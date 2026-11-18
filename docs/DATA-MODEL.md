@@ -60,7 +60,7 @@ so prices not loaded yet are kept.
 
 ## Local data file
 
-`carnet.json`, written by `server/file-store.js`, pretty-printed so it can be read and diffed.
+`carnet.json`, written by `src/js/data/data-file.js`, pretty-printed so it can be read and diffed.
 Location (`server/paths.js`): `--data` or `CARNET_DATA` if given; else `data/carnet.json` next to
 the app when that `data` folder exists (portable mode); else the per-user application data
 folder (`%APPDATA%\Carnet de Kamas`, `~/Library/Application Support/Carnet de Kamas`,

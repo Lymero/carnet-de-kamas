@@ -106,8 +106,10 @@ has focus.
   listens on 127.0.0.1 and refuses requests with a foreign `Host` (DNS rebinding) or `Origin`
   (other sites); writes must be `application/json`, so browsers cannot send them cross-site
   without a preflight, which the server never answers.
-- `file-store.js`: the data file. It is read once, and every change is applied to a copy, written
-  atomically and only then kept in memory, one change at a time. Each start writes a backup.
+- `node-file.js`: the disk for the data file's rules (`src/js/data/data-file.js`): atomic
+  writes (temporary file, fsync, rename) and the backup copy. The rules themselves (read once,
+  each change applied to a copy, written whole and only then kept in memory, one at a time; a
+  backup at each start) live in `data-file.js`, free of Node-specific code.
 
 ### Distribution
 

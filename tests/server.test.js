@@ -1,15 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { request as httpRequest } from "node:http";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createApp } from "../server/app.js";
-import { backupPath, openFileStore } from "../server/file-store.js";
+import { backupPath, openDataFile } from "../src/js/data/data-file.js";
+import { nodeFile } from "../server/node-file.js";
 
 const SRC = fileURLToPath(new URL("../src/", import.meta.url));
 const doc = { date: "2026-01-10", item: "Kokulte", cat: "resale", cost: 1000, expected: 2000, sold: false };
+
+/** The data file on disk, as the server opens it. @param {string} path */
+const openOnDisk = (path) => openDataFile(nodeFile(path));
 
 async function tempFile(t) {
   const dir = await mkdtemp(join(tmpdir(), "carnet-test-"));
@@ -42,59 +46,33 @@ function rawRequest(url, headers) {
   });
 }
 
-// ---------------------------------------------------------------- file store
+// ---------------------------------------------------------------- data file on disk (node-file.js)
+// The data file's rules are tested in data-file.test.js; here, what Node adds.
 
-test("file store: a missing file is an empty notebook, created on first write", async (t) => {
-  const file = await tempFile(t);
-  const store = await openFileStore(file);
-  assert.deepEqual(store.trades(), {});
-  assert.deepEqual(store.prices(), {});
-  await store.putTrade("t1", doc);
-  const saved = JSON.parse(await readFile(file, "utf8"));
-  assert.deepEqual(saved, { version: 1, trades: { t1: doc }, prices: {} });
-});
-
-test("file store: data survives reopening, and reopening makes a backup", async (t) => {
-  const file = await tempFile(t);
-  const first = await openFileStore(file);
+test("node file: created with its folders, replaced atomically, backed up next to it", async (t) => {
+  const file = join(await tempFile(t), "..", "nested", "carnet.json");
+  const first = await openOnDisk(file);
   await first.putTrade("t1", doc);
-  await first.mergePrices({ 10: 100 });
-  await first.mergePrices({ 20: 200 });
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8")).trades, { t1: doc });
 
-  const second = await openFileStore(file);
-  assert.deepEqual(second.trades(), { t1: doc });
-  assert.deepEqual(second.prices(), { 10: 100, 20: 200 });
+  const second = await openOnDisk(file);
+  assert.deepEqual(second.trades(), { t1: doc }, "survives reopening");
   assert.equal(await readFile(backupPath(file), "utf8"), await readFile(file, "utf8"));
-  assert.equal(backupPath("/x/carnet.json"), "/x/carnet.backup.json");
+  await second.putTrade("t2", doc);
+  const leftovers = (await readdir(dirname(file))).filter((name) => name.endsWith(".tmp"));
+  assert.deepEqual(leftovers, [], "no temporary file left behind");
 });
 
-test("file store: concurrent writes are applied one after the other, none lost", async (t) => {
-  const file = await tempFile(t);
-  const store = await openFileStore(file);
-  await Promise.all(Array.from({ length: 25 }, (_, i) => store.putTrade(`t${i}`, { ...doc, cost: i })));
-  await store.deleteTrade("t0");
-  await store.deleteTrade("missing"); // no-op
-  const saved = JSON.parse(await readFile(file, "utf8"));
-  assert.equal(Object.keys(saved.trades).length, 24);
-  assert.equal(saved.trades.t24.cost, 24);
-});
-
-test("file store: an unreadable file is refused and left untouched", async (t) => {
+test("node file: an unreadable file is refused and left untouched", async (t) => {
   const file = await tempFile(t);
   await writeFile(file, "{ not json");
-  await assert.rejects(openFileStore(file), /pas un JSON valide.*pas été modifié/);
+  await assert.rejects(openOnDisk(file), /pas un JSON valide.*pas été modifié/);
   assert.equal(await readFile(file, "utf8"), "{ not json");
-
-  await writeFile(file, JSON.stringify([1, 2]));
-  await assert.rejects(openFileStore(file), /ne ressemble pas/);
-
-  await writeFile(file, JSON.stringify({ version: 99, trades: {}, prices: {} }));
-  await assert.rejects(openFileStore(file), /plus récente/);
 });
 
-test("file store: a failed write rejects and changes nothing in memory", async (t) => {
+test("node file: a failed write rejects and changes nothing in memory", async (t) => {
   const file = await tempFile(t);
-  const store = await openFileStore(file);
+  const store = await openOnDisk(file);
   // A directory now stands where the file goes: the final rename fails on every OS.
   await mkdir(file);
   await assert.rejects(store.putTrade("t1", doc));
@@ -106,7 +84,7 @@ test("file store: a failed write rejects and changes nothing in memory", async (
 
 test("API: trades can be created, read and deleted", async (t) => {
   const file = await tempFile(t);
-  const base = await startApp(t, await openFileStore(file));
+  const base = await startApp(t, await openOnDisk(file));
 
   assert.deepEqual(await (await fetch(`${base}/api/info`)).json(), { app: "carnet-de-kamas", store: "file" });
   assert.equal((await fetch(`${base}/api/trades/t1`, json(doc))).status, 204);
@@ -118,7 +96,7 @@ test("API: trades can be created, read and deleted", async (t) => {
 });
 
 test("API: remembered prices are merged and validated", async (t) => {
-  const base = await startApp(t, await openFileStore(await tempFile(t)));
+  const base = await startApp(t, await openOnDisk(await tempFile(t)));
   const patch = (p) => fetch(`${base}/api/prices`, { ...json({ p }), method: "PATCH" });
   assert.equal((await patch({ 10: 100 })).status, 204);
   assert.equal((await patch({ 20: 200 })).status, 204);
@@ -129,7 +107,7 @@ test("API: remembered prices are merged and validated", async (t) => {
 });
 
 test("API: malformed requests are refused", async (t) => {
-  const base = await startApp(t, await openFileStore(await tempFile(t)));
+  const base = await startApp(t, await openOnDisk(await tempFile(t)));
   assert.equal((await fetch(`${base}/api/trades/bad%20id`, json(doc))).status, 400);
   assert.equal((await fetch(`${base}/api/trades/t1`, json([doc]))).status, 400);
   assert.equal((await fetch(`${base}/api/trades/t1`, { ...json(doc), body: "{ nope" })).status, 400);
@@ -143,7 +121,7 @@ test("API: malformed requests are refused", async (t) => {
 });
 
 test("API: other sites and other host names are refused", async (t) => {
-  const base = await startApp(t, await openFileStore(await tempFile(t)));
+  const base = await startApp(t, await openOnDisk(await tempFile(t)));
   const fromEvil = await fetch(`${base}/api/trades`, { headers: { origin: "https://evil.example" } });
   assert.equal(fromEvil.status, 403, "cross-origin read");
   const evilWrite = await fetch(`${base}/api/trades/t1`, {
@@ -157,7 +135,7 @@ test("API: other sites and other host names are refused", async (t) => {
 });
 
 test("API: writes are announced on the event stream with the writer's id", async (t) => {
-  const base = await startApp(t, await openFileStore(await tempFile(t)));
+  const base = await startApp(t, await openOnDisk(await tempFile(t)));
   const received = new Promise((resolve, reject) => {
     httpRequest(`${base}/api/events`, (res) => {
       assert.equal(res.headers["content-type"], "text/event-stream");

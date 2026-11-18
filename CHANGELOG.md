@@ -6,6 +6,11 @@
 
 - The fonts ship with the app: no request to Google Fonts, and it works offline.
 
+### Changed
+
+- The data file's rules live in one module shared by the desktop app and the local server
+  (`src/js/data/data-file.js`); only the disk access differs (Rust commands, Node).
+
 ### Removed
 
 - The Claude artifact mode: its storage, the read-only "viewer" mode and the capability

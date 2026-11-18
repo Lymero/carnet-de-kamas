@@ -46,7 +46,7 @@ class HttpError extends Error {
 }
 
 /**
- * @param {{root: string, store?: Awaited<ReturnType<typeof import("./file-store.js").openFileStore>>|null}} options
+ * @param {{root: string, store?: import("../src/js/data/data-file.js").DataFile|null}} options
  *   `root`: folder served as the site; without `store`, only files are served (no API).
  * @returns {import("node:http").Server}
  */

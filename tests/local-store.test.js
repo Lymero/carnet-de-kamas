@@ -7,7 +7,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createLocalStore, describeStoreError } from "../src/js/data/store.js";
 import { createApp } from "../server/app.js";
-import { openFileStore } from "../server/file-store.js";
+import { openDataFile } from "../src/js/data/data-file.js";
+import { nodeFile } from "../server/node-file.js";
 
 const SRC = fileURLToPath(new URL("../src/", import.meta.url));
 const trade = {
@@ -45,7 +46,7 @@ class FakeEventSource {
 async function setup(t) {
   const dir = await mkdtemp(join(tmpdir(), "carnet-test-"));
   const file = join(dir, "carnet.json");
-  const server = createApp({ root: SRC, store: await openFileStore(file) });
+  const server = createApp({ root: SRC, store: await openDataFile(nodeFile(file)) });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.after(async () => {
     server.close();

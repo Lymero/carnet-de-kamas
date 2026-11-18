@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * @file Runs Carnet de Kamas on this computer: serves the app and keeps the data in a
- * JSON file (see server/file-store.js; default location in server/paths.js).
+ * JSON file (src/js/data/data-file.js, on disk through server/node-file.js; default
+ * location in server/paths.js).
  *
  * Usage: node server/main.js [--port 8000] [--data path/to/carnet.json] [--open] [--static]
  *   --port    port to listen on, on 127.0.0.1 only (default 8000, or $PORT)
@@ -18,8 +19,9 @@ import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { openDataFile } from "../src/js/data/data-file.js";
 import { createApp } from "./app.js";
-import { openFileStore } from "./file-store.js";
+import { nodeFile } from "./node-file.js";
 import { defaultDataFile } from "./paths.js";
 
 const MIN_NODE_MAJOR = 22;
@@ -54,7 +56,7 @@ let store = null;
 if (!values.static) {
   const dataFile = resolve(values.data ?? process.env.CARNET_DATA ?? defaultDataFile({ appDir: APP_DIR }));
   try {
-    store = await openFileStore(dataFile);
+    store = await openDataFile(nodeFile(dataFile));
   } catch (error) {
     console.error(`Impossible d'ouvrir le fichier de données : ${error.message}`);
     process.exit(1);
@@ -76,7 +78,7 @@ server.on("error", (error) => {
 
 server.listen(port, "127.0.0.1", () => {
   console.log(`Carnet de Kamas est lancé : ${url}`);
-  console.log(store ? `Données : ${store.file}` : "Mode fichiers seuls : rien n'est enregistré.");
+  console.log(store ? `Données : ${store.path}` : "Mode fichiers seuls : rien n'est enregistré.");
   console.log("Laisse cette fenêtre ouverte pendant que tu utilises l'app ; ferme-la (ou Ctrl+C) pour l'arrêter.");
   if (values.open) openBrowser(url);
 });

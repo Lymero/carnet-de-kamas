@@ -118,7 +118,7 @@ carnet-de-kamas/
 ├── server/                 the local server (npm start), no dependencies
 │   ├── main.js             command line: port, data file
 │   ├── app.js              serves src/ and the data API (/api/...)
-│   ├── file-store.js       the data file: atomic writes, backup
+│   ├── node-file.js        the data file on disk: atomic writes, backup
 │   └── paths.js            default data location (portable or per-user)
 ├── release/                launchers and LISEZMOI.txt shipped in the download
 ├── scripts/
