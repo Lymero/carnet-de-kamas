@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.0.1 (2026-11-18)
+
+### Fixed
+
+- The 3.0.0 release was published without its installers. This release has them, for Windows,
+  macOS and Linux.
+
 ## 3.0.0 (2026-11-18)
 
 ### Added
