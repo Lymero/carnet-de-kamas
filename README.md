@@ -176,9 +176,10 @@ npm run check:all        # everything, including Rust and the browser tests
 | `npm run icons`         | Regenerates the icons from `src-tauri/icons/app-icon.svg`.          |
 | `npm run build:catalog` | Regenerates the item catalog (see below).                           |
 
-CI runs `check` and `test:coverage` on Node 22 and 24, `test:e2e`, and on Windows `check:rust`,
-a build of the app and `test:desktop`, for every push to `main` and every pull request. Failed
-browser runs upload the Playwright report and traces.
+CI runs `check` and `test:coverage` on Node 22 and 24, `test:e2e`, and on Windows `check:rust`
+and a build of the app, for every push to `main` and every pull request. Failed browser runs
+upload the Playwright report and traces. `test:desktop` runs locally only (see Making a release):
+WebView2 on GitHub's runners ignores the DevTools arguments it needs.
 
 `npm run desktop` and the built app use the data file in your user folder. To try something on
 a copy, set `CARNET_DATA` to another file first.
@@ -225,8 +226,9 @@ See the docstring in `scripts/build_catalog.py` for what is included and how rec
 
 1. Move the _Unreleased_ entries of `CHANGELOG.md` under a new `## X.Y.Z (date)` heading, and set
    the same `version` in `package.json` (the desktop app takes its version from it).
-2. Commit, then tag and push: `git tag -a vX.Y.Z -m "Carnet de Kamas X.Y.Z" && git push origin main vX.Y.Z`.
-3. The _Release_ workflow (`.github/workflows/release.yml`) checks that the tag, `package.json`
+2. On Windows, check the real app: `npm run build:desktop && npm run test:desktop`.
+3. Commit, then tag and push: `git tag -a vX.Y.Z -m "Carnet de Kamas X.Y.Z" && git push origin main vX.Y.Z`.
+4. The _Release_ workflow (`.github/workflows/release.yml`) checks that the tag, `package.json`
    and `CHANGELOG.md` agree and runs the checks and browser tests. It then builds the installers
    on Windows, macOS and Linux into a draft release, and publishes it once all are uploaded,
    with that version's CHANGELOG section as notes.

@@ -48,8 +48,10 @@ jobs:
           retention-days: 14
 
   desktop:
-    # The Tauri app: Rust format, lint and tests, then the real app built and driven
-    # through WebView2 (Windows only, see tests/desktop/).
+    # The Tauri app: Rust format, lint and tests, then a build of the app. The tests of the
+    # real app (npm run test:desktop) run locally before each release: on GitHub's runners,
+    # WebView2 ignores the DevTools arguments they rely on (the runner's WebView2 starts with
+    # Tauri's default arguments only, whether they come from the environment or the registry).
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
@@ -65,19 +67,3 @@ jobs:
       - run: npm ci
       - run: npm run check:rust
       - run: npx tauri build --no-bundle
-      - name: Show the WebView2 runtime the app runs on
-        shell: pwsh
-        run: |
-          $id = '{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
-          $keys = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\$id", "HKCU:\Software\Microsoft\EdgeUpdate\Clients\$id"
-          $versions = $keys | Where-Object { Test-Path $_ } | ForEach-Object { (Get-ItemProperty $_).pv }
-          if ($versions) { "WebView2 runtime: $versions" } else { "WebView2 runtime: not installed" }
-      - run: npm run test:desktop
-      - if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: desktop-report
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 14

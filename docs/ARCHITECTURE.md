@@ -235,8 +235,10 @@ data. Every test also fails on any page error, console error or failed request.
 protocol when asked (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`), so Playwright connects to the
 app's window, on a temporary `$CARNET_DATA` file. It checks loading, the backup, saving through
 the Rust commands, the bundled fonts, and that nothing logs to the console (so the security
-policy blocks nothing).
+policy blocks nothing). It runs locally, before each release: on GitHub's Windows runners the
+app starts fine, but WebView2 ignores the DevTools arguments (its processes start with Tauri's
+default arguments only, whether these come from the environment or the registry policy).
 
 CI (`.github/workflows/ci.yml`) runs `check` and coverage on Node 22 and 24, the browser tests,
-and on Windows `check:rust`, a build of the app and `test:desktop`, on every push to `main` and
-every pull request. The release workflow builds the installers for the three systems.
+and on Windows `check:rust` and a build of the app, on every push to `main` and every pull
+request. The release workflow builds the installers for the three systems.
