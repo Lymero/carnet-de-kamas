@@ -48,8 +48,12 @@ jobs:
             echo
             awk -v v="$VERSION" '$0 ~ "^## " v " " {found=1; next} /^## / {found=0} found' CHANGELOG.md
           } > notes.md
-          gh release create "$GITHUB_REF_NAME" --draft --title "Carnet de Kamas $VERSION" --notes-file notes.md
-          echo "id=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq ".[] | select(.tag_name == \"$GITHUB_REF_NAME\") | .id")" >> "$GITHUB_OUTPUT"
+          # Take the id from the creation itself: a draft is not yet linked to its tag, so
+          # looking it up by tag name finds nothing.
+          ID=$(gh api "repos/$GITHUB_REPOSITORY/releases" -f tag_name="$GITHUB_REF_NAME" \
+            -f name="Carnet de Kamas $VERSION" -F draft=true -F body=@notes.md --jq .id)
+          test -n "$ID"
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
 
   build:
     needs: verify
@@ -87,6 +91,10 @@ jobs:
           workspaces: src-tauri
       - run: npm ci
 
+      - name: Refuse to build without a release to upload to
+        shell: bash
+        run: test -n "${{ needs.verify.outputs.release-id }}"
+
       - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -96,10 +104,16 @@ jobs:
 
   publish:
     # Only once every installer is uploaded, so nobody sees a half-filled release.
-    needs: build
+    needs: [verify, build]
     runs-on: ubuntu-latest
     steps:
-      - name: Publish the release
+      - name: Publish the release, once every system's installers are attached
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+        run: |
+          ASSETS=$(gh api "repos/$GITHUB_REPOSITORY/releases/${{ needs.verify.outputs.release-id }}" --jq '[.assets[].name]')
+          echo "$ASSETS"
+          for pattern in '-setup.exe"' '.msi"' '.dmg"' '.AppImage"' '.deb"'; do
+            echo "$ASSETS" | grep -qF -- "$pattern" || { echo "missing an asset ending in ${pattern%\"}"; exit 1; }
+          done
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest
