@@ -15,8 +15,8 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { posix, win32 } from "node:path";
 
-export const APP_NAME = "Carnet de Kamas";
-export const DATA_FILE_NAME = "carnet.json";
+const APP_NAME = "Carnet de Kamas";
+const DATA_FILE_NAME = "carnet.json";
 
 /**
  * @param {{appDir: string, platform?: string, env?: Record<string, string|undefined>, home?: string, exists?: (path: string) => boolean}} options

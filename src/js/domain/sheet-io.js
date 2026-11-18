@@ -138,7 +138,7 @@ export function parseSheetPaste(text) {
  * @param {{date: string, cost: number}} t
  * @returns {string}
  */
-export function duplicateKey(t) {
+function duplicateKey(t) {
   return `${t.date}|${t.cost}`;
 }
 

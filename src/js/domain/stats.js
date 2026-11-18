@@ -58,7 +58,7 @@ export function summarize(trades, todayIso) {
  * @param {Trade} t
  * @returns {string} "YYYY-MM"
  */
-export function saleMonth(t) {
+function saleMonth(t) {
   return monthKey(t.soldDate || t.date);
 }
 
