@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Source of the app icons: run `npm run icons` after changing it. -->
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="#1d2420"/>
+  <circle cx="512" cy="512" r="330" fill="#e0aa45"/>
+  <circle cx="512" cy="512" r="280" fill="none" stroke="#966710" stroke-width="26"/>
+  <path d="M432 352 V672 M452 540 L628 352 M520 470 L640 672" fill="none" stroke="#1d2420" stroke-width="74" stroke-linejoin="round"/>
+</svg>

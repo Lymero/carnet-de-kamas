@@ -1,15 +1,41 @@
 # Data model
 
-## Stored documents
+## The data file
 
-The data file (see [Local data file](#local-data-file) below) holds two kinds of documents:
+Everything the app stores is in one file, `carnet.json`, pretty-printed so it can be read and
+diffed:
 
+```json
+{
+  "version": 1,
+  "trades": {
+    "s001": { "date": "2026-08-20", "item": "Ceinture du Minotot", "cat": "craft", "cost": 173796, "...": "..." }
+  },
+  "prices": { "13157": 12500 }
+}
 ```
-trades/<id>         one Trade per document
-settings/prices     remembered unit prices for the recipe helper
-```
 
-### `trades/<id>`
+- `trades`: one document per trade, keyed by id (see below).
+- `prices`: ingredient id → last unit price typed in the recipe helper, in kamas. Each save
+  merges only the prices that changed.
+- `version`: the file format, currently 1. A file from a newer version, or one that is not
+  valid JSON, is refused and left untouched.
+
+**Location.** The desktop app (`src-tauri/src/lib.rs`) uses `$CARNET_DATA` if set, else the
+per-user application data folder: `%APPDATA%\Carnet de Kamas` on Windows,
+`~/Library/Application Support/Carnet de Kamas` on macOS, `$XDG_DATA_HOME/carnet-de-kamas`
+(default `~/.local/share/carnet-de-kamas`) on Linux. The local server (`server/paths.js`) uses
+`--data` or `$CARNET_DATA` if given, else `data/carnet.json` next to the app when that `data`
+folder exists (portable mode), else the same per-user folder.
+
+**Writing** (`src/js/data/data-file.js`, the same code in both hosts): the file is read once;
+every change is applied to a copy, and the whole file is replaced atomically (temporary file,
+fsync, rename), one change at a time. Each start first copies the previous file to
+`carnet.backup.json` next to it. The local server also checks the shape of what it receives
+(ids, a JSON object per trade, whole non-negative prices); the field-level rules are
+`validateTrade`'s, applied in the page.
+
+## Trades
 
 | Field           | Type                                          | Required           | Meaning                                               |
 | --------------- | --------------------------------------------- | ------------------ | ----------------------------------------------------- |
@@ -45,45 +71,8 @@ null), malformed `recipe` lines are dropped, and a non-numeric `runes` or non-st
 ignored. Unknown fields are kept, so a newer version's documents survive an edit by an older one.
 
 **Compatibility:** because of that defensive reading, documents written before `schemaVersion`
-existed still load. When the shape
-changes, bump `SCHEMA_VERSION` in `config.js`, keep `normalizeTrade` able to read the old
-shape, and note it in `CHANGELOG.md`.
-
-### `settings/prices`
-
-```json
-{ "p": { "13157": 12500, "14928": 3200 } }
-```
-
-Ingredient id → last unit price typed, in kamas. Each save merges only the prices that changed,
-so prices not loaded yet are kept.
-
-## Local data file
-
-`carnet.json`, written by `src/js/data/data-file.js`, pretty-printed so it can be read and diffed.
-Location (`server/paths.js`): `--data` or `CARNET_DATA` if given; else `data/carnet.json` next to
-the app when that `data` folder exists (portable mode); else the per-user application data
-folder (`%APPDATA%\Carnet de Kamas`, `~/Library/Application Support/Carnet de Kamas`,
-`$XDG_DATA_HOME/carnet-de-kamas`).
-
-```json
-{
-  "version": 1,
-  "trades": {
-    "s001": { "date": "2026-08-20", "item": "Ceinture du Minotot", "cat": "craft", "cost": 173796, "...": "..." }
-  },
-  "prices": { "13157": 12500 }
-}
-```
-
-- `trades` holds the `trades/<id>` documents above, keyed by id; `prices` is the `p` map of
-  `settings/prices`.
-- `version` is the file format (currently 1). A file from a newer version, or one that is not
-  valid JSON, is refused at start and left untouched.
-- Every change rewrites the file atomically (temporary file, fsync, rename), one at a time.
-- Each start copies the previous file to `carnet.backup.json` next to it.
-- The server checks the shape of what it stores (ids, a JSON object per trade, whole
-  non-negative prices); the field-level rules are `validateTrade`'s, applied in the browser.
+existed still load. When the shape changes, bump `SCHEMA_VERSION` in `config.js`, keep
+`normalizeTrade` able to read the old shape, and note it in `CHANGELOG.md`.
 
 ## Item catalog (`src/data/dofus-data.json`)
 

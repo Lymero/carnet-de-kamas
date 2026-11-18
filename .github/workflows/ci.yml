@@ -46,3 +46,29 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 14
+
+  desktop:
+    # The Tauri app: Rust format, lint and tests, then the real app built and driven
+    # through WebView2 (Windows only, see tests/desktop/).
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - run: npm run check:rust
+      - run: npx tauri build --no-bundle
+      - run: npm run test:desktop
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

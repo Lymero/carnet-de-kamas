@@ -8,18 +8,22 @@
   "type": "module",
   "scripts": {
     "start": "node server/main.js",
+    "desktop": "tauri dev",
     "test": "node --test \"tests/**/*.test.js\"",
     "test:py": "python3 -m unittest discover -s tests -p \"test_*.py\"",
     "test:e2e": "playwright test",
+    "test:desktop": "playwright test -c playwright.desktop.config.js",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"src/js/**\" --test-coverage-include=\"server/**\" --test-coverage-lines=90 --test-coverage-branches=85 \"tests/**/*.test.js\"",
     "lint": "eslint .",
     "typecheck": "tsc -p jsconfig.json",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:py",
-    "check:all": "npm run check && npm run test:coverage && npm run test:e2e",
+    "check:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml",
+    "check:all": "npm run check && npm run check:rust && npm run test:coverage && npm run test:e2e",
     "build:catalog": "python3 scripts/build_catalog.py",
-    "build:release": "node scripts/build-release.js",
+    "build:desktop": "tauri build",
+    "icons": "node scripts/render-icon.js",
     "prepare": "node scripts/install-hooks.js"
   },
   "engines": {
@@ -28,6 +32,7 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.64.1",
+    "@tauri-apps/cli": "2.12.4",
     "eslint": "10.14.0",
     "globals": "17.14.0",
     "prettier": "3.9.10",

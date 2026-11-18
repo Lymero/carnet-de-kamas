@@ -1,8 +1,9 @@
 // The data file's rules (src/js/data/data-file.js), on an in-memory disk.
-// The real disk is covered by server.test.js.
+// Real disks are covered by server.test.js (Node) and src-tauri/src/lib.rs (desktop).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { backupPath, openDataFile } from "../src/js/data/data-file.js";
+import { tauriFile } from "../src/js/data/tauri-file.js";
 import { memoryFile } from "./memory-file.js";
 
 const doc = { date: "2026-01-10", item: "Kokulte", cat: "resale", cost: 1000, expected: 2000, sold: false };
@@ -65,9 +66,32 @@ test("an unreadable file is refused with a French explanation", async () => {
   }
 });
 
-test("backupPath puts the backup next to the file", () => {
+test("backupPath follows the same rule as the desktop shell", () => {
   assert.equal(backupPath("/x/carnet.json"), "/x/carnet.backup.json");
   assert.equal(backupPath("C:\\x\\Carnet.JSON"), "C:\\x\\Carnet.backup.json");
   assert.equal(backupPath("/x/carnet"), "/x/carnet.backup.json");
   assert.equal(backupPath("/x/notes.txt"), "/x/notes.txt.backup.json");
+});
+
+test("tauriFile maps the DiskFile to the desktop shell's commands", async () => {
+  const calls = [];
+  const core = {
+    async invoke(command, args) {
+      calls.push([command, args]);
+      return { data_file_path: "C:\\Users\\ana\\AppData\\Roaming\\Carnet de Kamas\\carnet.json", read_data: null }[
+        command
+      ];
+    },
+  };
+  const file = await tauriFile(core);
+  assert.equal(file.path, "C:\\Users\\ana\\AppData\\Roaming\\Carnet de Kamas\\carnet.json");
+  assert.equal(await file.read(), null);
+  await file.write("{}");
+  await file.backup();
+  assert.deepEqual(calls, [
+    ["data_file_path", undefined],
+    ["read_data", undefined],
+    ["write_data", { contents: "{}" }],
+    ["backup_data", undefined],
+  ]);
 });

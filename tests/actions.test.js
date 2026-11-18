@@ -92,7 +92,7 @@ test("importDrafts stops at the first failure and says how many were saved", asy
     ...store,
     save: async (t) => {
       calls += 1;
-      if (calls === 2) throw { code: "rejected" };
+      if (calls === 2) throw { code: "write_failed", message: "disque plein" };
       return store.save(t);
     },
   };
@@ -101,7 +101,7 @@ test("importDrafts stops at the first failure and says how many were saved", asy
   const error = await actions.importDrafts(drafts).catch((e) => e);
   assert.ok(error instanceof ImportError);
   assert.equal(error.saved, 1);
-  assert.match(error.message, /^1 importées, puis arrêt : Le serveur local a refusé/);
+  assert.match(error.message, /^1 importées, puis arrêt : Enregistrement impossible.*disque plein/);
   assert.equal(state.get().trades.length, 1);
 
   // Retrying with the remaining drafts completes the import without duplicates.

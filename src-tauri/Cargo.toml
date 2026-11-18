@@ -1,0 +1,25 @@
+[package]
+name = "carnet-de-kamas"
+# The app's version comes from package.json (see tauri.conf.json); this one is unused.
+version = "0.0.0"
+description = "Carnet de Kamas desktop app"
+edition = "2021"
+publish = false
+
+[lib]
+name = "carnet_de_kamas_lib"
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+tauri = { version = "2.12", features = [] }
+tauri-plugin-single-instance = "2.5"
+
+# Small, fast release binaries (as recommended by Tauri).
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

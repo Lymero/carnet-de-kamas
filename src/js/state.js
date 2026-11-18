@@ -10,7 +10,7 @@
  * @typedef {Object} AppState
  * @property {import("./domain/trade.js").Trade[]} trades
  * @property {boolean} loaded             first snapshot received (or no database)
- * @property {"local"|"memory"|null} storage
+ * @property {"desktop"|"local"|"memory"|null} storage
  * @property {Record<string, number>} prices  last unit price per ingredient id
  * @property {import("./data/catalog.js").ItemCatalog} catalog
  * @property {string} view                one of config.VIEWS

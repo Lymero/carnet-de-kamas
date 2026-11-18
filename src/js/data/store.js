@@ -2,20 +2,25 @@
  * @file Persistence. The rest of the app talks to a `TradeStore` and never to the
  * storage directly, which keeps storage swappable and testable.
  *
- * Two implementations share one interface:
+ * Three implementations share one interface:
+ * - `createDesktopStore(file)`: the desktop app (Tauri), reading and writing the data
+ *   file itself;
  * - `createLocalStore()`: the page served by the local server (server/main.js), through
- *   its data API, which keeps the data file (format in docs/DATA-MODEL.md);
- * - `createMemoryStore()`: in memory, when the page has no server, and in tests.
+ *   its data API;
+ * - `createMemoryStore()`: in memory, when the page has neither, and in tests.
+ *
+ * The first two keep the same data file (data-file.js; format in docs/DATA-MODEL.md).
  */
 
 import { LOCAL_API_URL, RETRY } from "../config.js";
 import { normalizeTrade, toDocument } from "../domain/trade.js";
+import { openDataFile } from "./data-file.js";
 
 /** @typedef {import("../domain/trade.js").Trade} Trade */
 
 /**
  * @typedef {Object} TradeStore
- * @property {"local"|"memory"} mode
+ * @property {"desktop"|"local"|"memory"} mode
  * @property {(onTrades: (trades: Trade[], meta: {confirmed: boolean}) => void, onError: (e: StoreError) => void) => () => void} subscribe
  *   Calls `onTrades` with the full list now and after every change. Returns an unsubscribe function.
  * @property {(trade: Trade) => Promise<void>} save     Create or replace one trade.
@@ -27,9 +32,10 @@ import { normalizeTrade, toDocument } from "../domain/trade.js";
 
 /**
  * @typedef {Object} StoreError
- * @property {"offline"|"rejected"|"unavailable"} code
+ * @property {"offline"|"rejected"|"unavailable"|"unreadable"|"write_failed"} code
  *   offline: the local server cannot be reached; rejected: it refused the request;
- *   unavailable: it failed (worth retrying)
+ *   unavailable: it failed (worth retrying); unreadable: the data file cannot be read;
+ *   write_failed: the data file could not be written
  * @property {string} message
  */
 
@@ -63,14 +69,78 @@ export async function withRetry(
  * @returns {string}
  */
 export function describeStoreError(error) {
-  switch (/** @type {StoreError} */ (error)?.code) {
+  const { code, message } = /** @type {StoreError} */ (error ?? {});
+  switch (code) {
     case "offline":
       return "Serveur local injoignable : relance « npm start », puis réessaie.";
     case "rejected":
       return "Le serveur local a refusé l'enregistrement.";
+    case "unreadable":
+      return `Impossible d'ouvrir le fichier de données : ${message}`;
+    case "write_failed":
+      return `Enregistrement impossible : le fichier de données n'a pas pu être écrit (${message}).`;
     default:
       return "Enregistrement impossible pour l'instant. Réessaie dans un moment.";
   }
+}
+
+/**
+ * Store for the desktop app: keeps the data file itself through `openDataFile`, with
+ * no server in between. The app has a single window, so no other writer to follow.
+ * If the file cannot be read, subscribers get the error and every write is refused,
+ * so an unreadable file is never overwritten.
+ * @param {import("./data-file.js").DiskFile} file  see tauri-file.js
+ * @returns {TradeStore}
+ */
+export function createDesktopStore(file) {
+  const opened = openDataFile(file);
+  opened.catch(() => {}); // reported to subscribers, and by every write
+  /** @type {Set<(trades: Trade[], meta: {confirmed: boolean}) => void>} */
+  const listeners = new Set();
+
+  /** @param {import("./data-file.js").DataFile} data */
+  const tradesOf = (data) => Object.entries(data.trades()).map(([id, doc]) => normalizeTrade(id, doc));
+
+  /** @returns {Promise<import("./data-file.js").DataFile>} */
+  async function data() {
+    try {
+      return await opened;
+    } catch (error) {
+      throw { code: "unreadable", message: error.message };
+    }
+  }
+
+  /**
+   * @param {(data: import("./data-file.js").DataFile) => Promise<void>} operation
+   * @param {{notify: boolean}} options  notify subscribers afterwards (trades changed)
+   */
+  async function write(operation, { notify }) {
+    const file = await data();
+    try {
+      await operation(file);
+    } catch (error) {
+      throw { code: "write_failed", message: String(error?.message ?? error) };
+    }
+    if (notify) listeners.forEach((fn) => fn(tradesOf(file), { confirmed: true }));
+  }
+
+  return {
+    mode: "desktop",
+    subscribe(onTrades, onError) {
+      listeners.add(onTrades);
+      data().then(
+        (file) => listeners.has(onTrades) && onTrades(tradesOf(file), { confirmed: true }),
+        (error) => listeners.has(onTrades) && onError(error),
+      );
+      return () => listeners.delete(onTrades);
+    },
+    save: (trade) => write((file) => file.putTrade(trade.id, toDocument(trade)), { notify: true }),
+    remove: (id) => write((file) => file.deleteTrade(id), { notify: true }),
+    async loadPrices() {
+      return { ...(await data()).prices() };
+    },
+    savePrices: (changes) => write((file) => file.mergePrices(changes), { notify: false }),
+  };
 }
 
 /**

@@ -1,7 +1,7 @@
 /**
- * @file The data file: every trade and remembered price, in one JSON file. Free of
- * browser- and Node-specific code: the host gives it the disk (server/node-file.js for
- * the local server).
+ * @file The data file: every trade and remembered price, in one JSON file. Used by the
+ * local server (server/node-file.js gives it the disk) and by the desktop app
+ * (tauri-file.js), so both follow exactly the same rules.
  *
  * Shape (pretty-printed, so it can be read, diffed and backed up by hand; see docs/DATA-MODEL.md):
  *   { "version": 1, "trades": { "<id>": { ...trade document } }, "prices": { "<ingredientId>": price } }
@@ -18,7 +18,7 @@
 const FILE_VERSION = 1;
 
 /**
- * Access to the data file, provided by the host (server/node-file.js).
+ * Access to the data file, provided by the platform (server/node-file.js, tauri-file.js).
  * @typedef {Object} DiskFile
  * @property {string} path                            where the file is, for messages
  * @property {() => Promise<string|null>} read        its text, or null when it does not exist
@@ -93,6 +93,7 @@ export async function openDataFile(file, { backup = true } = {}) {
 
 /**
  * Where the backup of a data file goes: "carnet.json" → "carnet.backup.json".
+ * The desktop shell (src-tauri/src/lib.rs) follows the same rule.
  * @param {string} path
  */
 export function backupPath(path) {

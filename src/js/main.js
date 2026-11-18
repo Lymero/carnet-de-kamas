@@ -3,8 +3,8 @@
  *
  * Start-up sequence:
  *   1. render the shell with a loading state;
- *   2. connect storage: the data file through the local server's API (server/main.js),
- *      or memory when the page has none;
+ *   2. connect storage: the data file through the desktop shell (Tauri) or through the
+ *      local server's API (server/main.js), or memory when the page has neither;
  *   3. mount the form, dialogs and router; subscribe to trades;
  *   4. load the item catalog in the background (autocomplete works without it).
  */
@@ -12,7 +12,8 @@
 import { createActions } from "./actions.js";
 import { CATALOG_URL, LOAD_TIMEOUT_MS, LOCAL_API_URL } from "./config.js";
 import { ItemCatalog } from "./data/catalog.js";
-import { createLocalStore, createMemoryStore, describeStoreError } from "./data/store.js";
+import { createDesktopStore, createLocalStore, createMemoryStore, describeStoreError } from "./data/store.js";
+import { tauriFile } from "./data/tauri-file.js";
 import { todayIso } from "./domain/dates.js";
 import { plural } from "./domain/text.js";
 import { isOpen } from "./domain/trade.js";
@@ -39,12 +40,18 @@ const state = createState({
 });
 
 /**
- * Picks the storage: in a page served by the local server, its data API; otherwise
- * memory (nothing saved).
- * @returns {Promise<import("./data/store.js").TradeStore>}
+ * Picks the storage: inside the desktop app, the data file through its shell; in a
+ * page served by the local server, its data API; otherwise memory (nothing saved).
+ * @returns {Promise<{store: import("./data/store.js").TradeStore, dataPath: string|null}>}
  */
 async function connectStorage() {
-  return (await hasLocalServer()) ? createLocalStore() : createMemoryStore();
+  const tauri = /** @type {any} */ (window).__TAURI__;
+  if (tauri) {
+    const file = await tauriFile(tauri.core);
+    return { store: createDesktopStore(file), dataPath: file.path };
+  }
+  if (await hasLocalServer()) return { store: createLocalStore(), dataPath: null };
+  return { store: createMemoryStore(), dataPath: null };
 }
 
 /** True when the page was served by the local server with its data API (server/app.js). */
@@ -66,7 +73,8 @@ async function start() {
     countAll: $("#c-all"),
   };
 
-  const store = await connectStorage();
+  const { store, dataPath } = await connectStorage();
+  if (dataPath) els.status.title = `Fichier de données : ${dataPath}`;
   state.set({
     storage: store.mode,
     status:

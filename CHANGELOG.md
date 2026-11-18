@@ -4,17 +4,27 @@
 
 ### Added
 
+- **Desktop app** (Tauri): installers of a few MB for Windows (NSIS and MSI, in French), macOS
+  (universal `.dmg`) and Linux (`.AppImage`, `.deb`). No Node.js or browser needed: the app
+  opens in its own window and keeps the same data file, in the same per-user folder. A second
+  launch focuses the window already open, so the file has a single writer.
 - The fonts ship with the app: no request to Google Fonts, and it works offline.
+- Tests of the real desktop app (`npm run test:desktop`, Windows), Rust format, lint and unit
+  tests (`npm run check:rust`), all run in CI; the release workflow builds the installers for
+  the three systems.
 
 ### Changed
 
 - The data file's rules live in one module shared by the desktop app and the local server
   (`src/js/data/data-file.js`); only the disk access differs (Rust commands, Node).
+- `npm start` still runs the app in a browser, on the same data file.
 
 ### Removed
 
 - The Claude artifact mode: its storage, the read-only "viewer" mode and the capability
   detection.
+- The zip download with launchers, replaced by the installers, and the server's `--open`
+  option.
 
 ## 2.2.0 (2026-11-18)
 

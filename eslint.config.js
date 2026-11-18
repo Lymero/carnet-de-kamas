@@ -3,7 +3,7 @@ import js from "@eslint/js";
 import globals from "globals";
 
 export default [
-  { ignores: ["playwright-report/", "test-results/", "coverage/", "dist/"] },
+  { ignores: ["playwright-report/", "test-results/", "coverage/", "src-tauri/target/", "src-tauri/gen/"] },
   js.configs.recommended,
   {
     files: ["src/js/**/*.js"],
@@ -15,7 +15,7 @@ export default [
   },
   {
     // End-to-end tests also run code in the page (page.evaluate, init scripts).
-    files: ["tests/e2e/**/*.js"],
+    files: ["tests/e2e/**/*.js", "tests/desktop/**/*.js"],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 ];

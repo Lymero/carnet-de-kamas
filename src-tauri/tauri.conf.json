@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Carnet de Kamas",
+  "version": "../package.json",
+  "identifier": "com.lymero.carnet-de-kamas",
+  "build": {
+    "frontendDist": "../src"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Carnet de Kamas",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 380,
+        "minHeight": 560,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self'; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Finance",
+    "shortDescription": "Suivi des crafts, de la forgemagie et des reventes Dofus",
+    "longDescription": "Carnet de Kamas suit tes crafts, ta forgemagie et tes reventes Dofus : bénéfices, objets en vente, historique et analyse. Tout reste sur ton ordinateur.",
+    "copyright": "Christopher",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "windows": {
+      "nsis": {
+        "languages": ["French"]
+      },
+      "wix": {
+        "language": "fr-FR"
+      }
+    },
+    "macOS": {
+      "signingIdentity": "-"
+    }
+  }
+}

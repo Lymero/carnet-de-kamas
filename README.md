@@ -13,56 +13,31 @@ maintained spreadsheet with:
 
 The interface is in French, as are the item names; code and docs are in English.
 
-## Running it
+## Installing it
 
-Requirements: [Node.js](https://nodejs.org/) 22 or newer. In the project folder:
+Download the installer for your system from the
+[latest release](https://github.com/Lymero/carnet-de-kamas/releases/latest) and run it:
 
-```bash
-npm start
-```
+- **Windows**: `Carnet de Kamas_<version>_x64-setup.exe` (or the `.msi`). Windows SmartScreen may
+  warn that the publisher is unknown: _Informations complémentaires_ › _Exécuter quand même_.
+- **macOS**: the `.dmg`. The first time, macOS refuses an app from an unidentified developer:
+  open _Réglages Système_ › _Confidentialité et sécurité_ and click _Ouvrir quand même_.
+- **Linux**: the `.AppImage` (make it executable, then run it) or the `.deb`.
 
-Then open **http://localhost:8000** and leave the terminal open while you use the app
-(Ctrl+C stops it). Options: `npm start -- --port 8080`, `npm start -- --data D:/kamas/carnet.json`.
+Nothing else is needed: the app opens in its own window. The warnings come from the installers
+not being signed with a paid certificate.
 
-**Your data** is one file, `carnet.json`. The terminal prints its exact path when the server
-starts:
-
-- If a `data` folder sits next to the app (as in this project folder), the data goes there:
-  `data/carnet.json`. This is "portable mode".
-- Otherwise it goes to the usual per-user folder: `%APPDATA%\Carnet de Kamas\` on Windows,
-  `~/Library/Application Support/Carnet de Kamas/` on macOS, `~/.local/share/carnet-de-kamas/`
-  on Linux.
-
-About that file:
+**Your data** is one file, `carnet.json`, in your per-user folder: `%APPDATA%\Carnet de Kamas\`
+on Windows, `~/Library/Application Support/Carnet de Kamas/` on macOS,
+`~/.local/share/carnet-de-kamas/` on Linux. Hover the status line (top right) to see the exact
+path.
 
 - One readable JSON file with every trade and remembered price (format in
-  [docs/DATA-MODEL.md](docs/DATA-MODEL.md)). Copy it to back up; replace it, with the server
-  stopped, to restore.
+  [docs/DATA-MODEL.md](docs/DATA-MODEL.md)). Copy it to back up; replace it, with the app
+  closed, to restore.
 - Each start copies the previous file to `carnet.backup.json` next to it.
 - Writes are atomic: a crash or power cut cannot leave a half-written file.
-- It never leaves your computer. Git ignores the `data/` folder, so it is never committed.
-- Several tabs can be open at once: a change in one appears in the others.
-
-Starting it again while it runs just opens the browser on it. The server only answers this
-computer (127.0.0.1) and refuses requests from other web sites.
-Opened another way (from a plain file server, for example), the page keeps data in memory only,
-and the status line says so.
-
-## Sharing it with someone
-
-Each [release](https://github.com/Lymero/carnet-de-kamas/releases/latest) has a zip,
-`carnet-de-kamas-<version>.zip`, to send to anyone. It holds the app, the server, a double-click
-launcher for each system and a French install guide (`LISEZMOI.txt`). The other person:
-
-1. installs [Node.js](https://nodejs.org) (LTS) once;
-2. unzips the file anywhere and double-clicks _Carnet de Kamas.cmd_ (Windows) or
-   _Carnet de Kamas.command_ (macOS; on Linux, run it from a terminal);
-3. uses the app in the browser tab that opens. Their data goes to their own per-user folder
-   (see above), separate from the app files.
-
-To update, they unzip the new version anywhere and launch it: the data stays where it is.
-The launchers are not signed, so Windows SmartScreen and macOS Gatekeeper warn the first time;
-`LISEZMOI.txt` explains how to proceed.
+- It never leaves your computer. Updating or uninstalling the app does not touch it.
 
 ## Using it
 
@@ -97,9 +72,29 @@ sheet. The preview says how many rows are new, already present, sold, or unreada
 - Dates must exist and be day-first or ISO (`20/08/2026`, `2026-08-20`); others are rejected.
 
 **Back up.** _Historique_ → _Copier en tableau_, then paste into any spreadsheet. The columns
-are the original sheet's plus _Prix de vente_, _Date de vente_ and _Taxe HDV_, so pasting the backup into
-_Importer depuis Sheets_ restores every figure (recipe breakdowns are not included). If the
-browser blocks the clipboard, the text opens in a dialog to copy by hand.
+are the original sheet's plus _Prix de vente_, _Date de vente_ and _Taxe HDV_, so pasting the
+backup into _Importer depuis Sheets_ restores every figure (recipe breakdowns are not
+included). If the clipboard is blocked, the text opens in a dialog to copy by hand.
+
+## Running it in a browser instead
+
+From a copy of this repository, with [Node.js](https://nodejs.org/) 22 or newer:
+
+```bash
+npm start
+```
+
+Then open **http://localhost:8000** and leave the terminal open (Ctrl+C stops it). Options:
+`npm start -- --port 8080`, `npm start -- --data D:/kamas/carnet.json`. The local server keeps
+the same data file as the desktop app, in the same place, except in "portable mode": when a
+`data` folder sits next to the app (as in a project folder used this way before), the data goes
+to `data/carnet.json`. The terminal prints the path. Several tabs can be open at once; a change
+in one appears in the others. Don't run the desktop app and the server on the same file at the
+same time: each would overwrite the other's changes.
+
+The server has no dependencies, only answers this computer (127.0.0.1) and refuses requests
+from other web sites. Served any other way (a plain file server, for example), the page keeps
+data in memory only, and the status line says so.
 
 ## Project layout
 
@@ -110,24 +105,16 @@ carnet-de-kamas/
 ├── eslint.config.js        lint rules (undefined names, unused code)
 ├── jsconfig.json           type checking of the JSDoc annotations
 ├── playwright.config.js    browser tests (tests/e2e/)
+├── playwright.desktop.config.js  tests of the built desktop app (tests/desktop/)
 ├── .prettierrc.json        formatting (Prettier); .editorconfig for editors
-├── .github/workflows/      CI: check + coverage on Node 22 and 24, browser tests
+├── .github/workflows/      CI on every push; installers on every version tag
 ├── docs/
 │   ├── ARCHITECTURE.md     layers, data flow, design decisions
-│   └── DATA-MODEL.md       stored documents, validation, catalog format
-├── server/                 the local server (npm start), no dependencies
-│   ├── main.js             command line: port, data file
-│   ├── app.js              serves src/ and the data API (/api/...)
-│   ├── node-file.js        the data file on disk: atomic writes, backup
-│   └── paths.js            default data location (portable or per-user)
-├── release/                launchers and LISEZMOI.txt shipped in the download
-├── scripts/
-│   ├── build_catalog.py    regenerates src/data/dofus-data.json from game data
-│   └── build-release.js    builds the downloadable folder (npm run build:release)
-├── data/                   your data file (created by npm start; git-ignored)
-├── src/                    everything that is published
+│   └── DATA-MODEL.md       data file, validation, catalog format
+├── src/                    the app itself (shown by the desktop shell or a browser)
 │   ├── index.html          static shell
 │   ├── css/app.css         design tokens + styles (light & dark)
+│   ├── fonts/              Barlow and Barlow Condensed (SIL Open Font License)
 │   ├── data/dofus-data.json item catalog (generated)
 │   └── js/
 │       ├── main.js         bootstrap and wiring
@@ -136,48 +123,72 @@ carnet-de-kamas/
 │       ├── actions.js      every user change (validate → store)
 │       ├── router.js       #en-cours / #historique / #analyse
 │       ├── domain/         pure logic: trade, kamas, dates, stats, sheet-io, text
-│       ├── data/           catalog (items, recipes, search) and store (persistence)
+│       ├── data/           catalog, stores, the data file and its desktop access
 │       └── ui/             DOM: form, autocomplete, summary, chart, dialogs, views/
+├── src-tauri/              the desktop shell (Tauri, Rust): window, data file commands, installers
+├── server/                 the local server for browsers (npm start), no dependencies
+│   ├── main.js             command line: port, data file
+│   ├── app.js              serves src/ and the data API (/api/...)
+│   ├── node-file.js        the data file on disk: atomic writes, backup
+│   └── paths.js            default data location (portable or per-user)
+├── scripts/
+│   ├── build_catalog.py    regenerates src/data/dofus-data.json from game data
+│   └── render-icon.js      regenerates the app icons from src-tauri/icons/app-icon.svg
+├── data/                   portable-mode data file (git-ignored)
 └── tests/                  node:test suites (*.test.js), the catalog script test (test_*.py)
-    └── e2e/                Playwright tests (*.spec.js) and their fixtures
+    ├── e2e/                Playwright tests of the page (*.spec.js) and their fixtures
+    └── desktop/            Playwright tests of the built desktop app (Windows)
 ```
 
 ## Development
 
-Requirements: Node.js ≥ 22, Python 3 (catalog build and its test), and Google Chrome (browser
-tests). The app has no runtime dependencies and no build step: the browser loads the ES modules
-directly. The dev tools (ESLint, Prettier, TypeScript for type checking, Playwright) are pinned
-in `package-lock.json`.
+Requirements: Node.js ≥ 22, Python 3 (catalog build and its test), Google Chrome (browser
+tests), and for the desktop app [Rust](https://rustup.rs) plus the
+[Tauri prerequisites](https://tauri.app/start/prerequisites/) of your system. The web app has
+no runtime dependencies and no build step: the desktop shell and browsers load the ES modules
+in `src/` directly. The dev tools (ESLint, Prettier, TypeScript for type checking, Playwright,
+the Tauri CLI) are pinned in `package-lock.json`, the Rust crates in `src-tauri/Cargo.lock`.
 
 ```bash
 npm ci                   # install the pinned dev tools and enable the git hooks
+npm run desktop          # the desktop app in a development window
+npm start                # or the app in a browser, at http://localhost:8000
 npm run check            # format check, lint, type check, JS and Python tests
-npm run test:e2e         # the real page in Chrome
-npm start                # the app at http://localhost:8000, with your data
+npm run check:all        # everything, including Rust and the browser tests
 ```
 
-| Script                  | What it does                                                    |
-| ----------------------- | --------------------------------------------------------------- |
-| `npm run check`         | The five scripts below, from `format` to `test:py`.             |
-| `npm run check:all`     | `check`, then `test:coverage` and `test:e2e`.                   |
-| `npm run format`        | Rewrites files with Prettier (`format:check` only verifies).    |
-| `npm run lint`          | ESLint.                                                         |
-| `npm run typecheck`     | `tsc` over `src/js` using the JSDoc types; emits nothing.       |
-| `npm test`              | `node:test` suites in `tests/*.test.js`.                        |
-| `npm run test:py`       | `unittest` for `scripts/build_catalog.py`.                      |
-| `npm run test:coverage` | JS tests with coverage; fails under 90 % lines / 85 % branches. |
-| `npm run test:e2e`      | Playwright tests in `tests/e2e/` against the served page.       |
-| `npm start`             | The local server (`server/main.js`): the app plus its data API. |
+| Script                  | What it does                                                        |
+| ----------------------- | ------------------------------------------------------------------- |
+| `npm run desktop`       | `tauri dev`: the desktop app, on the data file in your user folder. |
+| `npm start`             | The local server (`server/main.js`): the app plus its data API.     |
+| `npm run check`         | The five scripts below, from `format` to `test:py`.                 |
+| `npm run format`        | Rewrites files with Prettier (`format:check` only verifies).        |
+| `npm run lint`          | ESLint.                                                             |
+| `npm run typecheck`     | `tsc` over `src/js` using the JSDoc types; emits nothing.           |
+| `npm test`              | `node:test` suites in `tests/*.test.js`.                            |
+| `npm run test:py`       | `unittest` for `scripts/build_catalog.py`.                          |
+| `npm run check:rust`    | `cargo fmt --check`, `clippy -D warnings` and `cargo test`.         |
+| `npm run test:coverage` | JS tests with coverage; fails under 90 % lines / 85 % branches.     |
+| `npm run test:e2e`      | Playwright tests in `tests/e2e/` against the served page.           |
+| `npm run build:desktop` | `tauri build`: the app and its installers, in `src-tauri/target/`.  |
+| `npm run test:desktop`  | The built app driven through WebView2 (Windows; build it first).    |
+| `npm run check:all`     | `check`, `check:rust`, `test:coverage` and `test:e2e`.              |
+| `npm run icons`         | Regenerates the icons from `src-tauri/icons/app-icon.svg`.          |
+| `npm run build:catalog` | Regenerates the item catalog (see below).                           |
 
-CI runs `check` and `test:coverage` on Node 22 and 24, and `test:e2e` on Node 24, for every push
-to `main` and every pull request. A failed browser run uploads the Playwright report and traces.
+CI runs `check` and `test:coverage` on Node 22 and 24, `test:e2e`, and on Windows `check:rust`,
+a build of the app and `test:desktop`, for every push to `main` and every pull request. Failed
+browser runs upload the Playwright report and traces.
+
+`npm run desktop` and the built app use the data file in your user folder. To try something on
+a copy, set `CARNET_DATA` to another file first.
 
 ### Automatic checks
 
 `npm ci` (or `npm install`) points git at the hooks in `.githooks/`:
 
 - **pre-commit** runs `npm run check` (a few seconds);
-- **pre-push** runs `npm run check:all`, the browser tests included.
+- **pre-push** runs `npm run check:all`, the Rust and browser tests included.
 
 A failing check stops the commit or push. To skip once in an emergency, use `--no-verify`; CI
 still runs everything. The hooks check the working tree, so stash unrelated edits before a
@@ -188,14 +199,14 @@ partial commit.
 - `domain/` is pure: no DOM, no network, no globals. It is what the tests cover.
 - UI modules never write to storage; they call `actions`, which validate and persist.
   The store's snapshot then updates `state`, which re-renders the UI (one-way flow).
-- Data read from the database is untrusted: `normalizeTrade` checks every field's type and
-  shape, and every string that reaches `innerHTML` also goes through `escapeHtml` (`esc`).
+- Stored data is untrusted: `normalizeTrade` checks every field's type and shape, and every
+  string that reaches `innerHTML` also goes through `escapeHtml` (`esc`).
 - Amounts are whole kamas (`number`), dates are ISO strings (`YYYY-MM-DD`) of real calendar days.
 - User-facing text is French; identifiers, comments and docs are English.
 - Public functions carry JSDoc types, checked by `npm run typecheck`.
-- Formatting is Prettier's (120 columns); don't hand-format.
+- Formatting is Prettier's (120 columns) and `rustfmt`'s; don't hand-format.
 - `npm run check` must pass before committing (the pre-commit hook enforces it), and
-  `npm run check:all` before publishing.
+  `npm run check:all` before pushing.
 
 ### Updating the item catalog
 
@@ -213,13 +224,12 @@ See the docstring in `scripts/build_catalog.py` for what is included and how rec
 ### Making a release
 
 1. Move the _Unreleased_ entries of `CHANGELOG.md` under a new `## X.Y.Z (date)` heading, and set
-   the same `version` in `package.json`.
-2. Commit, then tag and push: `git tag vX.Y.Z && git push origin main vX.Y.Z`.
+   the same `version` in `package.json` (the desktop app takes its version from it).
+2. Commit, then tag and push: `git tag -a vX.Y.Z -m "Carnet de Kamas X.Y.Z" && git push origin main vX.Y.Z`.
 3. The _Release_ workflow (`.github/workflows/release.yml`) checks that the tag, `package.json`
-   and `CHANGELOG.md` agree and runs `npm run check:all`. It then builds the zip and publishes
-   the GitHub release, with that version's CHANGELOG section as notes.
-
-`npm run build:release` builds the same folder locally, in `dist/`.
+   and `CHANGELOG.md` agree and runs the checks and browser tests. It then builds the installers
+   on Windows, macOS and Linux into a draft release, and publishes it once all are uploaded,
+   with that version's CHANGELOG section as notes.
 
 ## Limits
 

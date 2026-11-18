@@ -4,6 +4,8 @@
  * - `test`: Playwright's test, whose `page` fails the test on any page error,
  *   console error or failed request, so silent breakage cannot pass.
  * - `openApp`: loads the page and waits until it has started.
+ * - `installFakeDesktop`: stands in for the desktop shell (Tauri), so the desktop code
+ *   path runs in any browser; tests/desktop/ drives the real app.
  */
 
 import { test as base, expect } from "@playwright/test";
@@ -84,4 +86,41 @@ export async function addTrade(page, { item, cost, expected, date, cat = "craft"
   await page.selectOption("#f-tax", String(tax));
   await page.click("#f-submit");
   await expect(page.locator(".toast")).toContainText(`${item} ajouté`);
+}
+
+/**
+ * Stands in for the desktop shell before the page loads: a fake `window.__TAURI__`
+ * whose commands (src-tauri/src/lib.rs) keep the data file in memory. The page then
+ * runs its desktop code path. `window.__desktopFile` holds the file's current text and
+ * `window.__desktopCalls` every command called.
+ * @param {import("@playwright/test").Page} page
+ * @param {{text?: string|null, path?: string}} [file]  the data file's text (null: missing)
+ */
+export async function installFakeDesktop(
+  page,
+  { text = null, path = "/home/ana/.local/share/carnet-de-kamas/carnet.json" } = {},
+) {
+  await page.addInitScript(
+    ({ text, path }) => {
+      window.__desktopFile = text;
+      window.__desktopCalls = [];
+      const commands = {
+        data_file_path: () => path,
+        read_data: () => window.__desktopFile,
+        write_data: ({ contents }) => {
+          window.__desktopFile = contents;
+        },
+        backup_data: () => undefined,
+      };
+      window.__TAURI__ = {
+        core: {
+          async invoke(command, args) {
+            window.__desktopCalls.push(command);
+            return commands[command](args);
+          },
+        },
+      };
+    },
+    { text, path },
+  );
 }

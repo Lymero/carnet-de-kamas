@@ -1,21 +1,18 @@
 #!/usr/bin/env node
 /**
- * @file Runs Carnet de Kamas on this computer: serves the app and keeps the data in a
- * JSON file (src/js/data/data-file.js, on disk through server/node-file.js; default
- * location in server/paths.js).
+ * @file Runs Carnet de Kamas in the browser: serves the app and keeps the data file
+ * (src/js/data/data-file.js, on disk through server/node-file.js; default location in
+ * server/paths.js). The desktop app does the same without this server.
  *
- * Usage: node server/main.js [--port 8000] [--data path/to/carnet.json] [--open] [--static]
+ * Usage: node server/main.js [--port 8000] [--data path/to/carnet.json] [--static]
  *   --port    port to listen on, on 127.0.0.1 only (default 8000, or $PORT)
  *   --data    data file (default: see server/paths.js, or $CARNET_DATA)
- *   --open    open the app in the default browser (the double-click launchers use it)
  *   --static  serve the files only, without the data API: the page then keeps its
  *             data in memory (used by the in-memory end-to-end tests)
  *
- * Starting it while it already runs on that port just opens the browser on it.
- * Messages are in French, for whoever launches the app.
+ * Messages are in French, for whoever runs the app.
  */
 
-import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -27,8 +24,7 @@ import { defaultDataFile } from "./paths.js";
 const MIN_NODE_MAJOR = 22;
 if (Number(process.versions.node.split(".")[0]) < MIN_NODE_MAJOR) {
   console.error(
-    `Carnet de Kamas a besoin de Node.js ${MIN_NODE_MAJOR} ou plus récent (installé : ${process.version}).\n` +
-      "Installe la version LTS depuis https://nodejs.org puis relance.",
+    `Carnet de Kamas a besoin de Node.js ${MIN_NODE_MAJOR} ou plus récent (installé : ${process.version}).`,
   );
   process.exit(1);
 }
@@ -39,7 +35,6 @@ const { values } = parseArgs({
   options: {
     port: { type: "string" },
     data: { type: "string" },
-    open: { type: "boolean", default: false },
     static: { type: "boolean", default: false },
   },
 });
@@ -48,7 +43,6 @@ const url = `http://localhost:${port}/`;
 
 if (await alreadyRunning(port)) {
   console.log(`Carnet de Kamas est déjà lancé : ${url}`);
-  if (values.open) openBrowser(url);
   process.exit(0);
 }
 
@@ -67,10 +61,7 @@ const server = createApp({ root: resolve(APP_DIR, "src"), store });
 
 server.on("error", (error) => {
   if (error.code === "EADDRINUSE") {
-    console.error(
-      `Le port ${port} est déjà utilisé par un autre programme. ` +
-        `Choisis-en un autre, par exemple : node server/main.js --open --port 8080`,
-    );
+    console.error(`Le port ${port} est déjà utilisé par un autre programme. Choisis-en un autre avec --port.`);
     process.exit(1);
   }
   throw error;
@@ -79,8 +70,7 @@ server.on("error", (error) => {
 server.listen(port, "127.0.0.1", () => {
   console.log(`Carnet de Kamas est lancé : ${url}`);
   console.log(store ? `Données : ${store.path}` : "Mode fichiers seuls : rien n'est enregistré.");
-  console.log("Laisse cette fenêtre ouverte pendant que tu utilises l'app ; ferme-la (ou Ctrl+C) pour l'arrêter.");
-  if (values.open) openBrowser(url);
+  console.log("Laisse cette fenêtre ouverte pendant que tu utilises l'app ; Ctrl+C pour l'arrêter.");
 });
 
 // Let a write in progress reach the disk before exiting.
@@ -101,25 +91,5 @@ async function alreadyRunning(port) {
     return response.ok && (await response.json()).app === "carnet-de-kamas";
   } catch {
     return false;
-  }
-}
-
-/**
- * Opens `url` in the default browser. Failure is harmless: the address is printed.
- * @param {string} url
- */
-function openBrowser(url) {
-  const [command, args] =
-    process.platform === "win32"
-      ? ["cmd", ["/c", "start", "", url]]
-      : process.platform === "darwin"
-        ? ["open", [url]]
-        : ["xdg-open", [url]];
-  try {
-    const child = spawn(command, args, { detached: true, stdio: "ignore", windowsHide: true });
-    child.on("error", () => {});
-    child.unref();
-  } catch {
-    // No way to open a browser here: the address printed above is enough.
   }
 }

@@ -35,5 +35,3 @@ test-results/
 # Your local data (npm start writes it here); personal, never committed
 /data/
 
-# Built downloads (npm run build:release)
-dist/
