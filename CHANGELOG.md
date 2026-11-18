@@ -8,6 +8,8 @@
   every view, the dialogs, import/export, themes, phone widths, the cloud code path and read-only
   mode; they run in CI and fail on any page error.
 - `npm run serve` uses a small Node server (`scripts/serve.js`) instead of Python.
+- Git hooks, enabled by `npm install`: `npm run check` before each commit, and
+  `npm run check:all` (coverage and browser tests included) before each push.
 
 ### Fixed
 

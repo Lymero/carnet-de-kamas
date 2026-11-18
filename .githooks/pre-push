@@ -1,0 +1,4 @@
+#!/bin/sh
+# Everything before every push: the commit checks, coverage thresholds and the
+# browser tests (npm run check:all). To skip once in an emergency: git push --no-verify
+exec npm run --silent check:all

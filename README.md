@@ -87,7 +87,7 @@ directly. The dev tools (ESLint, Prettier, TypeScript for type checking, Playwri
 in `package-lock.json`.
 
 ```bash
-npm ci                   # install the pinned dev tools
+npm ci                   # install the pinned dev tools and enable the git hooks
 npm run check            # format check, lint, type check, JS and Python tests
 npm run test:e2e         # the real page in Chrome
 npm run serve            # http://localhost:8000 (ES modules need http://, not file://)
@@ -96,6 +96,7 @@ npm run serve            # http://localhost:8000 (ES modules need http://, not f
 | Script                  | What it does                                                      |
 | ----------------------- | ----------------------------------------------------------------- |
 | `npm run check`         | The five scripts below, from `format` to `test:py`.               |
+| `npm run check:all`     | `check`, then `test:coverage` and `test:e2e`.                     |
 | `npm run format`        | Rewrites files with Prettier (`format:check` only verifies).      |
 | `npm run lint`          | ESLint.                                                           |
 | `npm run typecheck`     | `tsc` over `src/js` using the JSDoc types; emits nothing.         |
@@ -107,6 +108,17 @@ npm run serve            # http://localhost:8000 (ES modules need http://, not f
 
 CI runs `check` and `test:coverage` on Node 22 and 24, and `test:e2e` on Node 24, for every push
 to `main` and every pull request. A failed browser run uploads the Playwright report and traces.
+
+### Automatic checks
+
+`npm ci` (or `npm install`) points git at the hooks in `.githooks/`:
+
+- **pre-commit** runs `npm run check` (a few seconds);
+- **pre-push** runs `npm run check:all`, the browser tests included.
+
+A failing check stops the commit or push. To skip once in an emergency, use `--no-verify`; CI
+still runs everything. The hooks check the working tree, so stash unrelated edits before a
+partial commit.
 
 Run locally, the page has no `db` capability and falls back to an in-memory store:
 everything works, nothing is saved, and the status line says so.
@@ -122,7 +134,8 @@ everything works, nothing is saved, and the status line says so.
 - User-facing text is French; identifiers, comments and docs are English.
 - Public functions carry JSDoc types, checked by `npm run typecheck`.
 - Formatting is Prettier's (120 columns); don't hand-format.
-- `npm run check` must pass before committing or publishing.
+- `npm run check` must pass before committing (the pre-commit hook enforces it), and
+  `npm run check:all` before publishing.
 
 ### Updating the item catalog
 
