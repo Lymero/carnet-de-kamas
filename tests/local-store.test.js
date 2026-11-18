@@ -22,7 +22,18 @@ const trade = {
   soldPrice: null,
   soldDate: null,
 };
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
+/**
+ * Waits until `condition()` holds, polling: a reload goes through the real server, which
+ * can be slow on a busy machine, so no fixed delay is long enough everywhere.
+ * @param {() => boolean} condition
+ * @param {string} what  for the failure message
+ */
+async function until(condition, what) {
+  for (const start = Date.now(); !condition();) {
+    if (Date.now() - start > 5000) assert.fail(`timed out waiting for ${what}`);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
 
 /** Stand-in for the browser's EventSource (Node has none by default). */
 class FakeEventSource {
@@ -77,7 +88,7 @@ test("local store: loads on connection, saves to the file, and shows its own wri
   const events = FakeEventSource.last;
   assert.match(events.url, /\/api\/events$/);
   events.onopen();
-  await tick();
+  await until(() => seen.length > 0, "the first load");
   assert.deepEqual(seen, [[[], true]]);
 
   await store.save(trade);
@@ -101,15 +112,14 @@ test("local store: reloads on other tabs' changes only", async (t) => {
   );
   const events = FakeEventSource.last;
   events.onopen();
-  await tick();
+  await until(() => calls === 1, "the first load");
+  // A reload starts its request as soon as the event arrives, so counting right away is exact.
   const before = requests();
   events.dispatch("change", "this-tab");
-  await tick();
   assert.equal(requests(), before, "our own write is not reloaded twice");
   events.dispatch("change", "another-tab");
-  await tick();
-  assert.equal(requests(), before + 1);
-  assert.equal(calls, 2);
+  assert.equal(requests(), before + 1, "another tab's change reloads the list");
+  await until(() => calls === 2, "the reload after another tab's change");
 });
 
 test("local store: remembered prices are merged", async (t) => {
