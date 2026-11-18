@@ -9,6 +9,8 @@
  * change at a time: a crash or power cut leaves the old or the new file, never half
  * of one, and memory only changes once the file has. Opening the store copies the
  * previous file to "<name>.backup.json" first.
+ *
+ * Error messages are in French: they are shown to whoever launches the app.
  */
 
 import { copyFile, mkdir, open, readFile, rename, rm } from "node:fs/promises";
@@ -100,17 +102,17 @@ async function load(file) {
     data = JSON.parse(text);
   } catch (error) {
     throw new Error(
-      `${file} is not valid JSON (${error.message}). It was left untouched: fix it, or restore ${backupPath(file)}.`,
+      `${file} n'est pas un JSON valide (${error.message}). Il n'a pas été modifié : corrige-le, ou remets la sauvegarde ${backupPath(file)}.`,
       { cause: error },
     );
   }
   const isRecord = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
   if (!isRecord(data) || !isRecord(data.trades ?? {}) || !isRecord(data.prices ?? {})) {
-    throw new Error(`${file} does not look like a Carnet de Kamas data file. It was left untouched.`);
+    throw new Error(`${file} ne ressemble pas à un fichier de Carnet de Kamas. Il n'a pas été modifié.`);
   }
   if (typeof data.version === "number" && data.version > FILE_VERSION) {
     throw new Error(
-      `${file} was written by a newer version of Carnet de Kamas (format ${data.version}). Update the app.`,
+      `${file} vient d'une version plus récente de Carnet de Kamas (format ${data.version}). Mets l'app à jour.`,
     );
   }
   return { state: { version: FILE_VERSION, trades: data.trades ?? {}, prices: data.prices ?? {} }, existed: true };

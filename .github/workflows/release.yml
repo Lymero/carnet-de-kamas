@@ -1,0 +1,56 @@
+name: Release
+
+# Pushing a version tag (v2.2.0) publishes a GitHub release with the downloadable zip.
+# The tag must match package.json's version, and CHANGELOG.md must have a section for it.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: npm ci
+
+      - name: Check the tag matches package.json and CHANGELOG.md
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          test "$(node -p "require('./package.json').version")" = "$VERSION"
+          grep -q "^## $VERSION " CHANGELOG.md
+
+      - run: npm run check:all
+
+      - name: Build the download
+        run: |
+          NAME="carnet-de-kamas-${GITHUB_REF_NAME#v}"
+          npm run build:release
+          cd dist && zip -r -X -q "$NAME.zip" "$NAME"
+
+      - name: Write the release notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          {
+            echo "**Installation :** télécharge \`carnet-de-kamas-$VERSION.zip\` ci-dessous, dézippe-le et suis \`LISEZMOI.txt\` (il faut juste Node.js)."
+            echo
+            awk -v v="$VERSION" '$0 ~ "^## " v " " {found=1; next} /^## / {found=0} found' CHANGELOG.md
+          } > dist/notes.md
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" "dist/carnet-de-kamas-$VERSION.zip" \
+            --title "Carnet de Kamas $VERSION" --notes-file dist/notes.md

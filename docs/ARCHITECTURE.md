@@ -99,14 +99,26 @@ has focus.
 
 ### `server/` (Node, no dependencies)
 
-- `main.js`: command line (`npm start`, `--port`, `--data`, `--static`); flushes pending writes
-  on Ctrl+C.
+- `main.js`: command line (`npm start`, `--port`, `--data`, `--open`, `--static`). If the app
+  already answers on the port, it just opens the browser on it. It flushes pending writes on
+  Ctrl+C, and prints French messages, since whoever launches the app reads them.
+- `paths.js`: the default data location. That is the portable `data/` folder when it exists,
+  else the per-user folder, so updating the app never moves the data.
 - `app.js`: serves `src/` and the JSON API (`/api/info`, `trades`, `prices`, `events`). It only
   listens on 127.0.0.1 and refuses requests with a foreign `Host` (DNS rebinding) or `Origin`
   (other sites); writes must be `application/json`, so browsers cannot send them cross-site
   without a preflight, which the server never answers.
 - `file-store.js`: the data file. It is read once, and every change is applied to a copy, written
   atomically and only then kept in memory, one change at a time. Each start writes a backup.
+
+### Distribution
+
+`scripts/build-release.js` assembles `dist/carnet-de-kamas-<version>/`: `src/`, `server/`, a
+minimal `package.json` (`"type": "module"`, no dependencies), and from `release/` the launchers
+(`Carnet de Kamas.cmd` for Windows, `.command` for macOS and Linux) and `LISEZMOI.txt`. The
+launchers check that Node.js is installed and run `node server/main.js --open`. Pushing a tag
+`vX.Y.Z` runs `.github/workflows/release.yml`, which zips the folder on Linux (keeping the
+`.command` executable bit) and publishes it as a GitHub release.
 
 ### Application
 

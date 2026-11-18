@@ -3,7 +3,7 @@
  *
  * Start-up sequence:
  *   1. render the shell with a loading state;
- *   2. connect storage: the local server's data file (`npm start`), the claude.ai `db`
+ *   2. connect storage: the local server's data file (server/main.js), the claude.ai `db`
  *      capability when published as an artifact, or memory when neither is there;
  *   3. mount the form, dialogs and router; subscribe to trades;
  *   4. load the item catalog in the background (autocomplete works without it).
@@ -42,7 +42,7 @@ const state = createState({
 /**
  * Picks the storage. Published on claude.ai, the page uses the artifact capabilities
  * (`claude.use` resolves null for a signed-out viewer: memory then). Otherwise it uses
- * the local server's data API when the page was served by `npm start`, else memory.
+ * the local server's data API when the page was served by server/main.js, else memory.
  * @returns {Promise<{store: import("./data/store.js").TradeStore, user: any}>}
  */
 async function connectStorage() {
@@ -97,7 +97,7 @@ async function start() {
     status:
       store.mode === "memory"
         ? {
-            text: "Sauvegarde indisponible : lance l'app avec « npm start » pour garder tes données.",
+            text: "Sauvegarde indisponible : ouvre l'app avec son lanceur « Carnet de Kamas » pour garder tes données.",
             warn: true,
           }
         : writable

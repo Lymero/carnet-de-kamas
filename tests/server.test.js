@@ -82,14 +82,14 @@ test("file store: concurrent writes are applied one after the other, none lost",
 test("file store: an unreadable file is refused and left untouched", async (t) => {
   const file = await tempFile(t);
   await writeFile(file, "{ not json");
-  await assert.rejects(openFileStore(file), /not valid JSON.*left untouched/);
+  await assert.rejects(openFileStore(file), /pas un JSON valide.*pas été modifié/);
   assert.equal(await readFile(file, "utf8"), "{ not json");
 
   await writeFile(file, JSON.stringify([1, 2]));
-  await assert.rejects(openFileStore(file), /does not look like/);
+  await assert.rejects(openFileStore(file), /ne ressemble pas/);
 
   await writeFile(file, JSON.stringify({ version: 99, trades: {}, prices: {} }));
-  await assert.rejects(openFileStore(file), /newer version/);
+  await assert.rejects(openFileStore(file), /plus récente/);
 });
 
 test("file store: a failed write rejects and changes nothing in memory", async (t) => {

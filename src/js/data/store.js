@@ -3,7 +3,7 @@
  * the database directly, which keeps storage swappable and testable.
  *
  * Three implementations share one interface:
- * - `createLocalStore()`: the local server's data API (`npm start`), which keeps
+ * - `createLocalStore()`: the local server's data API (server/main.js), which keeps
  *   everything in one JSON file on this computer: the normal way to run the app;
  * - `createCloudStore(db)`: the claude.ai artifact `db` capability, when the page
  *   is published as an artifact;
@@ -77,7 +77,7 @@ export function describeStoreError(error) {
     case "revoked":
       return "Accès retiré : recharge la page.";
     case "offline":
-      return "Serveur local injoignable : vérifie que « npm start » tourne toujours, puis réessaie.";
+      return "Serveur local injoignable : relance Carnet de Kamas (ou « npm start »), puis réessaie.";
     case "rejected":
       return "Le serveur local a refusé l'enregistrement.";
     default:

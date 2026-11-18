@@ -24,20 +24,45 @@ npm start
 Then open **http://localhost:8000** and leave the terminal open while you use the app
 (Ctrl+C stops it). Options: `npm start -- --port 8080`, `npm start -- --data D:/kamas/carnet.json`.
 
-**Your data** is in `data/carnet.json` in the project folder (the terminal prints the exact
-path when the server starts):
+**Your data** is one file, `carnet.json`. The terminal prints its exact path when the server
+starts:
+
+- If a `data` folder sits next to the app (as in this project folder), the data goes there:
+  `data/carnet.json`. This is "portable mode".
+- Otherwise it goes to the usual per-user folder: `%APPDATA%\Carnet de Kamas\` on Windows,
+  `~/Library/Application Support/Carnet de Kamas/` on macOS, `~/.local/share/carnet-de-kamas/`
+  on Linux.
+
+About that file:
 
 - One readable JSON file with every trade and remembered price (format in
   [docs/DATA-MODEL.md](docs/DATA-MODEL.md)). Copy it to back up; replace it, with the server
   stopped, to restore.
-- Each start copies the previous file to `data/carnet.backup.json` first.
+- Each start copies the previous file to `carnet.backup.json` next to it.
 - Writes are atomic: a crash or power cut cannot leave a half-written file.
-- It never leaves your computer, and git ignores the `data/` folder, so it is never committed.
+- It never leaves your computer. Git ignores the `data/` folder, so it is never committed.
 - Several tabs can be open at once: a change in one appears in the others.
 
-The server only answers this computer (127.0.0.1) and refuses requests from other web sites.
+Starting it again while it runs just opens the browser on it. The server only answers this
+computer (127.0.0.1) and refuses requests from other web sites.
 Opened another way (from a plain file server, for example), the page keeps data in memory only,
 and the status line says so.
+
+## Sharing it with someone
+
+Each [release](https://github.com/Lymero/carnet-de-kamas/releases/latest) has a zip,
+`carnet-de-kamas-<version>.zip`, to send to anyone. It holds the app, the server, a double-click
+launcher for each system and a French install guide (`LISEZMOI.txt`). The other person:
+
+1. installs [Node.js](https://nodejs.org) (LTS) once;
+2. unzips the file anywhere and double-clicks _Carnet de Kamas.cmd_ (Windows) or
+   _Carnet de Kamas.command_ (macOS; on Linux, run it from a terminal);
+3. uses the app in the browser tab that opens. Their data goes to their own per-user folder
+   (see above), separate from the app files.
+
+To update, they unzip the new version anywhere and launch it: the data stays where it is.
+The launchers are not signed, so Windows SmartScreen and macOS Gatekeeper warn the first time;
+`LISEZMOI.txt` explains how to proceed.
 
 ## Using it
 
@@ -93,9 +118,12 @@ carnet-de-kamas/
 ├── server/                 the local server (npm start), no dependencies
 │   ├── main.js             command line: port, data file
 │   ├── app.js              serves src/ and the data API (/api/...)
-│   └── file-store.js       the data file: atomic writes, backup
+│   ├── file-store.js       the data file: atomic writes, backup
+│   └── paths.js            default data location (portable or per-user)
+├── release/                launchers and LISEZMOI.txt shipped in the download
 ├── scripts/
-│   └── build_catalog.py    regenerates src/data/dofus-data.json from game data
+│   ├── build_catalog.py    regenerates src/data/dofus-data.json from game data
+│   └── build-release.js    builds the downloadable folder (npm run build:release)
 ├── data/                   your data file (created by npm start; git-ignored)
 ├── src/                    everything that is published
 │   ├── index.html          static shell
@@ -181,6 +209,17 @@ npm run build:catalog -- path/to/dofus.sqlite
 
 The output has one item or recipe per line, so the commit diff lists what the game update changed.
 See the docstring in `scripts/build_catalog.py` for what is included and how recipes are read.
+
+### Making a release
+
+1. Move the _Unreleased_ entries of `CHANGELOG.md` under a new `## X.Y.Z (date)` heading, and set
+   the same `version` in `package.json`.
+2. Commit, then tag and push: `git tag vX.Y.Z && git push origin main vX.Y.Z`.
+3. The _Release_ workflow (`.github/workflows/release.yml`) checks that the tag, `package.json`
+   and `CHANGELOG.md` agree and runs `npm run check:all`. It then builds the zip and publishes
+   the GitHub release, with that version's CHANGELOG section as notes.
+
+`npm run build:release` builds the same folder locally, in `dist/`.
 
 ### Publishing as a Claude artifact (optional)
 

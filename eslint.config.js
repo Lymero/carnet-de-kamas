@@ -3,7 +3,7 @@ import js from "@eslint/js";
 import globals from "globals";
 
 export default [
-  { ignores: ["playwright-report/", "test-results/", "coverage/"] },
+  { ignores: ["playwright-report/", "test-results/", "coverage/", "dist/"] },
   js.configs.recommended,
   {
     files: ["src/js/**/*.js"],

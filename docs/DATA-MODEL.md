@@ -74,8 +74,11 @@ Anyone the page is shared with can read; only the owner writes.
 
 ## Local data file
 
-`data/carnet.json` by default (`--data` or `CARNET_DATA` to change it), written by
-`server/file-store.js`, pretty-printed so it can be read and diffed:
+`carnet.json`, written by `server/file-store.js`, pretty-printed so it can be read and diffed.
+Location (`server/paths.js`): `--data` or `CARNET_DATA` if given; else `data/carnet.json` next to
+the app when that `data` folder exists (portable mode); else the per-user application data
+folder (`%APPDATA%\Carnet de Kamas`, `~/Library/Application Support/Carnet de Kamas`,
+`$XDG_DATA_HOME/carnet-de-kamas`).
 
 ```json
 {

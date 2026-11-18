@@ -1,0 +1,67 @@
+Carnet de Kamas {{version}}
+=====================
+
+Suivi de tes crafts, forgemagie et reventes Dofus : bénéfices, objets en vente,
+historique et analyse. Tout reste sur ton ordinateur.
+
+
+1. Installer Node.js (une seule fois)
+-------------------------------------
+
+Télécharge la version « LTS » sur https://nodejs.org et installe-la avec les
+options par défaut.
+
+
+2. Lancer l'app
+---------------
+
+- Windows : double-clique sur « Carnet de Kamas.cmd ».
+  Si Windows affiche « Windows a protégé votre ordinateur », clique sur
+  « Informations complémentaires » puis « Exécuter quand même ».
+- macOS : la première fois, clic droit sur « Carnet de Kamas.command » > Ouvrir.
+  Ensuite, un double-clic suffit.
+- Linux : dans un terminal, lance  ./"Carnet de Kamas.command"
+
+L'app s'ouvre dans ton navigateur (http://localhost:8000). Laisse la fenêtre
+noire ouverte pendant que tu l'utilises ; ferme-la pour arrêter l'app.
+
+
+3. Tes données
+--------------
+
+Tout est enregistré dans un seul fichier, carnet.json :
+
+- Windows : %APPDATA%\Carnet de Kamas\
+- macOS   : ~/Library/Application Support/Carnet de Kamas/
+- Linux   : ~/.local/share/carnet-de-kamas/
+
+La fenêtre noire affiche l'emplacement exact au démarrage. Copie ce fichier pour
+faire une sauvegarde. Une copie (carnet.backup.json) est aussi faite à chaque
+lancement.
+
+Mode portable : crée un dossier nommé « data » à côté de ce fichier LISEZMOI, et
+les données y seront enregistrées à la place (pratique sur une clé USB).
+
+
+4. Importer ton ancien tableau
+------------------------------
+
+Onglet Historique > « Importer depuis Sheets », puis colle les lignes copiées
+depuis Google Sheets ou Excel.
+
+
+5. Mettre à jour
+----------------
+
+Télécharge la nouvelle version, dézippe-la où tu veux et lance-la : tes données
+ne bougent pas. (En mode portable, déplace le dossier « data » dans la nouvelle
+version.)
+
+
+En cas de problème
+------------------
+
+- « Carnet de Kamas a besoin de Node.js » : installe Node.js (étape 1), puis
+  relance.
+- « Le port 8000 est déjà utilisé » : un autre programme l'occupe. Ouvre un
+  terminal dans ce dossier et lance : node server/main.js --open --port 8080

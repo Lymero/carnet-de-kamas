@@ -4,6 +4,15 @@
 
 ### Added
 
+- **A download to share the app**: each GitHub release has a zip with the app, the server,
+  double-click launchers (Windows `.cmd`, macOS/Linux `.command`) and a French install guide.
+  Only Node.js is needed. `npm run build:release` builds it; pushing a `vX.Y.Z` tag publishes
+  it. Launching the app while it already runs just opens the browser on it; `--open` opens the
+  browser.
+- Data location: the per-user application folder (`%APPDATA%\Carnet de Kamas` on Windows,
+  and the equivalents on macOS and Linux), unless a `data` folder sits next to the app
+  (portable mode, as in an existing project folder, which therefore keeps its data where it is).
+
 - Calculations in every kamas field: `1.2m + 350k + 80k`, `3 x 450k`, `(2.6m - 100k) / 2`. The
   result shows under the field while typing and replaces the calculation on leaving it.
 - _Taxe HDV_ on each trade: 2 % when listed, 1 % when the price was updated, or none. That
