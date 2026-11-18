@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { request as httpRequest } from "node:http";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -94,9 +94,9 @@ test("file store: an unreadable file is refused and left untouched", async (t) =
 
 test("file store: a failed write rejects and changes nothing in memory", async (t) => {
   const file = await tempFile(t);
-  await writeFile(file, JSON.stringify({ version: 1, trades: {}, prices: {} }));
-  // A data file "inside" a regular file cannot be written.
-  const store = await openFileStore(join(file, "carnet.json"), { backup: false });
+  const store = await openFileStore(file);
+  // A directory now stands where the file goes: the final rename fails on every OS.
+  await mkdir(file);
   await assert.rejects(store.putTrade("t1", doc));
   assert.deepEqual(store.trades(), {});
   await assert.rejects(store.putTrade("t2", doc), "the queue keeps working after a failure");
@@ -188,7 +188,9 @@ test("static files are served from src/ only", async (t) => {
   assert.match(await page.text(), /<title>Carnet de Kamas<\/title>/);
   assert.match((await fetch(`${base}/js/main.js`)).headers.get("content-type"), /javascript/);
   assert.equal((await fetch(`${base}/api/info`)).status, 404, "no API in static mode");
-  assert.equal((await fetch(`${base}/..%5cpackage.json`)).status, 403);
+  assert.equal((await fetch(`${base}/%2e%2e%2fpackage.json`)).status, 403, "encoded ../ escapes src/");
+  // A backslash separates paths on Windows only (403 there); elsewhere it stays inside src/ (404).
+  assert.notEqual((await fetch(`${base}/..%5cpackage.json`)).status, 200);
   assert.equal(await rawRequest(`${base}/../package.json`, {}), 404, "resolved inside src/");
   assert.equal((await fetch(`${base}/%E0%A4%A`)).status, 400);
   assert.equal((await fetch(`${base}/`, { method: "POST" })).status, 405);
