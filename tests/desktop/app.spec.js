@@ -47,13 +47,17 @@ test.beforeAll(async () => {
     },
     stdio: "ignore",
   });
+  let exited = null;
+  app.on("exit", (code, signal) => (exited = { code, signal }));
   // The window starts on about:blank, then loads the app. Connect only once the app's page
-  // exists: a page attached before that navigation is not usable afterwards.
+  // exists: a page attached before that navigation is not usable afterwards. A first start
+  // on a fresh machine (WebView2 setting up its profile) can take a while.
   const devtools = `http://127.0.0.1:${DEVTOOLS_PORT}`;
   await expect(async () => {
+    if (exited) throw new Error(`the app exited before showing its page: ${JSON.stringify(exited)}`);
     const targets = await (await fetch(`${devtools}/json/list`)).json();
     expect(targets.some((target) => target.type === "page" && target.url.startsWith(APP_URL))).toBe(true);
-  }).toPass({ timeout: 20_000 });
+  }).toPass({ timeout: 60_000 });
   browser = await chromium.connectOverCDP(devtools);
   page = browser
     .contexts()

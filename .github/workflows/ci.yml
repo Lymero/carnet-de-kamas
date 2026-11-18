@@ -60,9 +60,18 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: src-tauri
+          # Keep the compiled crates even when a later step fails, so a fix is quick to check.
+          cache-on-failure: true
       - run: npm ci
       - run: npm run check:rust
       - run: npx tauri build --no-bundle
+      - name: Show the WebView2 runtime the app runs on
+        shell: pwsh
+        run: |
+          $id = '{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          $keys = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\$id", "HKCU:\Software\Microsoft\EdgeUpdate\Clients\$id"
+          $versions = $keys | Where-Object { Test-Path $_ } | ForEach-Object { (Get-ItemProperty $_).pv }
+          if ($versions) { "WebView2 runtime: $versions" } else { "WebView2 runtime: not installed" }
       - run: npm run test:desktop
       - if: failure()
         uses: actions/upload-artifact@v7
