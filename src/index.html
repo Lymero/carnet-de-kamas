@@ -53,37 +53,25 @@
           <div class="row2">
             <div class="field">
               <label for="f-cost">Investissement</label>
-              <input
-                type="text"
-                id="f-cost"
-                class="kamas"
-                inputmode="decimal"
-                placeholder="1.8m"
-                aria-describedby="f-hint"
-              />
+              <input type="text" id="f-cost" class="kamas" placeholder="1.8m" />
             </div>
             <div class="field">
               <label for="f-exp">Vente prévue</label>
-              <input
-                type="text"
-                id="f-exp"
-                class="kamas"
-                inputmode="decimal"
-                placeholder="2.6m"
-                aria-describedby="f-hint"
-              />
+              <input type="text" id="f-exp" class="kamas" placeholder="2.6m" />
             </div>
           </div>
-          <div class="hint" id="f-hint">Raccourcis : 250k, 1.8m, 1 850 000</div>
           <div class="row2">
             <div class="field">
               <label for="f-date">Date</label>
               <input type="date" id="f-date" />
             </div>
-            <div class="field end">
-              <label class="check" for="f-sold"><input type="checkbox" id="f-sold" /> Déjà vendu</label>
+            <div class="field">
+              <label for="f-tax">Taxe HDV</label>
+              <!-- Options are filled in by ui/entry-form.js (ui/hdv-tax.js). -->
+              <select id="f-tax"></select>
             </div>
           </div>
+          <label class="check" for="f-sold"><input type="checkbox" id="f-sold" /> Déjà vendu</label>
           <div class="preview" id="f-preview"><span>Bénéfice prévu</span><b class="num">—</b></div>
           <button class="btn primary" type="submit" id="f-submit">Ajouter</button>
         </form>

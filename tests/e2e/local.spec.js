@@ -14,10 +14,10 @@ test("trades are saved to the data file and are still there after a reload", asy
   await openApp(page, { catalog: false });
   await expect(page.locator("#status")).toContainText("enregistré sur ce PC");
   const item = uniqueItem("Coiffe");
-  await addTrade(page, { item, cat: "resale", cost: "250k", expected: "400k", date: "2026-01-10" });
+  await addTrade(page, { item, cat: "resale", cost: "250k", expected: "400k", date: "2026-01-10", tax: 2 });
 
   const saved = Object.values((await readDataFile()).trades).find((doc) => doc.item === item);
-  expect(saved).toMatchObject({ cost: 250000, expected: 400000, sold: false, schemaVersion: 1 });
+  expect(saved).toMatchObject({ cost: 250000, expected: 400000, sold: false, hdvTax: 2, schemaVersion: 1 });
 
   await page.reload();
   await expect(page.locator("#status")).toContainText("enregistré sur ce PC");

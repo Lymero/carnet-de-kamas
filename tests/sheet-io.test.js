@@ -23,6 +23,7 @@ test("parseSheetPaste reads a pasted sheet with header", () => {
     sold: true,
     soldPrice: 4_350_000,
     soldDate: null,
+    hdvTax: 0,
     source: "sheet",
   });
   assert.equal(rows[1].cat, "resale");
@@ -99,6 +100,7 @@ test("toTsv round-trips every stored figure through parseSheetPaste", () => {
       sold: true,
       soldPrice: 2_500,
       soldDate: "2026-09-02",
+      hdvTax: 2,
     },
     {
       id: "b",
@@ -110,6 +112,7 @@ test("toTsv round-trips every stored figure through parseSheetPaste", () => {
       sold: false,
       soldPrice: null,
       soldDate: null,
+      hdvTax: 1,
     },
     {
       id: "c",
@@ -121,9 +124,10 @@ test("toTsv round-trips every stored figure through parseSheetPaste", () => {
       sold: true,
       soldPrice: 10,
       soldDate: null,
+      hdvTax: 0,
     },
   ];
-  const fields = ({ date, item, cat, cost, expected, sold, soldPrice, soldDate }) => ({
+  const fields = ({ date, item, cat, cost, expected, sold, soldPrice, soldDate, hdvTax }) => ({
     date,
     item,
     cat,
@@ -132,6 +136,7 @@ test("toTsv round-trips every stored figure through parseSheetPaste", () => {
     sold,
     soldPrice,
     soldDate,
+    hdvTax,
   });
   const again = parseSheetPaste(toTsv(trades));
   assert.equal(again.invalid, 0);
@@ -156,4 +161,38 @@ test("toTsv keeps one row per trade even with tabs or line breaks in a name", ()
   assert.equal(lines.length, 2);
   assert.equal(lines[1].split("\t")[1], "Cape d'Ogivol bis");
   assert.equal(lines[1].split("\t")[6], "100.00");
+});
+
+test("toTsv exports the profit after the auction tax, and the tax column re-imports", () => {
+  const tsv = toTsv([
+    {
+      id: "a",
+      date: "2026-08-20",
+      item: "Cape",
+      cat: "craft",
+      cost: 1_000_000,
+      expected: 2_000_000,
+      sold: false,
+      soldPrice: null,
+      soldDate: null,
+      hdvTax: 2,
+    },
+  ]);
+  const [header, row] = tsv.split("\n").map((line) => line.split("\t"));
+  assert.equal(header.at(-1), "Taxe HDV");
+  assert.equal(row[5], "960000", "Bénéfice: 2m - 1m - 2 % of 2m");
+  assert.equal(row.at(-1), "2 %");
+  assert.equal(parseSheetPaste(tsv).rows[0].hdvTax, 2);
+});
+
+test("the Taxe HDV column accepts a rate or a ticked box", () => {
+  const rateOf = (cell) =>
+    parseSheetPaste(["Date;Item;Investissement;Vente;Taxe HDV", `2026-08-20;Cape;1000;2000;${cell}`].join("\n")).rows[0]
+      .hdvTax;
+  assert.equal(rateOf("2 %"), 2);
+  assert.equal(rateOf("1"), 1, "a number is a rate, not a ticked box");
+  assert.equal(rateOf("1,00 %"), 1);
+  assert.equal(rateOf("VRAI"), 2, "a ticked box is the usual listing tax");
+  assert.equal(rateOf(""), 0);
+  assert.equal(rateOf("3 %"), 0, "not a rate the game uses");
 });

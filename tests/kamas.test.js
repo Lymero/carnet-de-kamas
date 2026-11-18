@@ -1,9 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  evaluateKamas,
   formatCompact,
   formatKamas,
   formatPercent,
+  isCalculation,
   isKamas,
   parseKamas,
   ratioPercent,
@@ -59,4 +61,48 @@ test("formatting helpers", () => {
   assert.equal(formatPercent(18.42), "+18,4 %");
   assert.equal(formatPercent(NaN), "—");
   assert.ok(Number.isNaN(ratioPercent(5, 0)));
+});
+
+test("evaluateKamas adds up, subtracts, multiplies and divides amounts", () => {
+  assert.equal(evaluateKamas("1.2m + 350k + 80k"), 1_630_000);
+  assert.equal(evaluateKamas("2.6m - 100k"), 2_500_000);
+  assert.equal(evaluateKamas("3 x 450k"), 1_350_000);
+  assert.equal(evaluateKamas("3X450k"), 1_350_000);
+  assert.equal(evaluateKamas("3 × 1.5m"), 4_500_000, "decimals kept until the end");
+  assert.equal(evaluateKamas("(2.6m - 100k) / 2"), 1_250_000);
+  assert.equal(evaluateKamas("1 + 2 * 3"), 7, "multiplication first");
+  assert.equal(evaluateKamas("1 850 000 - 50 000"), 1_800_000, "spaces still group digits");
+  assert.equal(evaluateKamas("1,850,000.00 + 1.850.000,00"), 3_700_000);
+  assert.equal(evaluateKamas("10 / 3"), 3, "the result is rounded to whole kamas");
+});
+
+test("evaluateKamas reads single amounts like parseKamas", () => {
+  for (const amount of ["250k", "1.8m", "1,5kk", "1 850 000", "-106,492.00", "1.500", "2 kamas"]) {
+    assert.equal(evaluateKamas(amount), parseKamas(amount), amount);
+  }
+});
+
+test("evaluateKamas rejects incomplete or invalid calculations", () => {
+  for (const bad of [
+    "1.2m +",
+    "+",
+    "(1 + 2",
+    "1 + 2)",
+    "2 / 0",
+    "abc + 1",
+    "x5",
+    "1 ++ 2 x",
+    "",
+    null,
+    "1+".repeat(150),
+  ]) {
+    assert.ok(Number.isNaN(evaluateKamas(bad)), String(bad));
+  }
+});
+
+test("isCalculation tells a calculation from a single amount", () => {
+  assert.equal(isCalculation("1.2m + 350k"), true);
+  assert.equal(isCalculation("1 850 000"), false);
+  assert.equal(isCalculation("250k"), false);
+  assert.equal(isCalculation(""), false);
 });

@@ -21,6 +21,7 @@ import { createState } from "./state.js";
 import { createDialogs } from "./ui/dialogs.js";
 import { $, $$ } from "./ui/dom.js";
 import { mountEntryForm } from "./ui/entry-form.js";
+import { enableKamasFields } from "./ui/kamas-field.js";
 import { renderSummary } from "./ui/summary.js";
 import { createAnalysisView } from "./ui/views/analysis.js";
 import { createHistoryView } from "./ui/views/history.js";
@@ -105,6 +106,7 @@ async function start() {
   });
 
   const actions = createActions({ store, state });
+  enableKamasFields();
   const dialogs = createDialogs(/** @type {HTMLDialogElement} */ ($("#dlg")), { state, actions });
   const historyView = createHistoryView(dialogs);
   /** @type {Record<string, import("./ui/views/view.js").View>} */

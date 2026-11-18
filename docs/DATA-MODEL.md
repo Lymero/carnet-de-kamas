@@ -16,26 +16,29 @@ settings/prices     remembered unit prices for the recipe helper
 
 ### `trades/<id>`
 
-| Field           | Type                                          | Required           | Meaning                                              |
-| --------------- | --------------------------------------------- | ------------------ | ---------------------------------------------------- |
-| `date`          | `"YYYY-MM-DD"`                                | yes                | Day the item was crafted or bought.                  |
-| `item`          | string                                        | yes                | Item name, normally the French in-game name.         |
-| `cat`           | `"craft"` \| `"resale"`                       | yes                | _Craft/FM_ or _Achat/revente_.                       |
-| `cost`          | integer ≥ 0                                   | yes                | Kamas invested, including runes for FM.              |
-| `expected`      | integer ≥ 0                                   | yes                | Planned sale price.                                  |
-| `sold`          | boolean                                       | yes                | Sold or still listed.                                |
-| `soldPrice`     | integer \| null                               | when sold          | Real sale price.                                     |
-| `soldDate`      | `"YYYY-MM-DD"` \| null                        | no                 | Sale day; null for rows imported from the old sheet. |
-| `recipe`        | `[ingredientId, quantity, unitPrice\|null][]` | no                 | Ingredient breakdown at the time of the craft.       |
-| `runes`         | integer                                       | no                 | Runes / forgemagie spend included in `cost`.         |
-| `source`        | `"sheet"`                                     | no                 | Set on rows imported from a spreadsheet.             |
-| `schemaVersion` | integer                                       | written by the app | Currently `1`.                                       |
-| `updatedAt`     | ISO timestamp                                 | written by the app | Last write.                                          |
+| Field           | Type                                          | Required           | Meaning                                               |
+| --------------- | --------------------------------------------- | ------------------ | ----------------------------------------------------- |
+| `date`          | `"YYYY-MM-DD"`                                | yes                | Day the item was crafted or bought.                   |
+| `item`          | string                                        | yes                | Item name, normally the French in-game name.          |
+| `cat`           | `"craft"` \| `"resale"`                       | yes                | _Craft/FM_ or _Achat/revente_.                        |
+| `cost`          | integer ≥ 0                                   | yes                | Kamas invested, including runes for FM.               |
+| `expected`      | integer ≥ 0                                   | yes                | Planned sale price.                                   |
+| `sold`          | boolean                                       | yes                | Sold or still listed.                                 |
+| `soldPrice`     | integer \| null                               | when sold          | Real sale price.                                      |
+| `soldDate`      | `"YYYY-MM-DD"` \| null                        | no                 | Sale day; null for rows imported from the old sheet.  |
+| `hdvTax`        | `2` \| `1` \| `0`                             | no                 | Auction-house tax in % (listed, price updated, none). |
+| `recipe`        | `[ingredientId, quantity, unitPrice\|null][]` | no                 | Ingredient breakdown at the time of the craft.        |
+| `runes`         | integer                                       | no                 | Runes / forgemagie spend included in `cost`.          |
+| `source`        | `"sheet"`                                     | no                 | Set on rows imported from a spreadsheet.              |
+| `schemaVersion` | integer                                       | written by the app | Currently `1`.                                        |
+| `updatedAt`     | ISO timestamp                                 | written by the app | Last write.                                           |
 
 Ids: `s001`…`s033` for the rows imported at set-up; new trades use `t<time><random>`.
 
-**Derived values (never stored):** profit = `(sold ? soldPrice : expected) − cost`;
-margin % = profit / cost. See `src/js/domain/trade.js`.
+**Derived values (never stored):** price = `sold ? soldPrice : expected`;
+tax = round(price × `hdvTax` / 100) (`auctionTax`; rates in `HDV_TAX`, `config.js`; absent = 0);
+profit = price − cost − tax; margin % = profit / cost. See `src/js/domain/trade.js`. The tax is
+derived rather than stored, so it follows any change of price.
 
 **Validation on write** (`validateTrade`, the same rules for the form, edits, sales and imports):
 `item` is non-empty and at most 200 characters; `date` and `soldDate` are real calendar days;
@@ -115,10 +118,10 @@ Generated by `scripts/build_catalog.py`; read-only at runtime.
 Tab-separated, oldest first, with this header:
 
 ```
-Date | Item | Catégorie | Investissement | Vente potentielle | Bénéfice | Bénéfice % | Vendu ? | Prix de vente | Date de vente
+Date | Item | Catégorie | Investissement | Vente potentielle | Bénéfice | Bénéfice % | Vendu ? | Prix de vente | Date de vente | Taxe HDV
 ```
 
 The first eight columns are the original spreadsheet's, so old and new pastes import the same
-way. _Bénéfice_ is realised for sold rows and expected otherwise. _Prix de vente_ and _Date de
-vente_ are empty for unsold rows. `parseSheetPaste` reads all of them back, so an export
+way. _Bénéfice_ is realised for sold rows and expected otherwise, after the tax. _Taxe HDV_ is the
+rate (`2 %`, `1 %`, `0 %`); on import a ticked box (`TRUE`, `VRAI`…) also means 2 %. _Prix de vente_ and _Date de vente_ are empty for unsold rows. `parseSheetPaste` reads all of them back, so an export
 re-imports without loss except for `recipe`, `runes` and `updatedAt`.

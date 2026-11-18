@@ -7,10 +7,11 @@
 import { CATEGORY, CATEGORY_LABEL } from "../config.js";
 import { ImportError } from "../actions.js";
 import { todayIso } from "../domain/dates.js";
-import { formatCompact, formatKamas, parseKamas } from "../domain/kamas.js";
+import { evaluateKamas, formatCompact, formatKamas } from "../domain/kamas.js";
 import { parseSheetPaste, withoutDuplicates } from "../domain/sheet-io.js";
 import { plural } from "../domain/text.js";
 import { $, esc, runAction, toast } from "./dom.js";
+import { taxOptions } from "./hdv-tax.js";
 
 /** @typedef {import("../domain/trade.js").Trade} Trade */
 
@@ -61,12 +62,15 @@ export function createDialogs(dialog, { state, actions }) {
         </select></div>
       </div>
       <div class="row2">
-        <div class="field"><label for="e-cost">Investissement</label><input type="text" id="e-cost" class="kamas" inputmode="decimal" value="${formatKamas(trade.cost)}" ${ro}></div>
-        <div class="field"><label for="e-exp">Vente prévue</label><input type="text" id="e-exp" class="kamas" inputmode="decimal" value="${formatKamas(trade.expected)}" ${ro}></div>
+        <div class="field"><label for="e-cost">Investissement</label><input type="text" id="e-cost" class="kamas" value="${formatKamas(trade.cost)}" ${ro}></div>
+        <div class="field"><label for="e-exp">Vente prévue</label><input type="text" id="e-exp" class="kamas" value="${formatKamas(trade.expected)}" ${ro}></div>
       </div>
-      <label class="check" for="e-sold"><input type="checkbox" id="e-sold" ${trade.sold ? "checked" : ""} ${ro}> Vendu</label>
       <div class="row2">
-        <div class="field"><label for="e-sp">Vendu à</label><input type="text" id="e-sp" class="kamas" inputmode="decimal" value="${trade.sold ? formatKamas(trade.soldPrice) : ""}" placeholder="${formatKamas(trade.expected)}" ${ro}></div>
+        <div class="field"><label for="e-tax">Taxe HDV</label><select id="e-tax" ${ro}>${taxOptions(trade.hdvTax)}</select></div>
+        <div class="field end"><label class="check" for="e-sold"><input type="checkbox" id="e-sold" ${trade.sold ? "checked" : ""} ${ro}> Vendu</label></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="e-sp">Vendu à</label><input type="text" id="e-sp" class="kamas" value="${trade.sold ? formatKamas(trade.soldPrice) : ""}" placeholder="${formatKamas(trade.expected)}" ${ro}></div>
         <div class="field"><label for="e-sd">Le</label><input type="date" id="e-sd" value="${esc(trade.soldDate ?? "")}" ${ro}></div>
       </div>
       ${recipe}
@@ -106,20 +110,21 @@ export function createDialogs(dialog, { state, actions }) {
     function save() {
       runAction(/** @type {HTMLButtonElement} */ ($("#e-save", body)), async () => {
         const sold = input("#e-sold").checked;
-        const expected = parseKamas(input("#e-exp").value);
+        const expected = evaluateKamas(input("#e-exp").value);
         const typedSale = input("#e-sp").value.trim();
         await actions.updateTrade({
           ...trade,
           item: input("#e-item").value.trim(),
           date: input("#e-date").value,
           cat: input("#e-cat").value === CATEGORY.RESALE ? CATEGORY.RESALE : CATEGORY.CRAFT,
-          cost: parseKamas(input("#e-cost").value),
+          cost: evaluateKamas(input("#e-cost").value),
           expected,
           sold,
           // An unreadable price is an error (NaN fails validation), never silently replaced.
-          soldPrice: sold ? (typedSale ? parseKamas(typedSale) : expected) : null,
+          soldPrice: sold ? (typedSale ? evaluateKamas(typedSale) : expected) : null,
           // An empty sale date is allowed: it means "unknown", as for imported rows.
           soldDate: sold ? input("#e-sd").value || null : null,
+          hdvTax: Number(input("#e-tax").value),
         });
         dialog.close();
       });

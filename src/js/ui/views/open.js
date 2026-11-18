@@ -12,9 +12,17 @@
 
 import { CATEGORY_LABEL, SLOW_SALE_DAYS } from "../../config.js";
 import { daysBetween, formatShortDate, todayIso } from "../../domain/dates.js";
-import { formatCompact, formatKamas, formatPercent, parseKamas, ratioPercent, signClass } from "../../domain/kamas.js";
-import { isCraft, isOpen, profit } from "../../domain/trade.js";
+import {
+  evaluateKamas,
+  formatCompact,
+  formatKamas,
+  formatPercent,
+  ratioPercent,
+  signClass,
+} from "../../domain/kamas.js";
+import { isCraft, isOpen, markSold, profit } from "../../domain/trade.js";
 import { $, closest, esc, renderKeepingFocus, runAction, toast } from "../dom.js";
+import { taxOptions } from "../hdv-tax.js";
 
 /**
  * @param {{actions: ReturnType<typeof import("../../actions.js").createActions>, openEditor: (t: import("../../domain/trade.js").Trade) => void}} ctx
@@ -24,7 +32,7 @@ export function createOpenView({ actions, openEditor }) {
   /** @type {HTMLElement} */ let root;
   /** @type {import("../../state.js").AppState} */ let current;
   /** The open sale form: which trade, and what has been typed so far. */
-  let sale = /** @type {{id: string, price: string, date: string}|null} */ (null);
+  let sale = /** @type {{id: string, price: string, date: string, tax: number}|null} */ (null);
 
   function render() {
     const today = todayIso();
@@ -51,8 +59,9 @@ export function createOpenView({ actions, openEditor }) {
         ${
           sale?.id === t.id
             ? `<div class="sell">
-          <div class="field"><label for="s-price">Vendu à</label><input type="text" id="s-price" class="kamas" inputmode="decimal" value="${esc(sale.price)}"></div>
+          <div class="field"><label for="s-price">Vendu à</label><input type="text" id="s-price" class="kamas" value="${esc(sale.price)}"></div>
           <div class="field"><label for="s-date">Le</label><input type="date" id="s-date" value="${esc(sale.date)}"></div>
+          <div class="field"><label for="s-tax">Taxe HDV</label><select id="s-tax">${taxOptions(sale.tax)}</select></div>
           <button class="btn primary" data-act="sell-ok">Confirmer</button>
           <button class="btn" data-act="sell-cancel">Annuler</button>
         </div>`
@@ -72,7 +81,7 @@ export function createOpenView({ actions, openEditor }) {
     if (!trade) return;
     switch (button.dataset.act) {
       case "sell":
-        sale = { id: trade.id, price: formatKamas(trade.expected), date: todayIso() };
+        sale = { id: trade.id, price: formatKamas(trade.expected), date: todayIso(), tax: trade.hdvTax };
         render();
         /** @type {HTMLInputElement|null} */ ($("#s-price", root))?.select();
         break;
@@ -85,12 +94,14 @@ export function createOpenView({ actions, openEditor }) {
         openEditor(trade);
         break;
       case "sell-ok": {
-        const price = parseKamas(sale?.price);
+        const price = evaluateKamas(sale?.price);
         const date = sale?.date || todayIso();
+        const tax = sale?.tax ?? trade.hdvTax;
         runAction(button, async () => {
-          await actions.sell(trade, price, date);
+          await actions.sell(trade, price, date, tax);
           sale = null;
-          toast(`${trade.item} vendu : ${formatPercent(ratioPercent(price - trade.cost, trade.cost))}`);
+          const result = profit(markSold({ ...trade, hdvTax: tax }, price, date)); // after the auction tax
+          toast(`${trade.item} vendu : ${formatPercent(ratioPercent(result, trade.cost))}`);
         });
         break;
       }
@@ -103,6 +114,7 @@ export function createOpenView({ actions, openEditor }) {
     if (!sale) return;
     if (target.id === "s-price") sale.price = target.value;
     else if (target.id === "s-date") sale.date = target.value;
+    else if (target.id === "s-tax") sale.tax = Number(target.value);
   }
 
   /** @param {KeyboardEvent} e */

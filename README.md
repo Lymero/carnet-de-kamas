@@ -43,6 +43,17 @@ and the status line says so.
 
 **Add a trade.** Fill the left form. Amounts accept `250k`, `1.8m`, `1 850 000`, `1,850,000.00`.
 
+**Calculate in any amount field.** Type `1.2m + 350k + 80k` (craft + FM + extras), `3 x 450k`,
+`(2.6m - 100k) / 2`: operators `+ - * /` (also `x`, `×`, `÷`) and parentheses. The result shows
+under the field while you type and replaces the calculation when you leave the field.
+
+**Auction-house tax.** Pick the _Taxe HDV_ paid on the trade: **2 %** when the item is put up
+for sale (the default), **1 %** when its price was updated, or none. That share of the price is
+deducted from the profit: of the planned price until the item sells, then of the real sale
+price. The preview shows the amount. The form remembers your last choice, and the rate can
+be changed when recording the sale (_Vendu_) or in the edit dialog. Trades recorded before
+this option have no tax.
+
 **Price a craft.** Pick a craftable item with type _Craft / FM_ and enter unit prices in the
 recipe box. Editing the investment by hand stops the auto-fill; _Utiliser le coût calculé_
 turns it back on.
@@ -61,7 +72,7 @@ sheet. The preview says how many rows are new, already present, sold, or unreada
 - Dates must exist and be day-first or ISO (`20/08/2026`, `2026-08-20`); others are rejected.
 
 **Back up.** _Historique_ → _Copier en tableau_, then paste into any spreadsheet. The columns
-are the original sheet's plus _Prix de vente_ and _Date de vente_, so pasting the backup into
+are the original sheet's plus _Prix de vente_, _Date de vente_ and _Taxe HDV_, so pasting the backup into
 _Importer depuis Sheets_ restores every figure (recipe breakdowns are not included). If the
 browser blocks the clipboard, the text opens in a dialog to copy by hand.
 

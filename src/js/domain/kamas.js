@@ -6,6 +6,10 @@
  */
 
 const NUMBER = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
+// French grouping uses a narrow no-break space, which the app's font (Barlow) has no
+// glyph for: digits then look glued together. A regular no-break space reads well.
+const NARROW_NO_BREAK_SPACE = String.fromCharCode(0x202f);
+const NO_BREAK_SPACE = String.fromCharCode(0xa0);
 /** Thousands separators and stray characters that can appear in pasted amounts. */
 const STRIP = /[\s\u00a0\u202f']/g;
 
@@ -24,6 +28,99 @@ const STRIP = /[\s\u00a0\u202f']/g;
  * @returns {number} a whole number of kamas, or NaN when the input is not an amount
  */
 export function parseKamas(raw) {
+  return Math.round(parseAmount(raw));
+}
+
+/** Operators accepted in calculations, with the symbols players may type for them. */
+const OPERATORS = Object.freeze({ "+": "+", "-": "-", "−": "-", "*": "*", "×": "*", x: "*", "/": "/", "÷": "/" });
+const MAX_EXPRESSION_LENGTH = 200;
+
+/**
+ * Reads a kamas field, which may hold a calculation: `1.2m + 350k + 80k`,
+ * `3 x 450k`, `(2.6m - 100k) / 2`. Each number accepts every form `parseKamas`
+ * does; operators are + - * / (also × x ÷), with the usual precedence and
+ * parentheses. Only the final result is rounded to whole kamas.
+ * @param {unknown} raw
+ * @returns {number} a whole number of kamas, or NaN when the input is not a valid amount or calculation
+ */
+export function evaluateKamas(raw) {
+  const text = String(raw ?? "").trim();
+  if (!text || text.length > MAX_EXPRESSION_LENGTH) return NaN;
+  const tokens = tokenize(text);
+  let index = 0;
+
+  // Recursive descent: expression := term (± term)*, term := factor (×÷ factor)*,
+  // factor := ± factor | ( expression ) | amount.
+  const expression = () => {
+    let value = term();
+    while (tokens[index]?.op === "+" || tokens[index]?.op === "-") {
+      value = tokens[index++].op === "+" ? value + term() : value - term();
+    }
+    return value;
+  };
+  const term = () => {
+    let value = factor();
+    while (tokens[index]?.op === "*" || tokens[index]?.op === "/") {
+      value = tokens[index++].op === "*" ? value * factor() : value / factor();
+    }
+    return value;
+  };
+  const factor = () => {
+    const token = tokens[index++];
+    if (token?.op === "-") return -factor();
+    if (token?.op === "+") return factor();
+    if (token?.paren === "(") {
+      const value = expression();
+      return tokens[index++]?.paren === ")" ? value : NaN;
+    }
+    return token?.amount === undefined ? NaN : parseAmount(token.amount);
+  };
+
+  const value = expression();
+  return index === tokens.length && Number.isFinite(value) ? Math.round(value) : NaN;
+}
+
+/**
+ * True when a field holds a calculation rather than a single amount.
+ * @param {unknown} raw
+ */
+export function isCalculation(raw) {
+  return tokenize(String(raw ?? "").trim()).length > 1;
+}
+
+/**
+ * Splits a calculation into amounts, operators and parentheses. Everything between
+ * operators (digits, separators, spaces, k/m suffixes) is one amount.
+ * @param {string} text
+ * @returns {Array<{amount?: string, op?: string, paren?: string}>}
+ */
+function tokenize(text) {
+  const tokens = [];
+  let amount = "";
+  const flush = () => {
+    if (amount.trim()) tokens.push({ amount });
+    amount = "";
+  };
+  for (const char of text) {
+    const op = OPERATORS[char.toLowerCase()];
+    if (op || char === "(" || char === ")") {
+      flush();
+      tokens.push(op ? { op } : { paren: char });
+    } else {
+      amount += char;
+    }
+  }
+  flush();
+  return tokens;
+}
+
+/**
+ * The number written in `raw` (see `parseKamas`), not rounded, so that
+ * calculations like `3 x 1.5` stay exact until their final result.
+ * @param {unknown} raw
+ * @returns {number} NaN when the input is not an amount
+ */
+function parseAmount(raw) {
   if (raw == null) return NaN;
   let s = String(raw)
     .toLowerCase()
@@ -51,7 +148,7 @@ export function parseKamas(raw) {
   }
 
   if (!/^-?\d*\.?\d+$/.test(s)) return NaN;
-  return Math.round(parseFloat(s) * multiplier);
+  return parseFloat(s) * multiplier;
 }
 
 /**
@@ -69,7 +166,9 @@ export function isKamas(value) {
  * @returns {string} "—" for missing values
  */
 export function formatKamas(n) {
-  return n == null || Number.isNaN(n) ? "—" : NUMBER.format(Math.round(n));
+  return n == null || Number.isNaN(n)
+    ? "—"
+    : NUMBER.format(Math.round(n)).replaceAll(NARROW_NO_BREAK_SPACE, NO_BREAK_SPACE);
 }
 
 /**

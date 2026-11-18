@@ -4,6 +4,13 @@
 
 ### Added
 
+- Calculations in every kamas field: `1.2m + 350k + 80k`, `3 x 450k`, `(2.6m - 100k) / 2`. The
+  result shows under the field while typing and replaces the calculation on leaving it.
+- _Taxe HDV_ on each trade: 2 % when listed, 1 % when the price was updated, or none. That
+  share of the price is deducted from the profit everywhere. Chosen in the form (2 % by default,
+  then the last choice), when recording a sale, or in the edit dialog. Exported and imported as
+  a _Taxe HDV_ column. Existing trades are unchanged.
+
 - **Local mode, the new normal way to run the app**: `npm start` serves it at
   http://localhost:8000 and saves everything in `data/carnet.json` on this computer (one readable
   JSON file, atomic writes, a backup at each start, git-ignored). Open tabs stay in sync. The
@@ -18,6 +25,9 @@
 
 ### Fixed
 
+- Thousands in amounts are visible again: they were grouped with a narrow no-break space, which
+  the app's font has no glyph for, so `1 850 000` showed as `1850000`.
+- Amount fields no longer ask phones for a number pad, which has neither `k`/`m` nor operators.
 - On phones, the history and analysis tables no longer widen the whole page: they scroll inside
   their card.
 

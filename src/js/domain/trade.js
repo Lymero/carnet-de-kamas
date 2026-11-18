@@ -5,7 +5,7 @@
  * The full field reference is in docs/DATA-MODEL.md.
  */
 
-import { CATEGORY, ITEM_NAME_MAX, SCHEMA_VERSION } from "../config.js";
+import { CATEGORY, HDV_TAX, ITEM_NAME_MAX, SCHEMA_VERSION } from "../config.js";
 import { isIsoDate } from "./dates.js";
 import { isKamas } from "./kamas.js";
 
@@ -25,6 +25,9 @@ import { isKamas } from "./kamas.js";
  * @property {boolean} sold         Whether the item has been sold.
  * @property {number|null} soldPrice Actual sale price, set when sold.
  * @property {string|null} soldDate ISO date of the sale, when known.
+ * @property {number} hdvTax        Auction-house tax paid, in percent of the price: 2 when the
+ *                                  item was listed, 1 when its price was updated, 0 for none
+ *                                  (see `auctionTax` and `HDV_TAX`).
  * @property {RecipeLine[]} [recipe] Ingredient breakdown, for crafts priced with the recipe helper.
  * @property {number} [runes]       Kamas spent on runes / forgemagie for this craft.
  * @property {string} [source]      Where the row came from: "sheet" for imported rows.
@@ -58,6 +61,8 @@ export function normalizeTrade(id, raw = {}) {
     sold,
     soldPrice: sold ? num(raw.soldPrice, num(raw.expected)) : null,
     soldDate: sold && isIsoDate(raw.soldDate) ? raw.soldDate : null,
+    // Absent on trades recorded before the option existed: no tax.
+    hdvTax: TAX_RATES.includes(/** @type {number} */ (raw.hdvTax)) ? /** @type {number} */ (raw.hdvTax) : HDV_TAX.NONE,
   };
   // Optional fields: keep them only when well formed (never write `undefined` back).
   const recipe = normalizeRecipe(raw.recipe);
@@ -105,6 +110,7 @@ export function validateTrade(t) {
   if (!isKamas(t.cost)) errors.push("Investissement illisible : écris par ex. 1.8m ou 1 800 000.");
   if (!isKamas(t.expected)) errors.push("Vente prévue illisible : écris par ex. 2.6m.");
   if (t.sold && !isKamas(t.soldPrice)) errors.push("Prix de vente illisible.");
+  if (t.hdvTax != null && !TAX_RATES.includes(t.hdvTax)) errors.push("Taxe HDV invalide.");
   if (t.soldDate != null && !isIsoDate(t.soldDate)) errors.push("Date de vente invalide.");
   else if (t.soldDate && isIsoDate(t.date) && t.soldDate < t.date) {
     errors.push("La date de vente est avant la date de l'opération.");
@@ -114,20 +120,34 @@ export function validateTrade(t) {
 
 /**
  * Price used for profit: the real sale price once sold, the planned price before.
- * @param {Trade} t
+ * @param {Pick<Trade, "sold"|"soldPrice"|"expected">} t
  * @returns {number}
  */
 export function salePrice(t) {
   return t.sold ? (t.soldPrice ?? t.expected) : t.expected;
 }
 
+/** The tax rates a trade may carry, in percent. */
+const TAX_RATES = Object.values(HDV_TAX);
+
 /**
- * Realised profit for sold trades, expected profit for open ones.
+ * Auction-house tax paid on the trade: its rate (`hdvTax`, in percent) of the price
+ * it sells at, or of the planned price until then.
+ * @param {Pick<Trade, "hdvTax"|"sold"|"soldPrice"|"expected">} t
+ * @returns {number} whole kamas
+ */
+export function auctionTax(t) {
+  return Math.round((salePrice(t) * (t.hdvTax ?? HDV_TAX.NONE)) / 100);
+}
+
+/**
+ * Realised profit for sold trades, expected profit for open ones, after the
+ * auction-house tax when it applies.
  * @param {Trade} t
  * @returns {number}
  */
 export function profit(t) {
-  return salePrice(t) - t.cost;
+  return salePrice(t) - t.cost - auctionTax(t);
 }
 
 /** @param {Trade} t */

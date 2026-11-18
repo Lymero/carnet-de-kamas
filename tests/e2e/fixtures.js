@@ -72,9 +72,10 @@ export async function pickCatalogItem(page, query, expectedName) {
 /**
  * Adds a trade through the entry form and waits for the confirmation.
  * @param {import("@playwright/test").Page} page
- * @param {{item: string, cost: string, expected: string, date?: string, cat?: "craft"|"resale", sold?: boolean}} trade
+ * @param {{item: string, cost: string, expected: string, date?: string, cat?: "craft"|"resale", sold?: boolean, tax?: number}} trade
+ *   `tax`: the "Taxe HDV" rate in percent, none unless asked, so amounts in tests stay round
  */
-export async function addTrade(page, { item, cost, expected, date, cat = "craft", sold = false }) {
+export async function addTrade(page, { item, cost, expected, date, cat = "craft", sold = false, tax = 0 }) {
   await page.fill("#f-item", item);
   await page.keyboard.press("Escape"); // close the suggestions
   await page.click(`#f-cat button[data-v="${cat}"]`);
@@ -82,6 +83,7 @@ export async function addTrade(page, { item, cost, expected, date, cat = "craft"
   await page.fill("#f-exp", expected);
   if (date) await page.fill("#f-date", date);
   if (sold) await page.check("#f-sold");
+  await page.selectOption("#f-tax", String(tax));
   await page.click("#f-submit");
   await expect(page.locator(".toast")).toContainText(`${item} ajouté`);
 }

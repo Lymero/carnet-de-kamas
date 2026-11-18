@@ -70,11 +70,14 @@ has focus.
 
 ### `domain/` (pure)
 
-- `trade.js`: the `Trade` type, `normalizeTrade`, `validateTrade`, `profit` / `salePrice`,
-  `markSold`, `toDocument`. `normalizeTrade` tolerates old documents and treats stored data as
+- `trade.js`: the `Trade` type, `normalizeTrade`, `validateTrade`, `profit` / `salePrice` /
+  `auctionTax`, `markSold`, `toDocument`. Every screen gets profit from `profit()`, so the
+  auction tax is applied in one place. `normalizeTrade` tolerates old documents and treats stored data as
   untrusted: every field the UI renders is type- and shape-checked (malformed recipe lines are
   dropped), on top of escaping at render time.
-- `kamas.js`: forgiving amount parser and formatters (`1.8m`, `1,850,000.00`, `1 850 000`).
+- `kamas.js`: forgiving amount parser and formatters (`1.8m`, `1,850,000.00`, `1 850 000`), and
+  `evaluateKamas`, a small recursive-descent calculator (`1.2m + 350k`, `3 x 450k`) used by
+  every kamas field the player types in; no `eval`. Imports keep using `parseKamas`.
 - `dates.js`: ISO calendar dates, never timestamps, so days don't shift across time zones.
   `isIsoDate` accepts real days only ("2026-02-30" is rejected).
 - `stats.js`: every aggregate shown on screen (`summarize`, `byCategory`, `byMonth`, `byItem`).
@@ -124,6 +127,10 @@ has focus.
 - `dialogs.js` uses the native `<dialog>` (content is a `<form>`, so Enter saves; titled by
   `#dlg-title`): edit, import, and copy-by-hand when the clipboard is blocked. Deletion is a
   two-step button because the artifact sandbox blocks `window.confirm`.
+- `kamas-field.js`: calculator behaviour for every `input.kamas` (delegated from the document):
+  a bubble with the result while typing, replaced by the result on blur.
+- `hdv-tax.js`: the tax `<select>` options (form, sale form, edit dialog) and the rate the
+  form remembers in `localStorage` (a per-browser convenience; trades store their own rate).
 - `dom.js`: `$`, `$$`, `closest` for delegated events, `toast`, `runAction`, `renderKeepingFocus`.
   The toast is a permanent live region; it moves into an open modal dialog, because the dialog's
   top layer would otherwise cover it. `runAction` shows `ActionError` messages as they are and

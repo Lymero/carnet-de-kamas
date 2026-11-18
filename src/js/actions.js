@@ -128,8 +128,11 @@ export function createActions({ store, state }) {
     addTrade,
     /** Replaces a trade after editing. @param {Trade} trade */
     updateTrade: (trade) => persist(trade),
-    /** Marks an open trade as sold. @param {Trade} trade @param {number} price @param {string} dateIso */
-    sell: (trade, price, dateIso) => persist(markSold(trade, price, dateIso)),
+    /**
+     * Marks an open trade as sold, optionally with another tax rate (a price updated at the HDV pays less).
+     * @param {Trade} trade @param {number} price @param {string} dateIso @param {number} [hdvTax]
+     */
+    sell: (trade, price, dateIso, hdvTax = trade.hdvTax) => persist(markSold({ ...trade, hdvTax }, price, dateIso)),
     removeTrade,
     importDrafts,
     rememberPrices,

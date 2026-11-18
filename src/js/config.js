@@ -20,6 +20,20 @@ export const CATEGORY_LABEL = Object.freeze({
 /** Version written on every trade document; bump when the shape changes (see docs/DATA-MODEL.md). */
 export const SCHEMA_VERSION = 1;
 
+/**
+ * Auction-house (HDV) tax, in percent of the price: paid when an item is put up for
+ * sale, or the lower rate when its price is updated. Stored on each trade.
+ * @type {Readonly<{LISTING: number, PRICE_UPDATE: number, NONE: number}>}
+ */
+export const HDV_TAX = Object.freeze({ LISTING: 2, PRICE_UPDATE: 1, NONE: 0 });
+
+/** Labels for each tax rate, in the order the choices are offered. */
+export const HDV_TAX_LABEL = Object.freeze({
+  [HDV_TAX.LISTING]: "2 %",
+  [HDV_TAX.PRICE_UPDATE]: "1 % (prix modifié)",
+  [HDV_TAX.NONE]: "Aucune",
+});
+
 /** Longest item name accepted (in-game names are well under this). */
 export const ITEM_NAME_MAX = 200;
 

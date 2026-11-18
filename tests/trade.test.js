@@ -1,6 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { markSold, normalizeTrade, profit, salePrice, toDocument, validateTrade } from "../src/js/domain/trade.js";
+import {
+  auctionTax,
+  markSold,
+  normalizeTrade,
+  profit,
+  salePrice,
+  toDocument,
+  validateTrade,
+} from "../src/js/domain/trade.js";
 
 const base = {
   id: "t1",
@@ -100,4 +108,26 @@ test("toDocument drops the id and stamps version and time", () => {
   assert.equal(doc.id, undefined);
   assert.equal(doc.schemaVersion, 1);
   assert.equal(doc.updatedAt, "2026-11-18T10:00:00.000Z");
+});
+
+test("the auction tax is a percentage of the price, deducted from the profit", () => {
+  const listed = { ...base, hdvTax: 2 };
+  assert.equal(auctionTax(listed), 87_000, "2 % of the planned 4 350 000");
+  assert.equal(profit(listed), 4_350_000 - 3_368_480 - 87_000);
+  const sold = markSold(listed, 4_000_000, "2026-08-25");
+  assert.equal(auctionTax(sold), 80_000, "once sold, 2 % of the real price");
+  assert.equal(profit(sold), 4_000_000 - 3_368_480 - 80_000);
+  assert.equal(auctionTax({ ...base, hdvTax: 1 }), 43_500, "1 % when the price was updated");
+  assert.equal(auctionTax({ ...base, hdvTax: 0 }), 0, "no tax");
+  assert.equal(auctionTax({ ...listed, expected: 1_234 }), 25, "rounded to whole kamas");
+});
+
+test("trades recorded before the tax option have no tax; unknown rates are refused", () => {
+  assert.equal(normalizeTrade("old", { item: "x", cost: 1, expected: 2 }).hdvTax, 0);
+  assert.equal(normalizeTrade("listed", { item: "x", hdvTax: 2 }).hdvTax, 2);
+  assert.equal(normalizeTrade("updated", { item: "x", hdvTax: 1 }).hdvTax, 1);
+  for (const bad of [3, "2", true, -1]) {
+    assert.equal(normalizeTrade("bad", { item: "x", hdvTax: bad }).hdvTax, 0, String(bad));
+    assert.match(validateTrade({ ...base, hdvTax: bad })[0], /Taxe HDV/, String(bad));
+  }
 });

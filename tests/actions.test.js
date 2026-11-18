@@ -115,3 +115,12 @@ test("importDrafts stops at the first failure and says how many were saved", asy
     [1, 2, 2_000_000],
   );
 });
+
+test("a sale can record another tax rate, as when the price was updated at the HDV", async () => {
+  const { state, actions } = setup();
+  const { trade } = await actions.addTrade({ ...draft, hdvTax: 2 });
+  await actions.sell(trade, 3_000_000, "2026-11-20", 1);
+  assert.equal(state.get().trades[0].hdvTax, 1);
+  await actions.sell(state.get().trades[0], 3_000_000, "2026-11-20");
+  assert.equal(state.get().trades[0].hdvTax, 1, "the trade's own rate by default");
+});

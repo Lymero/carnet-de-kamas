@@ -6,7 +6,7 @@
  * Export produces tab-separated text that pastes straight back into a sheet.
  */
 
-import { CATEGORY, CATEGORY_LABEL } from "../config.js";
+import { CATEGORY, CATEGORY_LABEL, HDV_TAX } from "../config.js";
 import { parseLooseDate } from "./dates.js";
 import { parseKamas, ratioPercent } from "./kamas.js";
 import { normalize } from "./text.js";
@@ -14,12 +14,12 @@ import { isCraft, profit, validateTrade } from "./trade.js";
 
 /** @typedef {import("./trade.js").Trade} Trade */
 /** @typedef {Omit<Trade, "id">} TradeDraft */
-/** @typedef {"date"|"item"|"cat"|"cost"|"expected"|"sold"|"soldPrice"|"soldDate"} Field */
+/** @typedef {"date"|"item"|"cat"|"cost"|"expected"|"sold"|"soldPrice"|"soldDate"|"hdvTax"} Field */
 
 /**
- * Column order of the original spreadsheet, extended with the two sale columns
- * written by `toTsv`. Used when the paste has no header row:
- * Date | Item | Catégorie | Investissement | Vente potentielle | Bénéfice | Bénéfice % | Vendu ? | Prix de vente | Date de vente
+ * Column order of the original spreadsheet, extended with the columns written by
+ * `toTsv`. Used when the paste has no header row:
+ * Date | Item | Catégorie | Investissement | Vente potentielle | Bénéfice | Bénéfice % | Vendu ? | Prix de vente | Date de vente | Taxe HDV
  * @type {Readonly<Record<Field, number>>}
  */
 const DEFAULT_COLUMNS = Object.freeze({
@@ -31,6 +31,7 @@ const DEFAULT_COLUMNS = Object.freeze({
   sold: 7,
   soldPrice: 8,
   soldDate: 9,
+  hdvTax: 10,
 });
 
 /**
@@ -47,6 +48,7 @@ const HEADER_PATTERNS = Object.freeze({
   sold: /^vendu(?! a\b)/,
   soldPrice: /^(prix de vente|vendu a)/,
   soldDate: /^date de vente/,
+  hdvTax: /^taxe/,
 });
 
 const TRUTHY = /^(true|vrai|oui|yes|x|1|✓|✔|☑)$/i;
@@ -63,6 +65,7 @@ const EXPORT_HEADER = Object.freeze([
   "Vendu ?",
   "Prix de vente",
   "Date de vente",
+  "Taxe HDV",
 ]);
 
 /**
@@ -120,6 +123,7 @@ export function parseSheetPaste(text) {
       sold,
       soldPrice: sold ? (Number.isNaN(typedSalePrice) ? expected : typedSalePrice) : null,
       soldDate: sold ? parseLooseDate(cell("soldDate")) : null,
+      hdvTax: parseTaxRate(cell("hdvTax")),
       source: "sheet",
     };
     if (validateTrade(draft).length) invalid += 1;
@@ -167,7 +171,7 @@ export function withoutDuplicates(drafts, existing) {
 
 /**
  * Tab-separated export, oldest first, with a header row. Every stored figure
- * (planned price, sale price, sale date) has its own column, so the text
+ * (planned price, sale price, sale date, auction tax) has its own column, so the text
  * re-imports through `parseSheetPaste` without loss. Recipe breakdowns are not exported.
  * @param {Trade[]} trades
  * @returns {string}
@@ -188,6 +192,7 @@ export function toTsv(trades) {
         t.sold ? "TRUE" : "FALSE",
         t.sold ? (t.soldPrice ?? t.expected) : "",
         t.soldDate ?? "",
+        `${t.hdvTax} %`,
       ];
     });
   return [EXPORT_HEADER, ...rows].map((r) => r.map(tsvCell).join("\t")).join("\n");
@@ -200,4 +205,16 @@ export function toTsv(trades) {
  */
 function tsvCell(value) {
   return String(value).replace(/[\t\r\n]+/g, " ");
+}
+
+/**
+ * Reads a "Taxe HDV" cell: a rate ("2 %", "1", "0 %"), or a ticked box ("TRUE",
+ * "VRAI"…) meaning the usual listing tax. Anything else means no tax.
+ * @param {string} text
+ * @returns {number} percent
+ */
+function parseTaxRate(text) {
+  const rate = text.match(/^([0-9]+)(?:[.,]0+)?\s*%?$/);
+  if (rate && Object.values(HDV_TAX).includes(Number(rate[1]))) return Number(rate[1]);
+  return TRUTHY.test(text) ? HDV_TAX.LISTING : HDV_TAX.NONE;
 }

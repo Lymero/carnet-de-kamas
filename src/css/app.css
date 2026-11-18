@@ -280,6 +280,14 @@ input.kamas {
   background: var(--accent-soft);
   border-radius: 6px;
 }
+.preview small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+.preview b {
+  white-space: nowrap;
+}
 
 .ac {
   position: absolute;
@@ -586,6 +594,25 @@ textarea {
   min-height: 160px;
   font-size: 13px;
   font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+/* Result of a calculation typed in a kamas field (ui/kamas-field.js). */
+.calc {
+  position: fixed;
+  z-index: 60;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  pointer-events: none;
+}
+.calc.bad {
+  background: var(--bad);
+}
+.calc[hidden] {
+  display: none;
 }
 .toast:empty {
   display: none;

@@ -9,10 +9,12 @@
 import { CATEGORY } from "../config.js";
 import { recipeCost } from "../data/catalog.js";
 import { todayIso } from "../domain/dates.js";
-import { formatKamas, formatPercent, isKamas, parseKamas, ratioPercent, signClass } from "../domain/kamas.js";
+import { evaluateKamas, formatKamas, formatPercent, isKamas, ratioPercent, signClass } from "../domain/kamas.js";
 import { itemHistory } from "../domain/stats.js";
 import { normalize } from "../domain/text.js";
+import { auctionTax, profit } from "../domain/trade.js";
 import { attachAutocomplete } from "./autocomplete.js";
+import { loadTaxPreference, saveTaxPreference, taxOptions } from "./hdv-tax.js";
 import { $, $$, esc, runAction, toast } from "./dom.js";
 
 /**
@@ -30,6 +32,8 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     expected: /** @type {HTMLInputElement} */ ($("#f-exp", form)),
     date: /** @type {HTMLInputElement} */ ($("#f-date", form)),
     sold: /** @type {HTMLInputElement} */ ($("#f-sold", form)),
+    tax: /** @type {HTMLSelectElement} */ ($("#f-tax", form)),
+    previewLabel: $("#f-preview span", form),
     preview: $("#f-preview b", form),
     submit: /** @type {HTMLButtonElement} */ ($("#f-submit", form)),
   };
@@ -109,7 +113,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   }
   el.recipe.addEventListener("input", (e) => {
     const t = /** @type {HTMLInputElement} */ (e.target);
-    const value = parseKamas(t.value);
+    const value = evaluateKamas(t.value);
     // Unreadable or negative amounts count as "no price yet".
     if (t.dataset.ing) {
       if (isKamas(value)) draft.unitPrices[t.dataset.ing] = value;
@@ -140,15 +144,24 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     updatePreview();
   });
   el.expected.addEventListener("input", updatePreview);
+  el.tax.addEventListener("change", () => {
+    saveTaxPreference(Number(el.tax.value));
+    updatePreview();
+  });
   function updatePreview() {
-    const cost = parseKamas(el.cost.value);
-    const expected = parseKamas(el.expected.value);
+    const cost = evaluateKamas(el.cost.value);
+    const expected = evaluateKamas(el.expected.value);
+    const planned = { cost, expected, sold: false, soldPrice: null, hdvTax: Number(el.tax.value) };
+    const tax = Number.isNaN(expected) ? 0 : auctionTax(planned);
+    const detail = document.createElement("small");
+    detail.textContent = `taxe HDV de ${formatKamas(tax)} (${planned.hdvTax} %) déduite`;
+    el.previewLabel.replaceChildren("Bénéfice prévu", ...(tax ? [detail] : []));
     if (Number.isNaN(cost) || Number.isNaN(expected)) {
       el.preview.textContent = "—";
       el.preview.className = "num";
       return;
     }
-    const p = expected - cost;
+    const p = profit(/** @type {import("../domain/trade.js").Trade} */ (planned));
     el.preview.textContent = `${formatKamas(p)} (${formatPercent(ratioPercent(p, cost))})`;
     el.preview.className = `num ${signClass(p)}`;
   }
@@ -157,6 +170,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   function reset() {
     form.reset();
     el.date.value = todayIso();
+    el.tax.value = String(loadTaxPreference());
     Object.assign(draft, { craftItem: null, unitPrices: {}, runes: 0, costFollowsRecipe: true });
     setCategory(draft.cat);
     updatePreview();
@@ -165,17 +179,18 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     e.preventDefault();
     runAction(el.submit, async () => {
       const sold = el.sold.checked;
-      const expected = parseKamas(el.expected.value);
+      const expected = evaluateKamas(el.expected.value);
       /** @type {Omit<import("../domain/trade.js").Trade, "id">} */
       const trade = {
         date: el.date.value || todayIso(),
         item: el.item.value,
         cat: draft.cat,
-        cost: parseKamas(el.cost.value),
+        cost: evaluateKamas(el.cost.value),
         expected,
         sold,
         soldPrice: sold ? expected : null,
         soldDate: sold ? todayIso() : null,
+        hdvTax: Number(el.tax.value),
       };
       if (draft.craftItem && draft.cat === CATEGORY.CRAFT) {
         trade.recipe = draft.craftItem.recipe.map(([id, qty]) => [id, qty, priceOf(id) ?? null]);
@@ -190,6 +205,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   });
 
   el.date.value = todayIso();
+  el.tax.innerHTML = taxOptions(loadTaxPreference());
 
   return {
     /** Re-render parts that depend on loaded data (catalog, remembered prices). */
@@ -197,7 +213,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     /** Disables the form for read-only viewers. */
     applyWriteMode() {
       const ro = !state.get().canWrite;
-      $$("input, button", form).forEach((x) => {
+      $$("input, select, button", form).forEach((x) => {
         /** @type {HTMLInputElement} */ (x).disabled = ro;
       });
       renderRecipe();

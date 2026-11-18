@@ -28,6 +28,7 @@ test("autocomplete suggests catalog items and the recipe helper prices the craft
 
 test("the preview shows expected profit and margin", async ({ page }) => {
   await openApp(page, { catalog: false });
+  await page.selectOption("#f-tax", "0");
   await page.fill("#f-cost", "1.8m");
   await page.fill("#f-exp", "2.6m");
   await expect(page.locator("#f-preview b")).toHaveText(/^800\s000 \(\+44,4\s%\)$/);

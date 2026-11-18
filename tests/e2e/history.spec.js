@@ -114,6 +114,7 @@ test("export copies a sheet with the sale columns", async ({ page, context }) =>
     "Vendu ?",
     "Prix de vente",
     "Date de vente",
+    "Taxe HDV",
   ]);
   expect(first.split(TAB).slice(0, 5)).toEqual(["2026-01-10", "Kokulte", "Achat/revente", "500000", "700000"]);
 });
