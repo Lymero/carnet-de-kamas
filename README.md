@@ -13,10 +13,33 @@ maintained spreadsheet with:
 
 The interface is in French, as are the item names; code and docs are in English.
 
-## Using it
+## Running it
 
-The app is published as a Claude artifact. Open it from claude.ai while signed in;
-your data is stored with the artifact and follows you across devices.
+Requirements: [Node.js](https://nodejs.org/) 22 or newer. In the project folder:
+
+```bash
+npm start
+```
+
+Then open **http://localhost:8000** and leave the terminal open while you use the app
+(Ctrl+C stops it). Options: `npm start -- --port 8080`, `npm start -- --data D:/kamas/carnet.json`.
+
+**Your data** is in `data/carnet.json` in the project folder (the terminal prints the exact
+path when the server starts):
+
+- One readable JSON file with every trade and remembered price (format in
+  [docs/DATA-MODEL.md](docs/DATA-MODEL.md)). Copy it to back up; replace it, with the server
+  stopped, to restore.
+- Each start copies the previous file to `data/carnet.backup.json` first.
+- Writes are atomic: a crash or power cut cannot leave a half-written file.
+- It never leaves your computer, and git ignores the `data/` folder, so it is never committed.
+- Several tabs can be open at once: a change in one appears in the others.
+
+The server only answers this computer (127.0.0.1) and refuses requests from other web sites.
+Opened another way (from a plain file server, for example), the page keeps data in memory only,
+and the status line says so.
+
+## Using it
 
 **Add a trade.** Fill the left form. Amounts accept `250k`, `1.8m`, `1 850 000`, `1,850,000.00`.
 
@@ -42,9 +65,6 @@ are the original sheet's plus _Prix de vente_ and _Date de vente_, so pasting th
 _Importer depuis Sheets_ restores every figure (recipe breakdowns are not included). If the
 browser blocks the clipboard, the text opens in a dialog to copy by hand.
 
-Sharing: the page starts private. If you share it, other people can **view** it; only
-the owner can change data (database rule `write: owner`).
-
 ## Project layout
 
 ```
@@ -59,9 +79,13 @@ carnet-de-kamas/
 ├── docs/
 │   ├── ARCHITECTURE.md     layers, data flow, design decisions
 │   └── DATA-MODEL.md       stored documents, validation, catalog format
+├── server/                 the local server (npm start), no dependencies
+│   ├── main.js             command line: port, data file
+│   ├── app.js              serves src/ and the data API (/api/...)
+│   └── file-store.js       the data file: atomic writes, backup
 ├── scripts/
-│   ├── build_catalog.py    regenerates src/data/dofus-data.json from game data
-│   └── serve.js            static server for src/ (npm run serve, browser tests)
+│   └── build_catalog.py    regenerates src/data/dofus-data.json from game data
+├── data/                   your data file (created by npm start; git-ignored)
 ├── src/                    everything that is published
 │   ├── index.html          static shell
 │   ├── css/app.css         design tokens + styles (light & dark)
@@ -90,21 +114,21 @@ in `package-lock.json`.
 npm ci                   # install the pinned dev tools and enable the git hooks
 npm run check            # format check, lint, type check, JS and Python tests
 npm run test:e2e         # the real page in Chrome
-npm run serve            # http://localhost:8000 (ES modules need http://, not file://)
+npm start                # the app at http://localhost:8000, with your data
 ```
 
-| Script                  | What it does                                                      |
-| ----------------------- | ----------------------------------------------------------------- |
-| `npm run check`         | The five scripts below, from `format` to `test:py`.               |
-| `npm run check:all`     | `check`, then `test:coverage` and `test:e2e`.                     |
-| `npm run format`        | Rewrites files with Prettier (`format:check` only verifies).      |
-| `npm run lint`          | ESLint.                                                           |
-| `npm run typecheck`     | `tsc` over `src/js` using the JSDoc types; emits nothing.         |
-| `npm test`              | `node:test` suites in `tests/*.test.js`.                          |
-| `npm run test:py`       | `unittest` for `scripts/build_catalog.py`.                        |
-| `npm run test:coverage` | JS tests with coverage; fails under 90 % lines / 85 % branches.   |
-| `npm run test:e2e`      | Playwright tests in `tests/e2e/` against the served page.         |
-| `npm run serve`         | Serves `src/` on port 8000 (`scripts/serve.js`, no dependencies). |
+| Script                  | What it does                                                    |
+| ----------------------- | --------------------------------------------------------------- |
+| `npm run check`         | The five scripts below, from `format` to `test:py`.             |
+| `npm run check:all`     | `check`, then `test:coverage` and `test:e2e`.                   |
+| `npm run format`        | Rewrites files with Prettier (`format:check` only verifies).    |
+| `npm run lint`          | ESLint.                                                         |
+| `npm run typecheck`     | `tsc` over `src/js` using the JSDoc types; emits nothing.       |
+| `npm test`              | `node:test` suites in `tests/*.test.js`.                        |
+| `npm run test:py`       | `unittest` for `scripts/build_catalog.py`.                      |
+| `npm run test:coverage` | JS tests with coverage; fails under 90 % lines / 85 % branches. |
+| `npm run test:e2e`      | Playwright tests in `tests/e2e/` against the served page.       |
+| `npm start`             | The local server (`server/main.js`): the app plus its data API. |
 
 CI runs `check` and `test:coverage` on Node 22 and 24, and `test:e2e` on Node 24, for every push
 to `main` and every pull request. A failed browser run uploads the Playwright report and traces.
@@ -119,9 +143,6 @@ to `main` and every pull request. A failed browser run uploads the Playwright re
 A failing check stops the commit or push. To skip once in an emergency, use `--no-verify`; CI
 still runs everything. The hooks check the working tree, so stash unrelated edits before a
 partial commit.
-
-Run locally, the page has no `db` capability and falls back to an in-memory store:
-everything works, nothing is saved, and the status line says so.
 
 ### Conventions
 
@@ -150,11 +171,12 @@ npm run build:catalog -- path/to/dofus.sqlite
 The output has one item or recipe per line, so the commit diff lists what the game update changed.
 See the docstring in `scripts/build_catalog.py` for what is included and how recipes are read.
 
-### Publishing
+### Publishing as a Claude artifact (optional)
 
-The published files are the contents of `src/` (paths relative to it: `index.html`,
-`css/app.css`, `js/...`, `data/dofus-data.json`). Republish to the same artifact so the
-stored data is kept. The page declares two capabilities:
+The app can also run as a claude.ai artifact, storing its data in the artifact database
+instead of a file (`createCloudStore`). The published files are the contents of `src/`
+(paths relative to it: `index.html`, `css/app.css`, `js/...`, `data/dofus-data.json`);
+republish to the same artifact to keep its data. The page declares two capabilities:
 
 ```json
 { "db": { "rules": [{ "path": "", "read": "view", "write": "owner" }] }, "user": {} }
@@ -165,6 +187,5 @@ stored data is kept. The page declares two capabilities:
 - **No live HDV prices.** Ankama publishes no market API, and tools that read the game
   client break the terms of use. Prices are what you type; unit prices are remembered.
 - **Recipes come from data-mined game files.** Check quantities the first time you use a recipe.
-  `src/data/dofus-data.json` is derived from Ankama's game client: keep that in mind before
-  making the repository public.
+  `src/data/dofus-data.json` is derived from Ankama's game client.
 - Rows imported from the old spreadsheet have no sale date; they count in the month of the trade date.

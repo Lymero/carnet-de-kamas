@@ -4,10 +4,15 @@
 
 ### Added
 
+- **Local mode, the new normal way to run the app**: `npm start` serves it at
+  http://localhost:8000 and saves everything in `data/carnet.json` on this computer (one readable
+  JSON file, atomic writes, a backup at each start, git-ignored). Open tabs stay in sync. The
+  server has no dependencies, only answers this computer, and refuses requests from other sites.
+  The claude.ai artifact mode still works.
+
 - End-to-end browser tests (`npm run test:e2e`, Playwright with the installed Chrome) covering
   every view, the dialogs, import/export, themes, phone widths, the cloud code path and read-only
   mode; they run in CI and fail on any page error.
-- `npm run serve` uses a small Node server (`scripts/serve.js`) instead of Python.
 - Git hooks, enabled by `npm install`: `npm run check` before each commit, and
   `npm run check:all` (coverage and browser tests included) before each push.
 

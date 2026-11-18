@@ -12,15 +12,25 @@ import { test as base, expect } from "@playwright/test";
 
 export { expect };
 
+/**
+ * The one failure that is expected: on the files-only server, the page's probe for
+ * the data API gets a 404, which is how it knows to keep data in memory.
+ * @param {string} url
+ * @param {number|string} status
+ */
+const isApiProbe404 = (url, status) => /\/api\/info$/.test(url) && String(status).includes("404");
+
 export const test = base.extend({
   page: async ({ page }, use) => {
     const problems = [];
     page.on("pageerror", (error) => problems.push(`page error: ${error.message}`));
     page.on("console", (message) => {
-      if (message.type() === "error") problems.push(`console error: ${message.text()}`);
+      if (message.type() !== "error" || isApiProbe404(message.location().url, message.text())) return;
+      problems.push(`console error: ${message.text()}`);
     });
     page.on("response", (response) => {
-      if (response.status() >= 400) problems.push(`HTTP ${response.status()} ${response.url()}`);
+      if (response.status() < 400 || isApiProbe404(response.url(), response.status())) return;
+      problems.push(`HTTP ${response.status()} ${response.url()}`);
     });
     await use(page);
     expect(problems, "the page reported errors").toEqual([]);

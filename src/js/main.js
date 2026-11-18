@@ -3,15 +3,16 @@
  *
  * Start-up sequence:
  *   1. render the shell with a loading state;
- *   2. connect storage (cloud `db` capability, or memory when unavailable);
+ *   2. connect storage: the local server's data file (`npm start`), the claude.ai `db`
+ *      capability when published as an artifact, or memory when neither is there;
  *   3. mount the form, dialogs and router; subscribe to trades;
  *   4. load the item catalog in the background (autocomplete works without it).
  */
 
 import { createActions } from "./actions.js";
-import { CATALOG_URL, DB_PATHS, LOAD_TIMEOUT_MS } from "./config.js";
+import { CATALOG_URL, DB_PATHS, LOAD_TIMEOUT_MS, LOCAL_API_URL } from "./config.js";
 import { ItemCatalog } from "./data/catalog.js";
-import { createCloudStore, createMemoryStore, describeStoreError } from "./data/store.js";
+import { createCloudStore, createLocalStore, createMemoryStore, describeStoreError } from "./data/store.js";
 import { todayIso } from "./domain/dates.js";
 import { plural } from "./domain/text.js";
 import { isOpen } from "./domain/trade.js";
@@ -38,13 +39,16 @@ const state = createState({
 });
 
 /**
- * Obtains the artifact capabilities. `claude.use` resolves null when the page
- * runs outside claude.ai or the viewer is signed out; we then keep data in memory.
+ * Picks the storage. Published on claude.ai, the page uses the artifact capabilities
+ * (`claude.use` resolves null for a signed-out viewer: memory then). Otherwise it uses
+ * the local server's data API when the page was served by `npm start`, else memory.
  * @returns {Promise<{store: import("./data/store.js").TradeStore, user: any}>}
  */
 async function connectStorage() {
   const host = /** @type {any} */ (window).claude;
-  if (typeof host?.use !== "function") return { store: createMemoryStore(), user: null };
+  if (typeof host?.use !== "function") {
+    return { store: (await hasLocalServer()) ? createLocalStore() : createMemoryStore(), user: null };
+  }
   // Settled separately: a failing `user` capability must not throw away a working database.
   const [db, user] = await Promise.allSettled([host.use("db"), host.use("user")]);
   const namespace = db.status === "fulfilled" ? db.value : null;
@@ -52,6 +56,16 @@ async function connectStorage() {
     store: namespace ? createCloudStore(namespace) : createMemoryStore(),
     user: user.status === "fulfilled" ? user.value : null,
   };
+}
+
+/** True when the page was served by the local server with its data API (server/app.js). */
+async function hasLocalServer() {
+  try {
+    const response = await fetch(`${LOCAL_API_URL}info`);
+    return response.ok && (await response.json()).store === "file";
+  } catch {
+    return false;
+  }
 }
 
 /** @param {any} user @returns {Promise<boolean>} */
@@ -82,7 +96,7 @@ async function start() {
     status:
       store.mode === "memory"
         ? {
-            text: "Sauvegarde indisponible ici : ouvre la page depuis claude.ai, connecté, pour garder tes données.",
+            text: "Sauvegarde indisponible : lance l'app avec « npm start » pour garder tes données.",
             warn: true,
           }
         : writable
@@ -172,10 +186,11 @@ async function start() {
       if (confirmed) {
         clearTimeout(loadTimer);
         // Also replaces a "slow connection" warning shown by the timer.
-        if (store.mode === "cloud") {
+        if (store.mode !== "memory") {
+          const where = store.mode === "local" ? "enregistré sur ce PC" : "sauvegardé";
           state.set({
             status: writable
-              ? { text: `${plural(trades.length, "opération")} · sauvegardé`, warn: false }
+              ? { text: `${plural(trades.length, "opération")} · ${where}`, warn: false }
               : readOnlyStatus,
           });
         }

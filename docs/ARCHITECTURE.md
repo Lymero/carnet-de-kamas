@@ -6,6 +6,7 @@
 2. Trustworthy numbers: one place computes profit; the same functions feed every screen.
 3. Easy to change: logic testable without a browser; storage swappable.
 4. No toolchain: plain ES modules, no dependencies, nothing to build.
+5. Your data stays on your computer, in one readable file.
 
 ## Layers
 
@@ -29,6 +30,7 @@ flowchart TD
   store --> domain
   catalog[data/catalog.js<br/>items · recipes · search] --> state
   domain[domain/<br/>trade · kamas · dates · stats · sheet-io · text<br/><i>pure</i>]
+  store <--> server[server/<br/>local data file]
   store <--> db[(artifact db<br/>or memory)]
 ```
 
@@ -39,6 +41,7 @@ flowchart TD
 | `actions.js`, `state.js` | `data/`, `domain/`     | touch the DOM                     |
 | `ui/`                    | everything above       | write to storage directly         |
 | `main.js`                | everything             | contain business logic            |
+| `server/`                | Node built-ins only    | import browser code from `src/`   |
 
 ## Data flow
 
@@ -83,9 +86,24 @@ has focus.
 
 - `catalog.js`: `ItemCatalog` built from `dofus-data.json`; name lookup, ranked suggestions,
   `recipeCost`. Ranking lives here, not in the UI, so it is unit tested.
-- `store.js`: `TradeStore` interface with two implementations, `createCloudStore(db)` and
-  `createMemoryStore()`; `withRetry` for transient errors; `describeStoreError` for messages.
-  The cloud store merges price writes and re-subscribes when the host drops the trades listener.
+- `store.js`: `TradeStore` interface with three implementations: `createLocalStore()` (the local
+  server's data API), `createCloudStore(db)` (claude.ai artifact) and `createMemoryStore()`;
+  `withRetry` for transient errors; `describeStoreError` for messages. `main.js` picks the cloud
+  store inside claude.ai, else the local store when `GET api/info` answers, else memory. The
+  local store follows changes from other tabs through server-sent events and reloads the list
+  on every reconnection; the cloud store merges price writes and re-subscribes when the host
+  drops the trades listener.
+
+### `server/` (Node, no dependencies)
+
+- `main.js`: command line (`npm start`, `--port`, `--data`, `--static`); flushes pending writes
+  on Ctrl+C.
+- `app.js`: serves `src/` and the JSON API (`/api/info`, `trades`, `prices`, `events`). It only
+  listens on 127.0.0.1 and refuses requests with a foreign `Host` (DNS rebinding) or `Origin`
+  (other sites); writes must be `application/json`, so browsers cannot send them cross-site
+  without a preflight, which the server never answers.
+- `file-store.js`: the data file. It is read once, and every change is applied to a copy, written
+  atomically and only then kept in memory, one change at a time. Each start writes a backup.
 
 ### Application
 
@@ -114,18 +132,23 @@ has focus.
 
 ## Design decisions
 
-| Decision                             | Why                                                                          | Trade-off                                                                         |
-| ------------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Artifact `db` capability for storage | Survives reloads and devices; Claude can read and write it (imports, fixes). | Needs claude.ai sign-in; falls back to memory otherwise.                          |
-| One document per trade               | Small writes, no conflicts between rows, live updates per row.               | ~10k trades fit well under the 25,000-document cap; archive if ever needed.       |
-| Remembered prices in one document    | Read once at start; each save merges only the prices that changed.           | Last write wins for the same ingredient edited on two devices at the same moment. |
-| Catalog as a static JSON file        | Browser fetches to other sites are blocked in artifacts; offline-friendly.   | Must be regenerated after game updates (`npm run build:catalog`).                 |
-| No framework, no build               | Nothing to install or upgrade; source is what runs.                          | Manual DOM updates; kept manageable by the view contract.                         |
-| Dedup key = date + investment        | Survives spelling fixes of item names. Matching counts occurrences.          | A re-typed row with another date or cost is not recognised as a duplicate.        |
-| French UI, English code              | The player reads French item names in game; code follows common practice.    | —                                                                                 |
+| Decision                          | Why                                                                        | Trade-off                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| One local JSON file for storage   | Private, works offline, easy to read, back up and restore.                 | One computer; the server must be running (`npm start`).                           |
+| Artifact `db` kept as an option   | The page still runs on claude.ai with no other change.                     | Two backends to keep working (both covered by tests).                             |
+| One document per trade            | Small writes, no conflicts between rows, live updates per row.             | ~10k trades fit well under the 25,000-document cap; archive if ever needed.       |
+| Remembered prices in one document | Read once at start; each save merges only the prices that changed.         | Last write wins for the same ingredient edited on two devices at the same moment. |
+| Catalog as a static JSON file     | Browser fetches to other sites are blocked in artifacts; offline-friendly. | Must be regenerated after game updates (`npm run build:catalog`).                 |
+| No framework, no build            | Nothing to install or upgrade; source is what runs.                        | Manual DOM updates; kept manageable by the view contract.                         |
+| Dedup key = date + investment     | Survives spelling fixes of item names. Matching counts occurrences.        | A re-typed row with another date or cost is not recognised as a duplicate.        |
+| French UI, English code           | The player reads French item names in game; code follows common practice.  | —                                                                                 |
 
 ## Error handling
 
+- Local mode: a stopped server is reported in the status line ("Serveur local injoignable"),
+  and the page reloads everything as soon as the event stream reconnects. A failed save shows
+  why and changes nothing. An unreadable data file stops the server at start, with the file
+  left untouched.
 - Transient storage errors (`unavailable`, `resource_exhausted`) are retried up to 4 times with
   backoff; others fail fast with a clear message (`describeStoreError`).
 - If the database does not answer within 10 s, the status line says so; the listener keeps
@@ -153,11 +176,17 @@ has focus.
 tests load (everything except the DOM modules).
 
 `npm run test:e2e` covers the DOM: Playwright drives the real page in Chrome
-(`tests/e2e/`, served by `scripts/serve.js`). It covers the entry form and recipe helper, sales,
+(`tests/e2e/`). It covers the entry form and recipe helper, sales,
 history filters, the edit dialog, import, export (with and without clipboard access), analysis,
 navigation, the dark theme and phone widths. A fake of the `db` and `user` capabilities
 (`installFakeDb` in `tests/e2e/fixtures.js`) covers the cloud code path, read-only viewers and
-hostile stored data. Every test also fails on any page error, console error or failed request.
+hostile stored data. Most tests run against `server/main.js --static`, so each starts with an
+empty in-memory notebook; `local.spec.js` runs against a second, full server on a throwaway
+data file and checks saving, reloading, sync between tabs, deletion and remembered prices.
+Every test also fails on any page error, console error or failed request.
+
+The server has its own unit tests (`tests/server.test.js`: data file, API, security checks,
+events), and `tests/local-store.test.js` runs the browser's local store against the real server.
 
 CI (`.github/workflows/ci.yml`) runs `check` and coverage on Node 22 and 24, and the browser
 tests on Node 24, on every push to `main` and every pull request.

@@ -2,8 +2,12 @@
 
 ## Stored documents
 
-Storage is the artifact's document database. Paths with an even number of segments are
-documents, odd ones are collections.
+The app stores documents in one of two places, with the same shapes:
+
+- **Local data file** (`npm start`, the normal way to run it): `data/carnet.json`, described
+  in [Local data file](#local-data-file) below.
+- **Claude artifact database** (when published on claude.ai): paths with an even number of
+  segments are documents, odd ones are collections.
 
 ```
 trades/<id>         one Trade per document
@@ -57,13 +61,37 @@ Ingredient id → last unit price typed, in kamas. The document is created on th
 then each save is a merge (`update({ p: { <id>: price } })`) of only the prices that changed, so
 prices saved from another device, or not loaded yet, are kept.
 
-### Access rules
+### Access rules (artifact only)
 
 ```json
 { "db": { "rules": [{ "path": "", "read": "view", "write": "owner" }] } }
 ```
 
 Anyone the page is shared with can read; only the owner writes.
+
+## Local data file
+
+`data/carnet.json` by default (`--data` or `CARNET_DATA` to change it), written by
+`server/file-store.js`, pretty-printed so it can be read and diffed:
+
+```json
+{
+  "version": 1,
+  "trades": {
+    "s001": { "date": "2026-08-20", "item": "Ceinture du Minotot", "cat": "craft", "cost": 173796, "...": "..." }
+  },
+  "prices": { "13157": 12500 }
+}
+```
+
+- `trades` holds the `trades/<id>` documents above, keyed by id; `prices` is the `p` map of
+  `settings/prices`.
+- `version` is the file format (currently 1). A file from a newer version, or one that is not
+  valid JSON, is refused at start and left untouched.
+- Every change rewrites the file atomically (temporary file, fsync, rename), one at a time.
+- Each start copies the previous file to `carnet.backup.json` next to it.
+- The server checks the shape of what it stores (ids, a JSON object per trade, whole
+  non-negative prices); the field-level rules are `validateTrade`'s, applied in the browser.
 
 ## Item catalog (`src/data/dofus-data.json`)
 

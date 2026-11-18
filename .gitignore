@@ -31,3 +31,6 @@ desktop.ini
 # Playwright output
 playwright-report/
 test-results/
+
+# Your local data (npm start writes it here); personal, never committed
+/data/
