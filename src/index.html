@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Carnet de Kamas</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='%23966710'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>K</text></svg>"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body>
+    <!-- Static shell. All dynamic content is rendered by js/main.js; see docs/ARCHITECTURE.md. -->
+    <div class="wrap">
+      <header class="top">
+        <h1>Carnet de Kamas</h1>
+        <div class="status" id="status" role="status">Chargement…</div>
+      </header>
+
+      <section class="kpis" id="kpis" aria-label="Résumé"></section>
+
+      <div class="main">
+        <form class="card form" id="addForm" autocomplete="off" novalidate>
+          <h2>Nouvelle opération</h2>
+          <div class="field">
+            <label for="f-item">Objet</label>
+            <input
+              type="text"
+              id="f-item"
+              placeholder="Cape d'Ogivol…"
+              role="combobox"
+              aria-expanded="false"
+              aria-controls="f-item-list"
+              aria-autocomplete="list"
+            />
+            <div class="ac" id="f-item-list" role="listbox" aria-label="Suggestions" hidden></div>
+          </div>
+          <div class="field">
+            <span class="lbl" id="f-cat-label">Type</span>
+            <div class="seg" id="f-cat" role="group" aria-labelledby="f-cat-label">
+              <button type="button" data-v="craft" aria-pressed="true">Craft / FM</button>
+              <button type="button" data-v="resale" aria-pressed="false">Achat / revente</button>
+            </div>
+          </div>
+          <div id="recipeBox"></div>
+          <div class="row2">
+            <div class="field">
+              <label for="f-cost">Investissement</label>
+              <input
+                type="text"
+                id="f-cost"
+                class="kamas"
+                inputmode="decimal"
+                placeholder="1.8m"
+                aria-describedby="f-hint"
+              />
+            </div>
+            <div class="field">
+              <label for="f-exp">Vente prévue</label>
+              <input
+                type="text"
+                id="f-exp"
+                class="kamas"
+                inputmode="decimal"
+                placeholder="2.6m"
+                aria-describedby="f-hint"
+              />
+            </div>
+          </div>
+          <div class="hint" id="f-hint">Raccourcis : 250k, 1.8m, 1 850 000</div>
+          <div class="row2">
+            <div class="field">
+              <label for="f-date">Date</label>
+              <input type="date" id="f-date" />
+            </div>
+            <div class="field end">
+              <label class="check" for="f-sold"><input type="checkbox" id="f-sold" /> Déjà vendu</label>
+            </div>
+          </div>
+          <div class="preview" id="f-preview"><span>Bénéfice prévu</span><b class="num">—</b></div>
+          <button class="btn primary" type="submit" id="f-submit">Ajouter</button>
+        </form>
+
+        <section class="card">
+          <nav class="tabs" id="tabs" aria-label="Vues">
+            <a href="#en-cours" data-v="en-cours">En cours <span class="count" id="c-open">0</span></a>
+            <a href="#historique" data-v="historique">Historique <span class="count" id="c-all">0</span></a>
+            <a href="#analyse" data-v="analyse">Analyse</a>
+          </nav>
+          <div class="view" id="view"><div class="empty">Chargement de ton carnet…</div></div>
+        </section>
+      </div>
+    </div>
+
+    <dialog id="dlg" aria-labelledby="dlg-title"><form class="dlg" novalidate></form></dialog>
+
+    <!-- Live region for short messages; moved into the open dialog when there is one (see ui/dom.js). -->
+    <div class="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

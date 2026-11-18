@@ -1,0 +1,31 @@
+{
+  "name": "carnet-de-kamas",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Tracker for Dofus crafting/forgemagie and resale profits.",
+  "author": "Christopher",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.js\"",
+    "test:py": "python3 -m unittest discover -s tests -p \"test_*.py\"",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"src/js/**\" --test-coverage-lines=90 --test-coverage-branches=85 \"tests/**/*.test.js\"",
+    "lint": "eslint .",
+    "typecheck": "tsc -p jsconfig.json",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:py",
+    "serve": "python3 -m http.server 8000 --directory src",
+    "build:catalog": "python3 scripts/build_catalog.py"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.14.0",
+    "globals": "17.14.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3"
+  }
+}

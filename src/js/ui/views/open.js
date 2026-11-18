@@ -1,0 +1,133 @@
+/**
+ * @file "En cours" view: items listed for sale, oldest first, with an inline
+ * "mark as sold" form.
+ *
+ * View contract (shared by all views, see docs/ARCHITECTURE.md):
+ *   mount(el)      called when the view becomes visible; binds events once
+ *   update(state)  called on every state change while visible
+ *
+ * The sale form's typed values live in `sale`, not only in the DOM, so a
+ * re-render caused by a live update keeps what the player is typing.
+ */
+
+import { CATEGORY_LABEL, SLOW_SALE_DAYS } from "../../config.js";
+import { daysBetween, formatShortDate, todayIso } from "../../domain/dates.js";
+import { formatCompact, formatKamas, formatPercent, parseKamas, ratioPercent, signClass } from "../../domain/kamas.js";
+import { isCraft, isOpen, profit } from "../../domain/trade.js";
+import { $, closest, esc, renderKeepingFocus, runAction, toast } from "../dom.js";
+
+/**
+ * @param {{actions: ReturnType<typeof import("../../actions.js").createActions>, openEditor: (t: import("../../domain/trade.js").Trade) => void}} ctx
+ * @returns {import("./view.js").View}
+ */
+export function createOpenView({ actions, openEditor }) {
+  /** @type {HTMLElement} */ let root;
+  /** @type {import("../../state.js").AppState} */ let current;
+  /** The open sale form: which trade, and what has been typed so far. */
+  let sale = /** @type {{id: string, price: string, date: string}|null} */ (null);
+
+  function render() {
+    const today = todayIso();
+    const open = current.trades.filter(isOpen).sort((a, b) => a.date.localeCompare(b.date));
+    if (sale && !open.some((t) => t.id === sale?.id)) sale = null; // sold or deleted meanwhile
+    if (!open.length) {
+      root.innerHTML = `<div class="empty">Rien en vente pour l'instant.<br>Ajoute un craft ou un achat à gauche : il apparaîtra ici jusqu'à ce que tu le marques vendu.</div>`;
+      return;
+    }
+    root.innerHTML = `<div class="open">${open
+      .map((t) => {
+        const p = profit(t);
+        const days = daysBetween(t.date, today);
+        const age = days >= SLOW_SALE_DAYS ? `<span class="pill slow">${days} j en vente</span>` : `${days} j`;
+        return `<div class="open-row" data-id="${esc(t.id)}">
+        <div class="it"><b>${esc(t.item)}</b><small>${esc(formatShortDate(t.date))} · <span class="pill ${isCraft(t) ? "craft" : ""}">${CATEGORY_LABEL[t.cat]}</span> ${age}</small></div>
+        <div class="c"><small>Investi</small><span class="num">${formatCompact(t.cost)}</span></div>
+        <div class="c"><small>Prévu</small><span class="num">${formatCompact(t.expected)}</span></div>
+        <div class="c"><small>Marge</small><span class="num ${signClass(p)}">${formatPercent(ratioPercent(p, t.cost))}</span></div>
+        <div class="row-actions">
+          ${current.canWrite ? `<button class="btn small primary" data-act="sell">Vendu</button>` : ""}
+          <button class="btn small" data-act="edit">${current.canWrite ? "Modifier" : "Détails"}</button>
+        </div>
+        ${
+          sale?.id === t.id
+            ? `<div class="sell">
+          <div class="field"><label for="s-price">Vendu à</label><input type="text" id="s-price" class="kamas" inputmode="decimal" value="${esc(sale.price)}"></div>
+          <div class="field"><label for="s-date">Le</label><input type="date" id="s-date" value="${esc(sale.date)}"></div>
+          <button class="btn primary" data-act="sell-ok">Confirmer</button>
+          <button class="btn" data-act="sell-cancel">Annuler</button>
+        </div>`
+            : ""
+        }
+      </div>`;
+      })
+      .join("")}</div>`;
+  }
+
+  /** @param {MouseEvent} e */
+  function onClick(e) {
+    const button = /** @type {HTMLButtonElement|null} */ (closest(e, "[data-act]"));
+    const row = closest(e, "[data-id]");
+    if (!button || !row) return;
+    const trade = current.trades.find((t) => t.id === row.dataset.id);
+    if (!trade) return;
+    switch (button.dataset.act) {
+      case "sell":
+        sale = { id: trade.id, price: formatKamas(trade.expected), date: todayIso() };
+        render();
+        /** @type {HTMLInputElement|null} */ ($("#s-price", root))?.select();
+        break;
+      case "sell-cancel":
+        sale = null;
+        render();
+        /** @type {HTMLElement|null} */ ($(`[data-id="${CSS.escape(trade.id)}"] [data-act="sell"]`, root))?.focus();
+        break;
+      case "edit":
+        openEditor(trade);
+        break;
+      case "sell-ok": {
+        const price = parseKamas(sale?.price);
+        const date = sale?.date || todayIso();
+        runAction(button, async () => {
+          await actions.sell(trade, price, date);
+          sale = null;
+          toast(`${trade.item} vendu : ${formatPercent(ratioPercent(price - trade.cost, trade.cost))}`);
+        });
+        break;
+      }
+    }
+  }
+
+  /** @param {Event} e */
+  function onInput(e) {
+    const target = /** @type {HTMLInputElement} */ (e.target);
+    if (!sale) return;
+    if (target.id === "s-price") sale.price = target.value;
+    else if (target.id === "s-date") sale.date = target.value;
+  }
+
+  /** @param {KeyboardEvent} e */
+  function onKeydown(e) {
+    if (e.key === "Enter" && /** @type {HTMLElement} */ (e.target).id === "s-price") {
+      /** @type {HTMLElement|null} */ ($('[data-act="sell-ok"]', root))?.click();
+    }
+  }
+
+  return {
+    mount(el) {
+      root = el;
+      sale = null;
+      root.addEventListener("click", onClick);
+      root.addEventListener("input", onInput);
+      root.addEventListener("keydown", onKeydown);
+    },
+    unmount() {
+      root.removeEventListener("click", onClick);
+      root.removeEventListener("input", onInput);
+      root.removeEventListener("keydown", onKeydown);
+    },
+    update(state) {
+      current = state;
+      renderKeepingFocus(root, render);
+    },
+  };
+}

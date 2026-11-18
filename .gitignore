@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Test output
+coverage/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Catalog build input: large, downloaded on demand, never committed (see README)
+*.sqlite
+*.sqlite3
+
+# Local environment
+.env
+.env.*
+
+# Logs
+*.log
+
+# Editors and operating systems
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
