@@ -221,17 +221,6 @@ See the docstring in `scripts/build_catalog.py` for what is included and how rec
 
 `npm run build:release` builds the same folder locally, in `dist/`.
 
-### Publishing as a Claude artifact (optional)
-
-The app can also run as a claude.ai artifact, storing its data in the artifact database
-instead of a file (`createCloudStore`). The published files are the contents of `src/`
-(paths relative to it: `index.html`, `css/app.css`, `js/...`, `data/dofus-data.json`);
-republish to the same artifact to keep its data. The page declares two capabilities:
-
-```json
-{ "db": { "rules": [{ "path": "", "read": "view", "write": "owner" }] }, "user": {} }
-```
-
 ## Limits
 
 - **No live HDV prices.** Ankama publishes no market API, and tools that read the game

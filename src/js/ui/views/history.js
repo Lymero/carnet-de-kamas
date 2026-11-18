@@ -72,7 +72,7 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
         <select id="h-cat" aria-label="Type">${opt("", "Tous types", filters.cat)}${opt(CATEGORY.CRAFT, CATEGORY_LABEL.craft, filters.cat)}${opt(CATEGORY.RESALE, CATEGORY_LABEL.resale, filters.cat)}</select>
         <select id="h-month" aria-label="Mois">${opt("", "Tous les mois", filters.month)}${months.map((m) => opt(m, monthLabel(m), filters.month)).join("")}</select>
         <select id="h-status" aria-label="Statut">${opt("", "Tous statuts", filters.status)}${opt("open", "En vente", filters.status)}${opt("sold", "Vendus", filters.status)}${opt("loss", "Ventes à perte", filters.status)}</select>
-        ${current.canWrite ? `<button class="btn" data-act="import">Importer depuis Sheets</button>` : ""}
+        <button class="btn" data-act="import">Importer depuis Sheets</button>
         <button class="btn" data-act="export">Copier en tableau</button>
       </div>
       <div id="h-results"></div>`;

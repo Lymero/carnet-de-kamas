@@ -3,16 +3,16 @@
  *
  * Start-up sequence:
  *   1. render the shell with a loading state;
- *   2. connect storage: the local server's data file (server/main.js), the claude.ai `db`
- *      capability when published as an artifact, or memory when neither is there;
+ *   2. connect storage: the data file through the local server's API (server/main.js),
+ *      or memory when the page has none;
  *   3. mount the form, dialogs and router; subscribe to trades;
  *   4. load the item catalog in the background (autocomplete works without it).
  */
 
 import { createActions } from "./actions.js";
-import { CATALOG_URL, DB_PATHS, LOAD_TIMEOUT_MS, LOCAL_API_URL } from "./config.js";
+import { CATALOG_URL, LOAD_TIMEOUT_MS, LOCAL_API_URL } from "./config.js";
 import { ItemCatalog } from "./data/catalog.js";
-import { createCloudStore, createLocalStore, createMemoryStore, describeStoreError } from "./data/store.js";
+import { createLocalStore, createMemoryStore, describeStoreError } from "./data/store.js";
 import { todayIso } from "./domain/dates.js";
 import { plural } from "./domain/text.js";
 import { isOpen } from "./domain/trade.js";
@@ -31,7 +31,6 @@ import { createOpenView } from "./ui/views/open.js";
 const state = createState({
   trades: [],
   loaded: false,
-  canWrite: true,
   storage: null,
   prices: {},
   catalog: ItemCatalog.empty(),
@@ -40,23 +39,12 @@ const state = createState({
 });
 
 /**
- * Picks the storage. Published on claude.ai, the page uses the artifact capabilities
- * (`claude.use` resolves null for a signed-out viewer: memory then). Otherwise it uses
- * the local server's data API when the page was served by server/main.js, else memory.
- * @returns {Promise<{store: import("./data/store.js").TradeStore, user: any}>}
+ * Picks the storage: in a page served by the local server, its data API; otherwise
+ * memory (nothing saved).
+ * @returns {Promise<import("./data/store.js").TradeStore>}
  */
 async function connectStorage() {
-  const host = /** @type {any} */ (window).claude;
-  if (typeof host?.use !== "function") {
-    return { store: (await hasLocalServer()) ? createLocalStore() : createMemoryStore(), user: null };
-  }
-  // Settled separately: a failing `user` capability must not throw away a working database.
-  const [db, user] = await Promise.allSettled([host.use("db"), host.use("user")]);
-  const namespace = db.status === "fulfilled" ? db.value : null;
-  return {
-    store: namespace ? createCloudStore(namespace) : createMemoryStore(),
-    user: user.status === "fulfilled" ? user.value : null,
-  };
+  return (await hasLocalServer()) ? createLocalStore() : createMemoryStore();
 }
 
 /** True when the page was served by the local server with its data API (server/app.js). */
@@ -69,16 +57,6 @@ async function hasLocalServer() {
   }
 }
 
-/** @param {any} user @returns {Promise<boolean>} */
-async function canWrite(user) {
-  try {
-    // null means "unknown": allow, and let a rejected write explain itself.
-    return (await user?.can?.("data.write")) !== false;
-  } catch {
-    return true;
-  }
-}
-
 async function start() {
   const els = {
     status: $("#status"),
@@ -88,21 +66,13 @@ async function start() {
     countAll: $("#c-all"),
   };
 
-  const { store, user } = await connectStorage();
-  const writable = await canWrite(user);
-  const readOnlyStatus = { text: "Lecture seule : seul le propriétaire peut modifier ce carnet.", warn: false };
+  const store = await connectStorage();
   state.set({
     storage: store.mode,
-    canWrite: writable,
     status:
       store.mode === "memory"
-        ? {
-            text: "Sauvegarde indisponible : ouvre l'app avec son lanceur « Carnet de Kamas » pour garder tes données.",
-            warn: true,
-          }
-        : writable
-          ? { text: "Connexion…", warn: false }
-          : readOnlyStatus,
+        ? { text: "Sauvegarde indisponible : rien n'est enregistré dans ce mode.", warn: true }
+        : { text: "Connexion…", warn: false },
   });
 
   const actions = createActions({ store, state });
@@ -128,7 +98,6 @@ async function start() {
       if (isOpen(trade) && state.get().view !== "en-cours") go("en-cours");
     },
   });
-  form.applyWriteMode();
 
   // ----- routing -----
   /** @type {import("./ui/views/view.js").View|null} */
@@ -155,10 +124,9 @@ async function start() {
       $$("#tabs a").forEach((a) => a.toggleAttribute("aria-current", false));
       $(`#tabs a[data-v="${s.view}"]`)?.setAttribute("aria-current", "page");
     }
-    if (changed.has("canWrite")) form.applyWriteMode();
     if (changed.has("catalog") || changed.has("prices")) form.refresh();
     // Views and the summary do not use the catalog: re-rendering them for it would only disturb typing.
-    if (["trades", "loaded", "canWrite"].some((k) => changed.has(k))) {
+    if (changed.has("trades") || changed.has("loaded")) {
       renderSummary(els.summary, s, todayIso());
       els.countOpen.textContent = String(s.trades.filter(isOpen).length);
       els.countAll.textContent = String(s.trades.length);
@@ -187,14 +155,9 @@ async function start() {
       state.set({ trades, loaded: true });
       if (confirmed) {
         clearTimeout(loadTimer);
-        // Also replaces a "slow connection" warning shown by the timer.
+        // Also replaces a warning shown by the timer or a lost connection.
         if (store.mode !== "memory") {
-          const where = store.mode === "local" ? "enregistré sur ce PC" : "sauvegardé";
-          state.set({
-            status: writable
-              ? { text: `${plural(trades.length, "opération")} · ${where}`, warn: false }
-              : readOnlyStatus,
-          });
+          state.set({ status: { text: `${plural(trades.length, "opération")} · enregistré sur ce PC`, warn: false } });
         }
       }
       if (first) showView();
@@ -209,7 +172,7 @@ async function start() {
     .loadPrices()
     // Prices typed before the load finished are newer than the stored ones: keep them.
     .then((stored) => state.set({ prices: { ...stored, ...state.get().prices } }))
-    .catch((e) => console.warn(`Could not read ${DB_PATHS.PRICES}`, e));
+    .catch((e) => console.warn("Could not read the remembered prices", e));
 
   ItemCatalog.load(CATALOG_URL)
     .then((catalog) => state.set({ catalog }))
@@ -220,7 +183,7 @@ start().catch((error) => {
   console.error(error);
   const status = $("#status");
   if (status) {
-    status.textContent = "Le carnet n'a pas pu démarrer : recharge la page (détails dans la console du navigateur).";
+    status.textContent = "Le carnet n'a pas pu démarrer : relance-le.";
     status.classList.add("warn");
   }
   const view = $("#view");

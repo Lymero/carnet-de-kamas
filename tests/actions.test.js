@@ -15,8 +15,8 @@ const draft = {
   soldDate: null,
 };
 
-function setup({ canWrite = true, store = createMemoryStore() } = {}) {
-  const state = createState({ trades: [], prices: {}, canWrite });
+function setup({ store = createMemoryStore() } = {}) {
+  const state = createState({ trades: [], prices: {} });
   store.subscribe((trades) => state.set({ trades }));
   return { store, state, actions: createActions({ store, state }) };
 }
@@ -36,10 +36,9 @@ test("actions add, sell and remove trades through the store", async () => {
   assert.equal(state.get().trades.length, 0);
 });
 
-test("actions reject invalid input and read-only viewers", async () => {
+test("actions reject invalid input with a readable message", async () => {
   await assert.rejects(setup().actions.addTrade({ ...draft, cost: NaN }), /Investissement/);
-  await assert.rejects(setup({ canWrite: false }).actions.addTrade(draft), /Lecture seule/);
-  await assert.rejects(setup({ canWrite: false }).actions.removeTrade("x"), /Lecture seule/);
+  await assert.rejects(setup().actions.addTrade({ ...draft, item: " " }), /nom de l'objet/);
 });
 
 test("a sale dated before the trade is refused", async () => {
@@ -93,7 +92,7 @@ test("importDrafts stops at the first failure and says how many were saved", asy
     ...store,
     save: async (t) => {
       calls += 1;
-      if (calls === 2) throw { code: "quota_exceeded" };
+      if (calls === 2) throw { code: "rejected" };
       return store.save(t);
     },
   };
@@ -102,7 +101,7 @@ test("importDrafts stops at the first failure and says how many were saved", asy
   const error = await actions.importDrafts(drafts).catch((e) => e);
   assert.ok(error instanceof ImportError);
   assert.equal(error.saved, 1);
-  assert.match(error.message, /^1 importées, puis arrêt : Stockage plein/);
+  assert.match(error.message, /^1 importées, puis arrêt : Le serveur local a refusé/);
   assert.equal(state.get().trades.length, 1);
 
   // Retrying with the remaining drafts completes the import without duplicates.

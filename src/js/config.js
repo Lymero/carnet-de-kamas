@@ -37,12 +37,6 @@ export const HDV_TAX_LABEL = Object.freeze({
 /** Longest item name accepted (in-game names are well under this). */
 export const ITEM_NAME_MAX = 200;
 
-/** Database paths. `trades` is a collection, `settings/prices` a single document. */
-export const DB_PATHS = Object.freeze({
-  TRADES: "trades",
-  PRICES: "settings/prices",
-});
-
 /** Views reachable through the URL hash (#en-cours, #historique, #analyse). */
 export const VIEWS = Object.freeze(["en-cours", "historique", "analyse"]);
 
@@ -55,7 +49,7 @@ export const CATALOG_URL = "data/dofus-data.json";
 /** An open trade listed for at least this many days is flagged as slow. */
 export const SLOW_SALE_DAYS = 14;
 
-/** How long to wait for the database before telling the user it is unreachable. */
+/** How long to wait for the stored trades before telling the user they cannot be reached. */
 export const LOAD_TIMEOUT_MS = 10_000;
 
 /** Autocomplete sizing: suggestions shown in total, and how many may come from the user's own history. */
@@ -64,5 +58,5 @@ export const AUTOCOMPLETE = Object.freeze({ LIMIT: 10, OWN_LIMIT: 5, MIN_QUERY: 
 /** Number of months shown in the monthly profit chart. */
 export const CHART_MONTHS = 12;
 
-/** Retry policy for transient database errors. */
+/** Retry policy for local server failures worth retrying. */
 export const RETRY = Object.freeze({ ATTEMPTS: 4, BASE_DELAY_MS: 400, JITTER_MS: 300 });

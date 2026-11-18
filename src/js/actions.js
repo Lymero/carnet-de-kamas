@@ -38,13 +38,8 @@ export class ImportError extends ActionError {
  * @param {{store: import("./data/store.js").TradeStore, state: ReturnType<typeof import("./state.js").createState>}} deps
  */
 export function createActions({ store, state }) {
-  function guardWrite() {
-    if (!state.get().canWrite) throw new ActionError("Lecture seule : seul le propriétaire peut modifier ce carnet.");
-  }
-
   /** Validates then saves; wraps storage errors. @param {Trade} trade */
   async function persist(trade) {
-    guardWrite();
     const errors = validateTrade(trade);
     if (errors.length) throw new ActionError(errors[0]);
     try {
@@ -65,7 +60,7 @@ export function createActions({ store, state }) {
     const updates = Object.fromEntries(
       Object.entries(changes).filter(([id, price]) => isKamas(price) && current[id] !== price),
     );
-    if (!Object.keys(updates).length || !state.get().canWrite) return;
+    if (!Object.keys(updates).length) return;
     state.set({ prices: { ...current, ...updates } });
     try {
       await store.savePrices(updates);
@@ -93,7 +88,6 @@ export function createActions({ store, state }) {
 
   /** @param {string} id */
   async function removeTrade(id) {
-    guardWrite();
     try {
       await store.remove(id);
     } catch (error) {
@@ -102,9 +96,9 @@ export function createActions({ store, state }) {
   }
 
   /**
-   * Saves imported rows one at a time: the store allows one write per document at a
-   * time, and sequential writes stay under the per-viewer rate limit.
-   * Stops at the first failure with an `ImportError` saying how many were saved,
+   * Saves imported rows one at a time, in order, so that progress can be shown and a
+   * failure leaves a known prefix saved. It stops at the first failure with an
+   * `ImportError` saying how many were saved,
    * so a retry can resume with `drafts.slice(error.saved)`.
    * @param {TradeDraft[]} drafts
    * @param {(done: number, total: number) => void} [onProgress]

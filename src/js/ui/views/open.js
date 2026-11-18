@@ -53,8 +53,8 @@ export function createOpenView({ actions, openEditor }) {
         <div class="c"><small>Prévu</small><span class="num">${formatCompact(t.expected)}</span></div>
         <div class="c"><small>Marge</small><span class="num ${signClass(p)}">${formatPercent(ratioPercent(p, t.cost))}</span></div>
         <div class="row-actions">
-          ${current.canWrite ? `<button class="btn small primary" data-act="sell">Vendu</button>` : ""}
-          <button class="btn small" data-act="edit">${current.canWrite ? "Modifier" : "Détails"}</button>
+          <button class="btn small primary" data-act="sell">Vendu</button>
+          <button class="btn small" data-act="edit">Modifier</button>
         </div>
         ${
           sale?.id === t.id

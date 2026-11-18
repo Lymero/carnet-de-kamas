@@ -31,7 +31,7 @@ flowchart TD
   catalog[data/catalog.js<br/>items · recipes · search] --> state
   domain[domain/<br/>trade · kamas · dates · stats · sheet-io · text<br/><i>pure</i>]
   store <--> server[server/<br/>local data file]
-  store <--> db[(artifact db<br/>or memory)]
+  store <--> memory[(memory)]
 ```
 
 | Layer                    | Depends on             | Must not                          |
@@ -89,13 +89,11 @@ has focus.
 
 - `catalog.js`: `ItemCatalog` built from `dofus-data.json`; name lookup, ranked suggestions,
   `recipeCost`. Ranking lives here, not in the UI, so it is unit tested.
-- `store.js`: `TradeStore` interface with three implementations: `createLocalStore()` (the local
-  server's data API), `createCloudStore(db)` (claude.ai artifact) and `createMemoryStore()`;
-  `withRetry` for transient errors; `describeStoreError` for messages. `main.js` picks the cloud
-  store inside claude.ai, else the local store when `GET api/info` answers, else memory. The
-  local store follows changes from other tabs through server-sent events and reloads the list
-  on every reconnection; the cloud store merges price writes and re-subscribes when the host
-  drops the trades listener.
+- `store.js`: `TradeStore` interface with two implementations: `createLocalStore()` (the local
+  server's data API) and `createMemoryStore()`; `withRetry` for server errors worth retrying;
+  `describeStoreError` for messages. `main.js` picks the local store when `GET api/info`
+  answers, else memory. The local store follows changes from other tabs through server-sent
+  events and reloads the list on every reconnection.
 
 ### `server/` (Node, no dependencies)
 
@@ -138,7 +136,7 @@ launchers check that Node.js is installed and run `node server/main.js --open`. 
   follows the recipe) locally; it is not app state because nothing else needs it.
 - `dialogs.js` uses the native `<dialog>` (content is a `<form>`, so Enter saves; titled by
   `#dlg-title`): edit, import, and copy-by-hand when the clipboard is blocked. Deletion is a
-  two-step button because the artifact sandbox blocks `window.confirm`.
+  two-step button rather than a `window.confirm` pop-up.
 - `kamas-field.js`: calculator behaviour for every `input.kamas` (delegated from the document):
   a bubble with the result while typing, replaced by the result on blur.
 - `hdv-tax.js`: the tax `<select>` options (form, sale form, edit dialog) and the rate the
@@ -154,7 +152,6 @@ launchers check that Node.js is installed and run `node server/main.js --open`. 
 | Decision                          | Why                                                                        | Trade-off                                                                         |
 | --------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | One local JSON file for storage   | Private, works offline, easy to read, back up and restore.                 | One computer; the server must be running (`npm start`).                           |
-| Artifact `db` kept as an option   | The page still runs on claude.ai with no other change.                     | Two backends to keep working (both covered by tests).                             |
 | One document per trade            | Small writes, no conflicts between rows, live updates per row.             | ~10k trades fit well under the 25,000-document cap; archive if ever needed.       |
 | Remembered prices in one document | Read once at start; each save merges only the prices that changed.         | Last write wins for the same ingredient edited on two devices at the same moment. |
 | Catalog as a static JSON file     | Browser fetches to other sites are blocked in artifacts; offline-friendly. | Must be regenerated after game updates (`npm run build:catalog`).                 |
@@ -168,17 +165,11 @@ launchers check that Node.js is installed and run `node server/main.js --open`. 
   and the page reloads everything as soon as the event stream reconnects. A failed save shows
   why and changes nothing. An unreadable data file stops the server at start, with the file
   left untouched.
-- Transient storage errors (`unavailable`, `resource_exhausted`) are retried up to 4 times with
-  backoff; others fail fast with a clear message (`describeStoreError`).
-- If the database does not answer within 10 s, the status line says so; the listener keeps
-  retrying in the background. The first confirmed snapshot clears that warning (for viewers too).
-- The one listener error that is not final, `unavailable` (the host stopped answering), is
-  recovered by subscribing again, with backoff, up to 4 times; other listener errors are shown.
-- If `claude.use("user")` fails, the database is still used (capabilities are settled separately).
+- Server errors worth retrying (HTTP 5xx) are retried up to 4 times with backoff; others fail
+  fast with a clear message (`describeStoreError`).
+- If the stored trades do not arrive within 10 s, the status line says so.
 - If start-up itself throws, the status line and main panel say so instead of loading forever.
 - A missing catalog only disables catalog suggestions and recipes; the rest of the app works.
-- Read-only viewers see the data; form and edit controls are disabled, and actions refuse
-  writes as a second line of defence.
 
 ## Testing
 
@@ -187,8 +178,8 @@ launchers check that Node.js is installed and run `node server/main.js --open`. 
 1. Prettier in check mode (formatting).
 2. ESLint: undefined names and unused code in every module, the UI included.
 3. `tsc` over `src/js` with the JSDoc types. It also proves every import resolves to a real export.
-4. `node:test` suites: the pure modules, the catalog, state, router and chart, both stores (the cloud
-   store against an in-memory fake of the `db` capability), and the actions through the memory store.
+4. `node:test` suites: the pure modules, the catalog, state, router and chart, the stores, and
+   the actions through the memory store.
 5. `unittest` for `scripts/build_catalog.py`, against a tiny SQLite file shaped like the real export.
 
 `npm run test:coverage` fails below 90 % of lines or 85 % of branches in the modules the unit
@@ -197,9 +188,7 @@ tests load (everything except the DOM modules).
 `npm run test:e2e` covers the DOM: Playwright drives the real page in Chrome
 (`tests/e2e/`). It covers the entry form and recipe helper, sales,
 history filters, the edit dialog, import, export (with and without clipboard access), analysis,
-navigation, the dark theme and phone widths. A fake of the `db` and `user` capabilities
-(`installFakeDb` in `tests/e2e/fixtures.js`) covers the cloud code path, read-only viewers and
-hostile stored data. Most tests run against `server/main.js --static`, so each starts with an
+navigation, the dark theme and phone widths. Most tests run against `server/main.js --static`, so each starts with an
 empty in-memory notebook; `local.spec.js` runs against a second, full server on a throwaway
 data file and checks saving, reloading, sync between tabs, deletion and remembered prices.
 Every test also fails on any page error, console error or failed request.

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+
+- The Claude artifact mode: its storage, the read-only "viewer" mode and the capability
+  detection.
+
 ## 2.2.0 (2026-11-18)
 
 ### Added

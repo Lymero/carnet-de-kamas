@@ -1,7 +1,7 @@
-// The entry form: autocomplete, recipe helper, preview, adding trades, read-only mode.
-import { addTrade, expect, installFakeDb, openApp, pickCatalogItem, test } from "./fixtures.js";
+// The entry form: autocomplete, recipe helper, preview, adding trades.
+import { addTrade, expect, openApp, pickCatalogItem, test } from "./fixtures.js";
 
-test("without the db capability the status says nothing is saved", async ({ page }) => {
+test("served without the data API, the status says nothing is saved", async ({ page }) => {
   await openApp(page, { catalog: false });
   await expect(page.locator("#status")).toContainText("Sauvegarde indisponible");
   await expect(page.locator("#status")).toHaveClass(/warn/);
@@ -54,20 +54,4 @@ test("invalid input is refused with a readable message", async ({ page }) => {
   await page.click("#f-submit");
   await expect(page.locator(".toast")).toContainText("Investissement illisible");
   await expect(page.locator("#c-all")).toHaveText("0");
-});
-
-test("a read-only viewer sees the data but cannot use the form", async ({ page }) => {
-  await installFakeDb(page, {
-    canWrite: false,
-    docs: {
-      "trades/a": { date: "2026-01-10", item: "Kokulte", cat: "resale", cost: 1, expected: 2, sold: false },
-    },
-  });
-  await openApp(page, { catalog: false });
-  await expect(page.locator("#status")).toContainText("Lecture seule");
-  await expect(page.locator("#f-submit")).toBeDisabled();
-  await expect(page.locator("#f-item")).toBeDisabled();
-  await expect(page.locator(".open-row")).toContainText("Kokulte");
-  await expect(page.locator('[data-act="sell"]')).toHaveCount(0);
-  await expect(page.locator('[data-act="edit"]')).toHaveText("Détails");
 });

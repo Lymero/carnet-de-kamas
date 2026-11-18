@@ -20,7 +20,7 @@ import { $, $$, esc, runAction, toast } from "./dom.js";
 /**
  * @param {HTMLFormElement} form
  * @param {{state: ReturnType<typeof import("../state.js").createState>, actions: ReturnType<typeof import("../actions.js").createActions>, onAdded: (trade: import("../domain/trade.js").Trade) => void}} ctx
- * @returns {{refresh: () => void, applyWriteMode: () => void}}
+ * @returns {{refresh: () => void}}
  */
 export function mountEntryForm(form, { state, actions, onAdded }) {
   const el = {
@@ -92,23 +92,22 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       el.recipe.innerHTML = "";
       return;
     }
-    const { catalog, canWrite } = state.get();
-    const ro = canWrite ? "" : "disabled";
+    const { catalog } = state.get();
     const rows = item.recipe
       .map(([id, qty]) => {
         const p = priceOf(id);
         const name = esc(catalog.ingredientName(id));
-        return `<tr><td class="q num">${qty}×</td><td>${name}</td><td class="r"><input type="text" class="kamas" data-ing="${id}" value="${p != null ? formatKamas(p) : ""}" placeholder="prix/u" aria-label="Prix unitaire ${name}" ${ro}></td></tr>`;
+        return `<tr><td class="q num">${qty}×</td><td>${name}</td><td class="r"><input type="text" class="kamas" data-ing="${id}" value="${p != null ? formatKamas(p) : ""}" placeholder="prix/u" aria-label="Prix unitaire ${name}"></td></tr>`;
       })
       .join("");
     el.recipe.innerHTML = `<div class="recipe">
       <div class="lbl">Recette · niv. ${item.level}</div>
       <table><tbody>${rows}
-        <tr><td class="q"></td><td>Runes / FM</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${draft.runes ? formatKamas(draft.runes) : ""}" placeholder="0" aria-label="Coût runes et forgemagie" ${ro}></td></tr>
+        <tr><td class="q"></td><td>Runes / FM</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${draft.runes ? formatKamas(draft.runes) : ""}" placeholder="0" aria-label="Coût runes et forgemagie"></td></tr>
       </tbody></table>
       <div class="tot"><span>Coût calculé</span><span class="num" id="r-tot">${formatKamas(currentRecipeTotal())}</span></div>
       <div class="hint">Les prix unitaires sont mémorisés pour la prochaine fois.
-        ${draft.costFollowsRecipe ? "L'investissement suit ce calcul." : `<button type="button" class="btn small" id="r-use" ${ro}>Utiliser le coût calculé</button>`}</div>
+        ${draft.costFollowsRecipe ? "L'investissement suit ce calcul." : `<button type="button" class="btn small" id="r-use">Utiliser le coût calculé</button>`}</div>
     </div>`;
   }
   el.recipe.addEventListener("input", (e) => {
@@ -210,13 +209,5 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   return {
     /** Re-render parts that depend on loaded data (catalog, remembered prices). */
     refresh: syncItem,
-    /** Disables the form for read-only viewers. */
-    applyWriteMode() {
-      const ro = !state.get().canWrite;
-      $$("input, select, button", form).forEach((x) => {
-        /** @type {HTMLInputElement} */ (x).disabled = ro;
-      });
-      renderRecipe();
-    },
   };
 }

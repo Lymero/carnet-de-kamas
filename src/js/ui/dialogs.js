@@ -40,8 +40,7 @@ export function createDialogs(dialog, { state, actions }) {
 
   /** @param {Trade} trade */
   function openEditor(trade) {
-    const { canWrite, catalog } = state.get();
-    const ro = canWrite ? "" : "disabled";
+    const { catalog } = state.get();
     const recipe = trade.recipe?.length
       ? `<div class="hint">Recette enregistrée : ${trade.recipe
           .map(
@@ -53,37 +52,36 @@ export function createDialogs(dialog, { state, actions }) {
     show(
       `
       <h2 id="dlg-title">${esc(trade.item)}</h2>
-      <div class="field"><label for="e-item">Objet</label><input type="text" id="e-item" value="${esc(trade.item)}" ${ro}></div>
+      <div class="field"><label for="e-item">Objet</label><input type="text" id="e-item" value="${esc(trade.item)}"></div>
       <div class="row2">
-        <div class="field"><label for="e-date">Date</label><input type="date" id="e-date" value="${esc(trade.date)}" ${ro}></div>
-        <div class="field"><label for="e-cat">Type</label><select id="e-cat" ${ro}>
+        <div class="field"><label for="e-date">Date</label><input type="date" id="e-date" value="${esc(trade.date)}"></div>
+        <div class="field"><label for="e-cat">Type</label><select id="e-cat">
           <option value="${CATEGORY.CRAFT}">${CATEGORY_LABEL.craft}</option>
           <option value="${CATEGORY.RESALE}" ${trade.cat === CATEGORY.RESALE ? "selected" : ""}>${CATEGORY_LABEL.resale}</option>
         </select></div>
       </div>
       <div class="row2">
-        <div class="field"><label for="e-cost">Investissement</label><input type="text" id="e-cost" class="kamas" value="${formatKamas(trade.cost)}" ${ro}></div>
-        <div class="field"><label for="e-exp">Vente prévue</label><input type="text" id="e-exp" class="kamas" value="${formatKamas(trade.expected)}" ${ro}></div>
+        <div class="field"><label for="e-cost">Investissement</label><input type="text" id="e-cost" class="kamas" value="${formatKamas(trade.cost)}"></div>
+        <div class="field"><label for="e-exp">Vente prévue</label><input type="text" id="e-exp" class="kamas" value="${formatKamas(trade.expected)}"></div>
       </div>
       <div class="row2">
-        <div class="field"><label for="e-tax">Taxe HDV</label><select id="e-tax" ${ro}>${taxOptions(trade.hdvTax)}</select></div>
-        <div class="field end"><label class="check" for="e-sold"><input type="checkbox" id="e-sold" ${trade.sold ? "checked" : ""} ${ro}> Vendu</label></div>
+        <div class="field"><label for="e-tax">Taxe HDV</label><select id="e-tax">${taxOptions(trade.hdvTax)}</select></div>
+        <div class="field end"><label class="check" for="e-sold"><input type="checkbox" id="e-sold" ${trade.sold ? "checked" : ""}> Vendu</label></div>
       </div>
       <div class="row2">
-        <div class="field"><label for="e-sp">Vendu à</label><input type="text" id="e-sp" class="kamas" value="${trade.sold ? formatKamas(trade.soldPrice) : ""}" placeholder="${formatKamas(trade.expected)}" ${ro}></div>
-        <div class="field"><label for="e-sd">Le</label><input type="date" id="e-sd" value="${esc(trade.soldDate ?? "")}" ${ro}></div>
+        <div class="field"><label for="e-sp">Vendu à</label><input type="text" id="e-sp" class="kamas" value="${trade.sold ? formatKamas(trade.soldPrice) : ""}" placeholder="${formatKamas(trade.expected)}"></div>
+        <div class="field"><label for="e-sd">Le</label><input type="date" id="e-sd" value="${esc(trade.soldDate ?? "")}"></div>
       </div>
       ${recipe}
       <div class="actions">
-        ${canWrite ? `<button type="button" class="btn danger left" id="e-del">Supprimer</button>` : ""}
-        <button type="button" class="btn" id="e-cancel">${canWrite ? "Annuler" : "Fermer"}</button>
-        ${canWrite ? `<button type="submit" class="btn primary" id="e-save">Enregistrer</button>` : ""}
+        <button type="button" class="btn danger left" id="e-del">Supprimer</button>
+        <button type="button" class="btn" id="e-cancel">Annuler</button>
+        <button type="submit" class="btn primary" id="e-save">Enregistrer</button>
       </div>`,
-      () => canWrite && save(),
+      () => save(),
     );
 
     $("#e-cancel", body).onclick = () => dialog.close();
-    if (!canWrite) return;
 
     // Ticking "Vendu" fills in the usual answers: the planned price, today.
     input("#e-sold").onchange = () => {

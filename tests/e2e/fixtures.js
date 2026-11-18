@@ -4,8 +4,6 @@
  * - `test`: Playwright's test, whose `page` fails the test on any page error,
  *   console error or failed request, so silent breakage cannot pass.
  * - `openApp`: loads the page and waits until it has started.
- * - `installFakeDb`: stands in for the claude.ai `db` and `user` capabilities, so the
- *   cloud code path (and read-only mode) can be tested outside claude.ai.
  */
 
 import { test as base, expect } from "@playwright/test";
@@ -86,73 +84,4 @@ export async function addTrade(page, { item, cost, expected, date, cat = "craft"
   await page.selectOption("#f-tax", String(tax));
   await page.click("#f-submit");
   await expect(page.locator(".toast")).toContainText(`${item} ajouté`);
-}
-
-/**
- * Installs a fake `window.claude` before the page loads. The fake database keeps
- * documents in memory, delivers snapshots like the real one, and records every
- * write in `window.__dbCalls` and the current documents in `window.__dbDocs`.
- * @param {import("@playwright/test").Page} page
- * @param {{docs?: Record<string, object>, canWrite?: boolean, userFails?: boolean}} [options]
- */
-export async function installFakeDb(page, { docs = {}, canWrite = true, userFails = false } = {}) {
-  await page.addInitScript(
-    ({ docs, canWrite, userFails }) => {
-      const store = new Map(Object.entries(docs));
-      const listeners = [];
-      const calls = [];
-      window.__dbCalls = calls;
-      window.__dbDocs = store;
-      const snapshot = () => ({
-        docs: [...store]
-          .filter(([path]) => path.startsWith("trades/"))
-          .map(([path, data]) => ({ id: path.slice("trades/".length), data: () => structuredClone(data) })),
-        metadata: { fromCache: false },
-      });
-      const emit = () => listeners.forEach((next) => next(snapshot()));
-      const ref = (path) => ({
-        id: path.split("/").pop(),
-        get: async () => ({ exists: store.has(path), data: () => structuredClone(store.get(path)) }),
-        set: async (data) => {
-          calls.push(["set", path, data]);
-          store.set(path, structuredClone(data));
-          emit();
-        },
-        update: async (data) => {
-          calls.push(["update", path, data]);
-          if (!store.has(path)) throw { code: "invalid_argument", message: "missing document" };
-          const current = store.get(path);
-          store.set(path, { ...current, p: { ...current.p, ...data.p } });
-        },
-        delete: async () => {
-          calls.push(["delete", path]);
-          store.delete(path);
-          emit();
-        },
-      });
-      const db = {
-        doc: ref,
-        collection: (name) => ({
-          doc: (id) => ref(`${name}/${id}`),
-          onSnapshot: (next) => {
-            listeners.push(next);
-            setTimeout(() => next(snapshot()), 20);
-            return () => listeners.splice(listeners.indexOf(next), 1);
-          },
-        }),
-      };
-      const user = { can: async () => canWrite };
-      window.claude = {
-        use: async (name) => {
-          if (name === "db") return db;
-          if (name === "user") {
-            if (userFails) throw new Error("user capability unavailable");
-            return user;
-          }
-          return null;
-        },
-      };
-    },
-    { docs, canWrite, userFails },
-  );
 }

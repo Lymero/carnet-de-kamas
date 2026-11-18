@@ -2,12 +2,7 @@
 
 ## Stored documents
 
-The app stores documents in one of two places, with the same shapes:
-
-- **Local data file** (`npm start`, the normal way to run it): `data/carnet.json`, described
-  in [Local data file](#local-data-file) below.
-- **Claude artifact database** (when published on claude.ai): paths with an even number of
-  segments are documents, odd ones are collections.
+The data file (see [Local data file](#local-data-file) below) holds two kinds of documents:
 
 ```
 trades/<id>         one Trade per document
@@ -60,17 +55,8 @@ shape, and note it in `CHANGELOG.md`.
 { "p": { "13157": 12500, "14928": 3200 } }
 ```
 
-Ingredient id → last unit price typed, in kamas. The document is created on the first save,
-then each save is a merge (`update({ p: { <id>: price } })`) of only the prices that changed, so
-prices saved from another device, or not loaded yet, are kept.
-
-### Access rules (artifact only)
-
-```json
-{ "db": { "rules": [{ "path": "", "read": "view", "write": "owner" }] } }
-```
-
-Anyone the page is shared with can read; only the owner writes.
+Ingredient id → last unit price typed, in kamas. Each save merges only the prices that changed,
+so prices not loaded yet are kept.
 
 ## Local data file
 
