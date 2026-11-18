@@ -149,8 +149,15 @@ has focus.
    store against an in-memory fake of the `db` capability), and the actions through the memory store.
 5. `unittest` for `scripts/build_catalog.py`, against a tiny SQLite file shaped like the real export.
 
-CI (`.github/workflows/ci.yml`) runs it on Node 22 and 24, followed by `npm run test:coverage`,
-which fails below 90 % of lines or 85 % of branches in the modules the tests load.
+`npm run test:coverage` fails below 90 % of lines or 85 % of branches in the modules the unit
+tests load (everything except the DOM modules).
 
-The DOM modules have no automated tests. They are checked by hand in the browser
-(`npm run serve`), including read-only mode and a narrow window. Next step: a Playwright smoke test in CI.
+`npm run test:e2e` covers the DOM: Playwright drives the real page in Chrome
+(`tests/e2e/`, served by `scripts/serve.js`). It covers the entry form and recipe helper, sales,
+history filters, the edit dialog, import, export (with and without clipboard access), analysis,
+navigation, the dark theme and phone widths. A fake of the `db` and `user` capabilities
+(`installFakeDb` in `tests/e2e/fixtures.js`) covers the cloud code path, read-only viewers and
+hostile stored data. Every test also fails on any page error, console error or failed request.
+
+CI (`.github/workflows/ci.yml`) runs `check` and coverage on Node 22 and 24, and the browser
+tests on Node 24, on every push to `main` and every pull request.

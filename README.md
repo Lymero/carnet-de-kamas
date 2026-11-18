@@ -53,13 +53,15 @@ carnet-de-kamas/
 ├── package.json            npm scripts (see Development) and pinned dev tools
 ├── eslint.config.js        lint rules (undefined names, unused code)
 ├── jsconfig.json           type checking of the JSDoc annotations
+├── playwright.config.js    browser tests (tests/e2e/)
 ├── .prettierrc.json        formatting (Prettier); .editorconfig for editors
-├── .github/workflows/      CI: npm run check + coverage on Node 22 and 24
+├── .github/workflows/      CI: check + coverage on Node 22 and 24, browser tests
 ├── docs/
 │   ├── ARCHITECTURE.md     layers, data flow, design decisions
 │   └── DATA-MODEL.md       stored documents, validation, catalog format
 ├── scripts/
-│   └── build_catalog.py    regenerates src/data/dofus-data.json from game data
+│   ├── build_catalog.py    regenerates src/data/dofus-data.json from game data
+│   └── serve.js            static server for src/ (npm run serve, browser tests)
 ├── src/                    everything that is published
 │   ├── index.html          static shell
 │   ├── css/app.css         design tokens + styles (light & dark)
@@ -73,31 +75,38 @@ carnet-de-kamas/
 │       ├── domain/         pure logic: trade, kamas, dates, stats, sheet-io, text
 │       ├── data/           catalog (items, recipes, search) and store (persistence)
 │       └── ui/             DOM: form, autocomplete, summary, chart, dialogs, views/
-└── tests/                  node:test suites (*.test.js) and the catalog script test (test_*.py)
+└── tests/                  node:test suites (*.test.js), the catalog script test (test_*.py)
+    └── e2e/                Playwright tests (*.spec.js) and their fixtures
 ```
 
 ## Development
 
-Requirements: Node.js ≥ 22 and Python 3 (catalog build, its test, and the local server).
-The app has no runtime dependencies and no build step: the browser loads the ES modules
-directly. The dev tools (ESLint, Prettier, TypeScript for type checking) are pinned in
-`package-lock.json`.
+Requirements: Node.js ≥ 22, Python 3 (catalog build and its test), and Google Chrome (browser
+tests). The app has no runtime dependencies and no build step: the browser loads the ES modules
+directly. The dev tools (ESLint, Prettier, TypeScript for type checking, Playwright) are pinned
+in `package-lock.json`.
 
 ```bash
 npm ci                   # install the pinned dev tools
 npm run check            # format check, lint, type check, JS and Python tests
+npm run test:e2e         # the real page in Chrome
 npm run serve            # http://localhost:8000 (ES modules need http://, not file://)
 ```
 
-| Script                  | What it does                                                     |
-| ----------------------- | ---------------------------------------------------------------- |
-| `npm run check`         | Everything below except coverage. CI runs it on every push / PR. |
-| `npm run format`        | Rewrites files with Prettier (`format:check` only verifies).     |
-| `npm run lint`          | ESLint.                                                          |
-| `npm run typecheck`     | `tsc` over `src/js` using the JSDoc types; emits nothing.        |
-| `npm test`              | `node:test` suites in `tests/*.test.js`.                         |
-| `npm run test:py`       | `unittest` for `scripts/build_catalog.py`.                       |
-| `npm run test:coverage` | JS tests with coverage; fails under 90 % lines / 85 % branches.  |
+| Script                  | What it does                                                      |
+| ----------------------- | ----------------------------------------------------------------- |
+| `npm run check`         | The five scripts below, from `format` to `test:py`.               |
+| `npm run format`        | Rewrites files with Prettier (`format:check` only verifies).      |
+| `npm run lint`          | ESLint.                                                           |
+| `npm run typecheck`     | `tsc` over `src/js` using the JSDoc types; emits nothing.         |
+| `npm test`              | `node:test` suites in `tests/*.test.js`.                          |
+| `npm run test:py`       | `unittest` for `scripts/build_catalog.py`.                        |
+| `npm run test:coverage` | JS tests with coverage; fails under 90 % lines / 85 % branches.   |
+| `npm run test:e2e`      | Playwright tests in `tests/e2e/` against the served page.         |
+| `npm run serve`         | Serves `src/` on port 8000 (`scripts/serve.js`, no dependencies). |
+
+CI runs `check` and `test:coverage` on Node 22 and 24, and `test:e2e` on Node 24, for every push
+to `main` and every pull request. A failed browser run uploads the Playwright report and traces.
 
 Run locally, the page has no `db` capability and falls back to an in-memory store:
 everything works, nothing is saved, and the status line says so.

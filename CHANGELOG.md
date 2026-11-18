@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- End-to-end browser tests (`npm run test:e2e`, Playwright with the installed Chrome) covering
+  every view, the dialogs, import/export, themes, phone widths, the cloud code path and read-only
+  mode; they run in CI and fail on any page error.
+- `npm run serve` uses a small Node server (`scripts/serve.js`) instead of Python.
+
 ### Fixed
 
 - On phones, the history and analysis tables no longer widen the whole page: they scroll inside

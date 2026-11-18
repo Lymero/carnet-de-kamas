@@ -2,3 +2,5 @@
 src/data/dofus-data.json
 package-lock.json
 coverage/
+playwright-report/
+test-results/
