@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- The fonts ship with the app: no request to Google Fonts, and it works offline.
+
 ### Removed
 
 - The Claude artifact mode: its storage, the read-only "viewer" mode and the capability
