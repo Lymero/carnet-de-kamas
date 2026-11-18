@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- On phones, the history and analysis tables no longer widen the whole page: they scroll inside
+  their card.
+
 ## 2.1.0 (2026-11-18)
 
 Correctness and robustness fixes from a full review, plus project tooling. Stored data is unchanged
