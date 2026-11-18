@@ -1,36 +1,34 @@
 # Changelog
 
-## Unreleased
+## 2.2.0 (2026-11-18)
 
 ### Added
 
+- **Local mode**: `npm start` (or the launchers below) serves the app at http://localhost:8000
+  and saves everything in one JSON file on this computer, with atomic writes, a backup at each
+  start, and open tabs kept in sync. The server has no dependencies, only answers this
+  computer, and refuses requests from other sites. The claude.ai artifact mode still works.
 - **A download to share the app**: each GitHub release has a zip with the app, the server,
-  double-click launchers (Windows `.cmd`, macOS/Linux `.command`) and a French install guide.
-  Only Node.js is needed. `npm run build:release` builds it; pushing a `vX.Y.Z` tag publishes
-  it. Launching the app while it already runs just opens the browser on it; `--open` opens the
-  browser.
-- Data location: the per-user application folder (`%APPDATA%\Carnet de Kamas` on Windows,
-  and the equivalents on macOS and Linux), unless a `data` folder sits next to the app
-  (portable mode, as in an existing project folder, which therefore keeps its data where it is).
+  double-click launchers (Windows `.cmd`, macOS/Linux `.command`) and a French install guide
+  (`LISEZMOI.txt`). Only Node.js is needed. Launching the app while it already runs just opens
+  the browser on it.
+- **Calculations in every kamas field**: `1.2m + 350k + 80k`, `3 x 450k`, `(2.6m - 100k) / 2`.
+  The result shows under the field while typing and replaces the calculation on leaving it.
+- **Taxe HDV** on each trade: 2 % when listed, 1 % when the price was updated, or none. That
+  share of the price is deducted from the profit everywhere. It is chosen in the form (2 % by
+  default, then the last choice), when recording a sale, or in the edit dialog, and is exported
+  and imported as a _Taxe HDV_ column. Existing trades are unchanged.
+- Data location: the per-user application folder (`%APPDATA%\Carnet de Kamas` on Windows, and
+  the equivalents on macOS and Linux), unless a `data` folder sits next to the app (portable
+  mode: an existing project folder keeps its `data/carnet.json`).
+- For development: end-to-end browser tests (`npm run test:e2e`, Playwright with the installed
+  Chrome); git hooks enabled by `npm install` (`npm run check` before each commit,
+  `npm run check:all` before each push); and a release workflow (`npm run build:release`
+  builds the download, pushing a `vX.Y.Z` tag publishes it).
 
-- Calculations in every kamas field: `1.2m + 350k + 80k`, `3 x 450k`, `(2.6m - 100k) / 2`. The
-  result shows under the field while typing and replaces the calculation on leaving it.
-- _Taxe HDV_ on each trade: 2 % when listed, 1 % when the price was updated, or none. That
-  share of the price is deducted from the profit everywhere. Chosen in the form (2 % by default,
-  then the last choice), when recording a sale, or in the edit dialog. Exported and imported as
-  a _Taxe HDV_ column. Existing trades are unchanged.
+### Changed
 
-- **Local mode, the new normal way to run the app**: `npm start` serves it at
-  http://localhost:8000 and saves everything in `data/carnet.json` on this computer (one readable
-  JSON file, atomic writes, a backup at each start, git-ignored). Open tabs stay in sync. The
-  server has no dependencies, only answers this computer, and refuses requests from other sites.
-  The claude.ai artifact mode still works.
-
-- End-to-end browser tests (`npm run test:e2e`, Playwright with the installed Chrome) covering
-  every view, the dialogs, import/export, themes, phone widths, the cloud code path and read-only
-  mode; they run in CI and fail on any page error.
-- Git hooks, enabled by `npm install`: `npm run check` before each commit, and
-  `npm run check:all` (coverage and browser tests included) before each push.
+- `npm start` replaces `npm run serve`, and the server prints its messages in French.
 
 ### Fixed
 
