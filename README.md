@@ -56,7 +56,11 @@ this option have no tax.
 
 **Price a craft.** Pick a craftable item with type _Craft / FM_ and enter unit prices in the
 recipe box. Editing the investment by hand stops the auto-fill; _Utiliser le coût calculé_
-turns it back on.
+turns it back on. To craft several at once, set the **×** next to the recipe title (e.g. 10):
+ingredient quantities, runes, the investment and the planned sale are all multiplied, while
+unit prices stay per unit. For runes, you can instead type your kamas and the value of your runes
+before and after forging (_Avant_ / _Après_): what you spent, (kamas + runes before) − (kamas +
+runes after), becomes the runes cost of the whole operation.
 
 **Investment from chat screenshots.** Copy a screenshot of the game chat and paste it
 anywhere in the app (Ctrl+V), drop it on the form, or use _Captures_. The

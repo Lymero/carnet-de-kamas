@@ -393,6 +393,36 @@ input.kamas {
 .recipe td.r {
   text-align: right;
 }
+.recipe table.bal th,
+.recipe table.bal td:first-child {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.recipe table.bal th {
+  text-align: right;
+  padding-right: 8px;
+}
+.recipe input[readonly] {
+  background: transparent;
+}
+.recipe .head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.recipe .qty {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.recipe .qty input {
+  width: 52px;
+  text-align: right;
+  color: var(--ink);
+}
 .recipe .tot {
   display: flex;
   justify-content: space-between;

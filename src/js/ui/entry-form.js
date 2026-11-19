@@ -17,6 +17,9 @@ import { attachAutocomplete } from "./autocomplete.js";
 import { loadTaxPreference, saveTaxPreference, taxOptions } from "./hdv-tax.js";
 import { $, $$, esc, runAction, toast } from "./dom.js";
 
+/** Largest number of crafts the recipe helper accepts in one operation. */
+const QTY_MAX = 9999;
+
 /**
  * @param {HTMLFormElement} form
  * @param {{state: ReturnType<typeof import("../state.js").createState>, actions: ReturnType<typeof import("../actions.js").createActions>, onAdded: (trade: import("../domain/trade.js").Trade) => void}} ctx
@@ -44,12 +47,34 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     /** @type {import("../data/catalog.js").CatalogItem|null} */ craftItem: null,
     /** @type {Record<string, number>} */ unitPrices: {},
     runes: 0,
+    /**
+     * Kamas and rune value held before and after forging (kb, rb, ka, ra). When a "before" and an
+     * "after" are set, what was spent, (kb + rb) − (ka + ra), is the runes cost of the operation.
+     * @type {Partial<Record<"kb"|"rb"|"ka"|"ra", number>>}
+     */
+    balance: {},
+    /** Number of crafts: multiplies the ingredient quantities and the runes. Unit prices stay per unit. */
+    qty: 1,
     costFollowsRecipe: true,
   };
 
   const priceOf = (id) => draft.unitPrices[id] ?? state.get().prices[id];
+  /** Runes cost read from the balance before and after, for the whole operation; null when not set. */
+  const runesFromBalance = () => {
+    const { kb, rb, ka, ra } = draft.balance;
+    if ((kb == null && rb == null) || (ka == null && ra == null)) return null;
+    const spent = (kb ?? 0) + (rb ?? 0) - (ka ?? 0) - (ra ?? 0);
+    return spent >= 0 ? spent : null;
+  };
+  const runesTotal = () => runesFromBalance() ?? draft.runes * draft.qty;
   const currentRecipeTotal = () =>
-    draft.craftItem ? recipeCost(draft.craftItem.recipe, priceOf, draft.runes).total : 0;
+    draft.craftItem ? recipeCost(draft.craftItem.recipe, priceOf).total * draft.qty + runesTotal() : 0;
+  const qtyLabel = (n) => (n === 1 ? "" : `${n}×`);
+  const runesQtyLabel = () => (runesFromBalance() == null ? qtyLabel(draft.qty) : "");
+  const runesValue = () => {
+    const v = runesFromBalance() ?? draft.runes;
+    return v ? formatKamas(v) : "";
+  };
 
   // ----- category -----
   function setCategory(cat) {
@@ -67,7 +92,14 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     const match = state.get().catalog.findByName(el.item.value);
     const craftItem = match?.recipe ? match : null;
     if (craftItem?.id !== draft.craftItem?.id) {
-      Object.assign(draft, { craftItem, unitPrices: {}, runes: 0, costFollowsRecipe: true });
+      Object.assign(draft, {
+        craftItem,
+        unitPrices: {},
+        runes: 0,
+        balance: {},
+        qty: 1,
+        costFollowsRecipe: true,
+      });
     }
     renderRecipe();
   }
@@ -97,13 +129,24 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       .map(([id, qty]) => {
         const p = priceOf(id);
         const name = esc(catalog.ingredientName(id));
-        return `<tr><td class="q num">${qty}×</td><td>${name}</td><td class="r"><input type="text" class="kamas" data-ing="${id}" value="${p != null ? formatKamas(p) : ""}" placeholder="prix/u" aria-label="Prix unitaire ${name}"></td></tr>`;
+        return `<tr><td class="q num" data-q="${qty}">${qty * draft.qty}×</td><td>${name}</td><td class="r"><input type="text" class="kamas" data-ing="${id}" value="${p != null ? formatKamas(p) : ""}" placeholder="prix/u" aria-label="Prix unitaire ${name}"></td></tr>`;
       })
       .join("");
     el.recipe.innerHTML = `<div class="recipe">
-      <div class="lbl">Recette · niv. ${item.level}</div>
+      <div class="head"><span class="lbl">Recette · niv. ${item.level}</span><label class="qty">×<input type="text" inputmode="numeric" id="f-qty" class="num" value="${draft.qty}" aria-label="Nombre de crafts"></label></div>
       <table><tbody>${rows}
-        <tr><td class="q"></td><td>Runes / FM</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${draft.runes ? formatKamas(draft.runes) : ""}" placeholder="0" aria-label="Coût runes et forgemagie"></td></tr>
+        <tr><td class="q num" data-q="runes">${runesQtyLabel()}</td><td>Runes / FM</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût runes et forgemagie"${runesFromBalance() == null ? "" : " readonly"}></td></tr>
+      </tbody></table>
+      <table class="bal"><thead><tr><td></td><th>Kamas</th><th>Runes</th></tr></thead><tbody>
+        ${[
+          ["Avant", "kb", "rb"],
+          ["Après", "ka", "ra"],
+        ]
+          .map(
+            ([label, k, r]) =>
+              `<tr><td>${label}</td>${[k, r].map((key) => `<td class="r"><input type="text" class="kamas" data-bal="${key}" value="${draft.balance[key] != null ? formatKamas(draft.balance[key]) : ""}" aria-label="${key[0] === "k" ? "Kamas" : "Valeur des runes"} ${label.toLowerCase()}"></td>`).join("")}</tr>`,
+          )
+          .join("")}
       </tbody></table>
       <div class="tot"><span>Coût calculé</span><span class="num" id="r-tot">${formatKamas(currentRecipeTotal())}</span></div>
       <div class="hint">Les prix unitaires sont mémorisés pour la prochaine fois.
@@ -112,6 +155,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   }
   el.recipe.addEventListener("input", (e) => {
     const t = /** @type {HTMLInputElement} */ (e.target);
+    if (t.id === "f-qty") return setQuantity(t.value);
     const value = evaluateKamas(t.value);
     // Unreadable or negative amounts count as "no price yet".
     if (t.dataset.ing) {
@@ -119,13 +163,50 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       else delete draft.unitPrices[t.dataset.ing];
     } else if (t.id === "f-runes") {
       draft.runes = isKamas(value) ? value : 0;
+    } else if (t.dataset.bal) {
+      const key = /** @type {"kb"|"rb"|"ka"|"ra"} */ (t.dataset.bal);
+      if (isKamas(value)) draft.balance[key] = value;
+      else delete draft.balance[key];
+      syncRunesField();
     } else return;
+    refreshTotals();
+  });
+  /** Shows the runes cost from the balance (read only) once it is set, the typed one otherwise. */
+  function syncRunesField() {
+    const runes = /** @type {HTMLInputElement} */ ($("#f-runes", el.recipe));
+    runes.readOnly = runesFromBalance() != null;
+    runes.value = runesValue();
+    $('td[data-q="runes"]', el.recipe).textContent = runesQtyLabel();
+  }
+  function refreshTotals() {
     $("#r-tot", el.recipe).textContent = formatKamas(currentRecipeTotal());
     if (draft.costFollowsRecipe) {
       el.cost.value = currentRecipeTotal() ? formatKamas(currentRecipeTotal()) : "";
       updatePreview();
     }
-  });
+  }
+  /**
+   * Changes the number of crafts. Everything follows: ingredient quantities, the
+   * computed cost, and the investment and planned sale already typed.
+   * @param {string} raw
+   */
+  function setQuantity(raw) {
+    const n = Number(raw.trim());
+    if (!Number.isInteger(n) || n < 1 || n > QTY_MAX || n === draft.qty) return;
+    const ratio = n / draft.qty;
+    draft.qty = n;
+    $$("td[data-q]", el.recipe).forEach((td) => {
+      td.textContent = td.dataset.q === "runes" ? runesQtyLabel() : `${Number(td.dataset.q) * n}×`;
+    });
+    const scale = (/** @type {HTMLInputElement} */ input) => {
+      const v = evaluateKamas(input.value);
+      if (input.value.trim() && isKamas(v)) input.value = formatKamas(Math.round(v * ratio));
+    };
+    scale(el.expected);
+    if (!draft.costFollowsRecipe) scale(el.cost);
+    refreshTotals();
+    updatePreview();
+  }
   el.recipe.addEventListener("click", (e) => {
     if (/** @type {HTMLElement} */ (e.target).id !== "r-use") return;
     draft.costFollowsRecipe = true;
@@ -170,7 +251,14 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     form.reset();
     el.date.value = todayIso();
     el.tax.value = String(loadTaxPreference());
-    Object.assign(draft, { craftItem: null, unitPrices: {}, runes: 0, costFollowsRecipe: true });
+    Object.assign(draft, {
+      craftItem: null,
+      unitPrices: {},
+      runes: 0,
+      balance: {},
+      qty: 1,
+      costFollowsRecipe: true,
+    });
     setCategory(draft.cat);
     updatePreview();
   }
@@ -192,8 +280,8 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
         hdvTax: Number(el.tax.value),
       };
       if (draft.craftItem && draft.cat === CATEGORY.CRAFT) {
-        trade.recipe = draft.craftItem.recipe.map(([id, qty]) => [id, qty, priceOf(id) ?? null]);
-        trade.runes = draft.runes;
+        trade.recipe = draft.craftItem.recipe.map(([id, qty]) => [id, qty * draft.qty, priceOf(id) ?? null]);
+        trade.runes = runesTotal();
       }
       const { trade: saved, warning } = await actions.addTrade(trade, draft.unitPrices);
       reset();
