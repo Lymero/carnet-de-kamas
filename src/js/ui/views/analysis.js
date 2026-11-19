@@ -33,13 +33,13 @@ export function createAnalysisView({ onItem }) {
       <div class="split">${panel(CATEGORY.CRAFT, "Craft / FM")}${panel(CATEGORY.RESALE, "Achat / revente")}</div>
       <div class="panel chart"><h3>Bénéfice réalisé par mois</h3>${monthlyProfitChart(byMonth(state.trades, CHART_MONTHS))}</div>
       <div class="panel"><h3>Par objet</h3><div class="scroll"><table class="grid">
-        <thead><tr><th>Objet</th><th class="n">Ventes</th><th class="n">En vente</th><th class="n">dont FM</th><th class="n">Bénéfice</th><th class="n">Rendement</th><th class="n">Moy. / vente</th><th class="n">Gagnantes</th></tr></thead>
+        <thead><tr><th>Objet</th><th class="n">Ventes</th><th class="n">En vente</th><th class="n">dont FM</th><th class="n">Bénéfice</th><th class="n">Rendement</th><th class="n">Moy.</th><th class="n">Gagnantes</th></tr></thead>
         <tbody>${items
           .map(
-            (s) => `<tr data-item="${esc(s.name)}" tabindex="0">
-          <td>${esc(s.name)}</td><td class="n">${s.sold}</td><td class="n">${s.open || ""}</td>
-          <td class="n fm">${s.fm ? formatKamas(s.fm) : ""}</td>
-          <td class="n ${signClass(s.profit)}">${s.sold ? formatKamas(s.profit) : "—"}</td>
+            (s) => `<tr data-item="${esc(s.name)}" tabindex="0" title="Voir dans l'historique">
+          <td class="go">${esc(s.name)}</td><td class="n">${s.sold}</td><td class="n">${s.open || ""}</td>
+          <td class="n fm" title="${s.fm ? formatKamas(s.fm) : ""}">${s.fm ? formatCompact(s.fm) : ""}</td>
+          <td class="n ${signClass(s.profit)}" title="${s.sold ? formatKamas(s.profit) : ""}">${s.sold ? formatCompact(s.profit) : "—"}</td>
           <td class="n ${signClass(s.profit)}">${s.sold ? formatPercent(ratioPercent(s.profit, s.cost)) : "—"}</td>
           <td class="n">${s.sold ? formatCompact(s.profit / s.sold) : "—"}</td>
           <td class="n">${s.sold ? `${s.wins}/${s.sold}` : "—"}</td>

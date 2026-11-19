@@ -17,9 +17,11 @@
   kamas and rune value before and after forging; what you spent, (kamas + runes before) −
   (kamas + runes after), is shown as you type and becomes the runes cost of the whole
   operation. The ingredients still count on top.
-- The recipe box is compact: _Ingrédients_ starts folded, with its subtotal shown, and the
-  explanatory notes are gone. Forgemagie moves out of it into its own _FM_ box under the recipe,
-  also folded with its subtotal; the computed cost (ingredients + FM) sits under both.
+- The recipe box is compact: _Recette_ starts folded, with its subtotal (and the number of crafts
+  when more than one) shown, and the explanatory notes are gone. Forgemagie moves out of it into
+  its own _FM_ box under the recipe, also folded with its subtotal: one small grid of kamas and
+  runes before and after, and the cost; the subtraction shows on hovering the cost. The computed
+  cost (ingredients + FM) sits under both.
 - **FM cost in the history and the analysis**: a _dont FM_ column next to _Investi_ in
   _Historique_ (with its total), the share of the investment spent on FM in the _Craft / FM_
   panel, and a _dont FM_ column in _Par objet_ (sold operations).
@@ -30,11 +32,13 @@
   leave no good copy.
 - _En cours_ can be sorted by date, item, type, investment, planned sale or margin, as in
   _Historique_. Craft and resale cards line up the same, the days for sale staying on one line.
-- A _Vider_ button empties the _Nouvelle opération_ form.
+- A reset button (circular arrow) next to _Nouvelle opération_ empties the form.
 - A click outside closes what is open: any dialog (as its cancel button does) and the
-  _Ingrédients_ / _FM_ folds.
+  _Recette_ / _FM_ folds.
 - Every kamas field writes its amount in full with separators once you leave it (`100000` →
   `100 000`, `1.2m` → `1 200 000`), not only after a calculation.
+- _Analyse_ > _Par objet_ fits its card: _dont FM_ and _Bénéfice_ are shown short (`32,7 M`, the
+  exact amount on hover). An arrow on hover shows that a row opens the item in _Historique_.
 
 ## 3.0.1 (2026-11-18)
 

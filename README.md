@@ -60,9 +60,9 @@ be changed when recording the sale (_Vendu_) or in the edit dialog. Trades recor
 this option have no tax.
 
 **Price a craft.** Pick a craftable item with type _Craft / FM_ and enter unit prices in the
-recipe box (_Ingrédients_ starts folded, showing its subtotal). Editing the investment by hand
+recipe box (_Recette_ starts folded, showing its subtotal). Editing the investment by hand
 stops the auto-fill; _Utiliser le coût calculé_ turns it back on. To craft several at once, set
-the **×** next to the recipe title (e.g. 10): ingredient quantities, the investment and the
+_Crafts_ **×** at the top of the recipe (e.g. 10): ingredient quantities, the investment and the
 planned sale are multiplied, while unit prices stay per unit.
 
 Forgemagie has its own _FM_ box under the recipe, folded with its subtotal: type its cost for

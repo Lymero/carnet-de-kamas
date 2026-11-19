@@ -228,6 +228,34 @@ header.top {
   position: sticky;
   top: 12px;
 }
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.icon-btn:hover {
+  color: var(--ink);
+}
+.icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .form-head {
   display: flex;
   align-items: center;
@@ -425,36 +453,29 @@ input.kamas {
 .recipe .fold summary::-webkit-details-marker {
   display: none;
 }
-.recipe .fold summary span:first-child::before {
+.recipe .fold summary > span:first-child::before {
   content: "▸";
   display: inline-block;
   width: 14px;
   color: var(--muted);
   transition: transform 0.15s;
 }
-.recipe .fold[open] summary span:first-child::before {
+.recipe .fold[open] summary > span:first-child::before {
   transform: rotate(90deg);
 }
 /* Open, the FM box shows its cost in the field: the subtotal would repeat it. */
 .recipe.fm .fold[open] summary .num {
   visibility: hidden;
 }
+.recipe .fold summary .muted {
+  color: var(--muted);
+}
 .recipe .fold[open] summary {
   margin-bottom: 4px;
 }
-/* Before / after: a panel of its own under the FM cost typed. */
-.recipe .bal {
-  display: grid;
-  gap: 6px;
-  margin-top: 6px;
-  padding: 10px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-}
+/* FM: one grid, kamas and runes before and after, and the cost they give (or typed). */
 .recipe .bal th,
-.recipe .bal td:first-child,
-.recipe .bal td.op {
+.recipe .bal td:first-child {
   color: var(--muted);
   font-size: 12px;
   font-weight: 500;
@@ -463,57 +484,33 @@ input.kamas {
   text-align: right;
   padding-right: 8px;
 }
-.recipe .bal td.op {
-  text-align: center;
-  width: 14px;
-}
-.recipe .bal .used {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.recipe .bal .used[hidden] {
-  display: none;
-}
-.recipe .bal .used .num {
-  text-align: right;
+.recipe .bal tr.cost td {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
   color: var(--ink);
-  font-weight: 600;
+  font-size: 13px;
 }
-.recipe .bal .formula {
-  font-size: 11px;
-  color: var(--muted);
-  text-align: right;
-}
-.recipe .bal .formula:empty {
-  display: none;
-}
-.recipe .bal .used .num.muted {
-  color: var(--muted);
-}
-.recipe .bal .used .num.neg {
+.recipe .bal #bal-used.neg {
+  margin-left: 6px;
   color: var(--bad);
+  font-size: 12px;
 }
-.recipe .head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.recipe .qty-row label {
+  color: var(--muted);
 }
 /* The screenshot buttons (ui/purchase-import.js) move here while a recipe is shown. */
 .recipe .slot:empty {
   display: none;
 }
 .recipe .qty {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   color: var(--muted);
   font-size: 13px;
 }
 .recipe .qty input {
-  width: 52px;
+  width: 60px;
   text-align: right;
   color: var(--ink);
 }
@@ -991,6 +988,18 @@ textarea {
   .kpi b {
     font-size: 22px;
   }
+}
+/* Analyse > Par objet: a row opens that item in Historique; an arrow says so on hover. */
+table.grid td.go::after {
+  content: "→";
+  margin-left: 6px;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+table.grid tr:hover td.go::after,
+table.grid tr:focus-visible td.go::after {
+  opacity: 1;
 }
 /* "dont FM": the runes / forgemagie part of the investment, kept discreet next to it. */
 table.grid td.fm {

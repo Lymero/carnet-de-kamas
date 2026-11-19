@@ -95,9 +95,11 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     const v = balanceFm() ?? draft.runes;
     return v ? formatKamas(v) : "";
   };
+  /** The number of crafts in the recipe header, so it shows while folded. */
+  const qtyTag = () => (draft.qty > 1 ? ` · ×${draft.qty}` : "");
   const balanceInput = (key, label) =>
     `<td class="r"><input type="text" class="kamas" data-bal="${key}" value="${draft.balance[key] != null ? formatKamas(draft.balance[key]) : ""}" placeholder="0" aria-label="${key[0] === "k" ? "Kamas" : "Valeur des runes"} ${label.toLowerCase()}"></td>`;
-  /** The live line under the balance: the subtraction and what it gives. */
+  /** What the balance gives: the amount (or the "after is higher" warning) and the subtraction. */
   const balanceSummary = () => {
     const used = balanceUsed();
     if (used == null) return { text: "—", calc: "", cls: "muted" };
@@ -165,30 +167,27 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
         return `<tr><td class="q num" data-q="${qty}">${qty * draft.qty}×</td><td>${name}</td><td class="r"><input type="text" class="kamas" data-ing="${id}" value="${p != null ? formatKamas(p) : ""}" placeholder="prix/u" aria-label="Prix unitaire ${name}"></td></tr>`;
       })
       .join("");
-    // The recipe (ingredients, × crafts), then FM in a box of its own: forging comes after the
-    // craft and is counted once for the whole operation.
+    // The recipe (× crafts, ingredients), then FM in a box of its own: forging comes after the
+    // craft and is counted once for the whole operation. Both fold with their subtotal in view;
+    // the screenshot buttons stay under the recipe, folded or not.
     el.recipe.innerHTML = `<div class="recipe">
-      <div class="head"><span class="lbl">Recette · niv. ${item.level}</span><label class="qty">×<input type="text" inputmode="numeric" id="f-qty" class="num" value="${draft.qty}" aria-label="Nombre de crafts"></label></div>
-      <div class="slot"></div>
       <details class="fold" data-fold="ing"${draft.open.ing ? " open" : ""}>
-        <summary><span>Ingrédients</span><span class="num" id="r-ing"></span></summary>
-        <table><tbody>${rows}</tbody></table>
+        <summary><span>Recette · niv. ${item.level}<span class="muted" id="r-qty">${qtyTag()}</span></span><span class="num" id="r-ing"></span></summary>
+        <table><tbody>
+          <tr class="qty-row"><td></td><td><label for="f-qty">Crafts</label></td><td class="r"><span class="qty">×<input type="text" inputmode="numeric" id="f-qty" class="num" value="${draft.qty}" aria-label="Nombre de crafts"></span></td></tr>
+          ${rows}
+        </tbody></table>
       </details>
+      <div class="slot"></div>
     </div>
     <div class="recipe fm">
       <details class="fold" data-fold="fm"${draft.open.fm ? " open" : ""}>
         <summary><span>FM</span><span class="num" id="r-fm"></span></summary>
-        <table><tbody>
-          <tr><td>Coût</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût FM"${balanceFm() == null ? "" : " readonly"}></td></tr>
+        <table class="bal"><thead><tr><td></td><th>Kamas</th><th>Runes</th></tr></thead><tbody>
+          <tr><td>Avant</td>${balanceInput("kb", "Avant")}${balanceInput("rb", "Avant")}</tr>
+          <tr><td>Après</td>${balanceInput("ka", "Après")}${balanceInput("ra", "Après")}</tr>
+          <tr class="cost"><td colspan="2">Coût <span id="bal-used"></span></td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût FM"${balanceFm() == null ? "" : " readonly"}></td></tr>
         </tbody></table>
-        <div class="bal">
-          <table><thead><tr><td></td><th>Kamas</th><th></th><th>Runes</th></tr></thead><tbody>
-            <tr><td>Avant</td>${balanceInput("kb", "Avant")}<td class="op">+</td>${balanceInput("rb", "Avant")}</tr>
-            <tr><td>Après</td>${balanceInput("ka", "Après")}<td class="op">+</td>${balanceInput("ra", "Après")}</tr>
-          </tbody></table>
-          <div class="used"><span>Coût FM</span><span class="num" id="bal-used"></span></div>
-          <div class="formula num" id="bal-calc"></div>
-        </div>
       </details>
     </div>
     <div class="recipe-tot">
@@ -221,11 +220,11 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     const { text, calc, cls } = balanceSummary();
     const used = $("#bal-used", el.recipe);
     used.textContent = text;
-    used.className = `num ${cls}`;
-    // A usable amount already shows in the cost above: the line only speaks up when "after" is higher.
-    /** @type {HTMLElement} */ (used.parentElement).hidden = cls !== "neg";
-    $("#bal-calc", el.recipe).textContent = calc;
+    used.className = cls;
+    // A usable amount already shows in the cost field: only the "after is higher" warning shows.
+    used.hidden = cls !== "neg";
     const runes = /** @type {HTMLInputElement} */ ($("#f-runes", el.recipe));
+    runes.title = calc; // the subtraction, on hover
     runes.readOnly = balanceFm() != null;
     runes.value = runesValue();
     syncSubtotals();
@@ -269,6 +268,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     $$("td[data-q]", el.recipe).forEach((td) => {
       td.textContent = `${Number(td.dataset.q) * n}×`;
     });
+    $("#r-qty", el.recipe).textContent = qtyTag();
     const scale = (/** @type {HTMLInputElement} */ input) => {
       const v = evaluateKamas(input.value);
       if (input.value.trim() && isKamas(v)) input.value = formatKamas(Math.round(v * ratio));

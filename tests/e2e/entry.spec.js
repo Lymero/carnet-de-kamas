@@ -45,6 +45,7 @@ test("the number of crafts multiplies the recipe, the investment and the planned
 
   await recipe.locator("#f-qty").fill("10");
   await expect(firstQty).toHaveText(`${unitQty * 10}×`);
+  await expect(recipe.locator("#r-qty")).toHaveText(" · ×10");
   await expect(page.locator("#f-cost")).toHaveValue(
     new RegExp(`^${String(unitCost * 10).replace(/\B(?=(\d{3})+$)/g, "\\s")}$`),
   );
@@ -103,7 +104,9 @@ test("the kamas and rune value before and after forging give the FM cost", async
   await recipe.locator('[data-bal="ka"]').fill("8m");
   await recipe.locator('[data-bal="ra"]').fill("2m");
   await expect(recipe.locator("#bal-used")).toHaveText(/^3\s000\s000$/);
-  await expect(recipe.locator("#bal-calc")).toHaveText(
+  // The subtraction shows on hovering the cost.
+  await expect(recipe.locator("#f-runes")).toHaveAttribute(
+    "title",
     /^= \(10\s000\s000 \+ 3\s000\s000\) − \(8\s000\s000 \+ 2\s000\s000\)$/,
   );
   await expect(recipe.locator("#f-runes")).toHaveValue(/^3\s000\s000$/);
@@ -159,7 +162,9 @@ test("the FM cost shows in the history and in the analysis", async ({ page }) =>
 
   await page.click('#tabs a[data-v="analyse"]');
   await expect(page.locator("#view .panel").first()).toContainText(/dont FM 3\s?M · 85,7\s%/);
-  await expect(page.locator("#view tr[data-item] td.fm").first()).toHaveText(/^3\s000\s000$/);
+  const fm = page.locator("#view tr[data-item] td.fm").first();
+  await expect(fm).toHaveText(/^3\sM$/);
+  await expect(fm).toHaveAttribute("title", /^3\s000\s000$/);
 });
 
 test("« Vider » empties the form", async ({ page }) => {
