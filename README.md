@@ -55,7 +55,7 @@ under the field while you type and replaces the calculation when you leave the f
 **Auction-house tax.** Pick the _Taxe HDV_ paid on the trade: **2 %** when the item is put up
 for sale (the default), **1 %** when its price was updated, or none. That share of the price is
 deducted from the profit: of the planned price until the item sells, then of the real sale
-price. The preview shows the amount. The form remembers your last choice, and the rate can
+price. The form remembers your last choice, and the rate can
 be changed when recording the sale (_Vendu_) or in the edit dialog. Trades recorded before
 this option have no tax.
 

@@ -63,20 +63,18 @@ test.describe("calculations in kamas fields", () => {
 });
 
 test.describe("auction-house tax", () => {
-  test("is 2 % by default, and deducted in the preview", async ({ page }) => {
+  test("is 2 % by default, and deducted in the preview without being spelled out", async ({ page }) => {
     await openApp(page, { catalog: false });
     await expect(page.locator("#f-tax")).toHaveValue("2");
     await page.fill("#f-cost", "1m");
     await page.fill("#f-exp", "2m");
-    await expect(page.locator("#f-preview small")).toHaveText(/^taxe HDV de 40\s000 \(2 %\) déduite$/);
+    await expect(page.locator("#f-preview")).not.toContainText("taxe");
     await expect(page.locator("#f-preview b")).toHaveText(/^960\s000 \(\+96\s%\)$/);
 
     await page.selectOption("#f-tax", "1");
-    await expect(page.locator("#f-preview small")).toHaveText(/^taxe HDV de 20\s000 \(1 %\) déduite$/);
     await expect(page.locator("#f-preview b")).toHaveText(/^980\s000 /);
 
     await page.selectOption("#f-tax", "0");
-    await expect(page.locator("#f-preview small")).toHaveCount(0);
     await expect(page.locator("#f-preview b")).toHaveText(/^1\s000\s000 \(\+100\s%\)$/);
   });
 

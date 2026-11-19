@@ -12,7 +12,7 @@ import { todayIso } from "../domain/dates.js";
 import { evaluateKamas, formatKamas, formatPercent, isKamas, ratioPercent, signClass } from "../domain/kamas.js";
 import { itemHistory } from "../domain/stats.js";
 import { normalize } from "../domain/text.js";
-import { auctionTax, profit } from "../domain/trade.js";
+import { profit } from "../domain/trade.js";
 import { attachAutocomplete } from "./autocomplete.js";
 import { closeOnClickOutside } from "./dismiss.js";
 import { loadTaxPreference, saveTaxPreference, taxOptions } from "./hdv-tax.js";
@@ -46,7 +46,6 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     date: /** @type {HTMLInputElement} */ ($("#f-date", form)),
     sold: /** @type {HTMLInputElement} */ ($("#f-sold", form)),
     tax: /** @type {HTMLSelectElement} */ ($("#f-tax", form)),
-    previewLabel: $("#f-preview span", form),
     preview: $("#f-preview b", form),
     submit: /** @type {HTMLButtonElement} */ ($("#f-submit", form)),
     reset: /** @type {HTMLButtonElement} */ ($("#f-reset", form)),
@@ -304,15 +303,12 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     const cost = evaluateKamas(el.cost.value);
     const expected = evaluateKamas(el.expected.value);
     const planned = { cost, expected, sold: false, soldPrice: null, hdvTax: Number(el.tax.value) };
-    const tax = Number.isNaN(expected) ? 0 : auctionTax(planned);
-    const detail = document.createElement("small");
-    detail.textContent = `taxe HDV de ${formatKamas(tax)} (${planned.hdvTax} %) déduite`;
-    el.previewLabel.replaceChildren("Bénéfice prévu", ...(tax ? [detail] : []));
     if (Number.isNaN(cost) || Number.isNaN(expected)) {
       el.preview.textContent = "—";
       el.preview.className = "num";
       return;
     }
+    // After the auction tax, which is not spelled out.
     const p = profit(/** @type {import("../domain/trade.js").Trade} */ (planned));
     el.preview.textContent = `${formatKamas(p)} (${formatPercent(ratioPercent(p, cost))})`;
     el.preview.className = `num ${signClass(p)}`;
