@@ -38,7 +38,7 @@
   _Recette_ / _FM_ folds.
 - Every kamas field writes its amount in full with separators once you leave it (`100000` →
   `100 000`, `1.2m` → `1 200 000`), not only after a calculation.
-- _Analyse_ > _Par objet_ fits its card: _dont FM_ and _Bénéfice_ are shown short (`32,7 M`, the
+- _Historique_ and _Analyse_ > _Par objet_ fit their card: amounts are shown short (`32,7 M`, the
   exact amount on hover). An arrow on hover shows that a row opens the item in _Historique_.
 - The _Craft/FM_ and _Achat/revente_ badges share one shape, filled, only their colour differs.
 - _Bénéfice prévu_ no longer spells out the HDV tax; it is still deducted.

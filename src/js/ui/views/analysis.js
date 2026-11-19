@@ -3,12 +3,13 @@
  */
 
 import { CATEGORY, CHART_MONTHS } from "../../config.js";
-import { formatCompact, formatKamas, formatPercent, ratioPercent, signClass } from "../../domain/kamas.js";
+import { formatCompact, formatPercent, ratioPercent, signClass } from "../../domain/kamas.js";
 import { byCategory, byItem, byMonth } from "../../domain/stats.js";
 import { normalize, plural } from "../../domain/text.js";
 import { monthlyProfitChart } from "../chart.js";
 import { closest, esc } from "../dom.js";
 import { nextSort, sortHeader, sortRows } from "../sort.js";
+import { amountCell } from "../table.js";
 
 /** @typedef {ReturnType<typeof byItem>[number]} ItemStats */
 
@@ -59,10 +60,10 @@ export function createAnalysisView({ onItem }) {
           .map(
             (s) => `<tr data-item="${esc(s.name)}" tabindex="0" title="Voir dans l'historique">
           <td class="go">${esc(s.name)}</td><td class="n">${s.sold}</td><td class="n">${s.open || ""}</td>
-          <td class="n fm" title="${s.fm ? formatKamas(s.fm) : ""}">${s.fm ? formatCompact(s.fm) : ""}</td>
-          <td class="n ${signClass(s.profit)}" title="${s.sold ? formatKamas(s.profit) : ""}">${s.sold ? formatCompact(s.profit) : "—"}</td>
+          ${amountCell(s.fm || null, { cls: "fm" })}
+          ${amountCell(s.sold ? s.profit : null, { cls: signClass(s.profit), empty: "—" })}
           <td class="n ${signClass(s.profit)}">${s.sold ? formatPercent(ratioPercent(s.profit, s.cost)) : "—"}</td>
-          <td class="n">${s.sold ? formatCompact(s.profit / s.sold) : "—"}</td>
+          ${amountCell(s.sold ? s.profit / s.sold : null, { empty: "—" })}
           <td class="n">${s.sold ? `${s.wins}/${s.sold}` : "—"}</td>
         </tr>`,
           )

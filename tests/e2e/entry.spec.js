@@ -156,8 +156,10 @@ test("the FM cost shows in the history and in the analysis", async ({ page }) =>
   await page.click('#tabs a[data-v="historique"]');
   const history = page.locator("#view table.grid");
   await expect(history.locator("thead")).toContainText("dont FM");
-  await expect(history.locator("tbody td.fm").first()).toHaveText(/^3\s000\s000$/);
-  await expect(history.locator("tfoot td.fm")).toHaveText(/^3\s000\s000$/);
+  // Short amounts, the exact one on hover.
+  await expect(history.locator("tbody td.fm").first()).toHaveText(/^3\sM$/);
+  await expect(history.locator("tbody td.fm").first()).toHaveAttribute("title", /^3\s000\s000$/);
+  await expect(history.locator("tfoot td.fm")).toHaveAttribute("title", /^3\s000\s000$/);
 
   await page.click('#tabs a[data-v="analyse"]');
   await expect(page.locator("#view .panel").first()).toContainText(/dont FM 3\s?M · 85,7\s%/);

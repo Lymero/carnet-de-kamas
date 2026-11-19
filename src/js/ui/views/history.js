@@ -8,13 +8,14 @@
 
 import { CATEGORY, CATEGORY_LABEL } from "../../config.js";
 import { formatShortDate, monthKey, monthLabel } from "../../domain/dates.js";
-import { formatKamas, formatPercent, ratioPercent, signClass } from "../../domain/kamas.js";
+import { formatPercent, ratioPercent, signClass } from "../../domain/kamas.js";
 import { toTsv } from "../../domain/sheet-io.js";
 import { fmCost } from "../../domain/stats.js";
 import { normalize, plural } from "../../domain/text.js";
 import { profit, salePrice } from "../../domain/trade.js";
 import { $, closest, esc, toast } from "../dom.js";
 import { categoryPill } from "../pills.js";
+import { amountCell } from "../table.js";
 import { nextSort, sortHeader, sortRows } from "../sort.js";
 
 /** @typedef {import("../../domain/trade.js").Trade} Trade */
@@ -103,10 +104,10 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
           <td class="num">${esc(formatShortDate(t.date))}</td>
           <td>${esc(t.item)}</td>
           <td>${categoryPill(t)}</td>
-          <td class="n">${formatKamas(t.cost)}</td>
-          <td class="n fm">${t.runes ? formatKamas(t.runes) : ""}</td>
-          <td class="n">${formatKamas(salePrice(t))}</td>
-          <td class="n ${signClass(p)}">${formatKamas(p)}</td>
+          ${amountCell(t.cost)}
+          ${amountCell(t.runes || null, { cls: "fm" })}
+          ${amountCell(salePrice(t))}
+          ${amountCell(p, { cls: signClass(p) })}
           <td class="n ${signClass(p)}">${formatPercent(ratioPercent(p, t.cost))}</td>
           <td>${t.sold ? `<span class="pill ${p >= 0 ? "ok" : "ko"}">Vendu</span>` : `<span class="pill">En vente</span>`}</td>
         </tr>`;
@@ -114,9 +115,9 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
         .join("")}</tbody>
       <tfoot><tr>
         <td colspan="3">${plural(rows.length, "opération")}</td>
-        <td class="n">${formatKamas(totalCost)}</td><td class="n fm">${totalFm ? formatKamas(totalFm) : ""}</td>
-        <td class="n">${formatKamas(totalSale)}</td>
-        <td class="n ${signClass(totalProfit)}">${formatKamas(totalProfit)}</td>
+        ${amountCell(totalCost)}${amountCell(totalFm || null, { cls: "fm" })}
+        ${amountCell(totalSale)}
+        ${amountCell(totalProfit, { cls: signClass(totalProfit) })}
         <td class="n ${signClass(totalProfit)}">${formatPercent(ratioPercent(totalProfit, totalCost))}</td><td></td>
       </tr></tfoot>
     </table></div>`;

@@ -58,7 +58,7 @@ test.describe("calculations in kamas fields", () => {
     await page.fill("#e-cost", "500k + 50k");
     await expect(page.getByRole("dialog").locator(".calc")).toHaveText(/^= 550\s000$/);
     await page.getByRole("button", { name: "Enregistrer" }).click();
-    await expect(page.locator("#h-results tbody tr").first()).toContainText(/550\s000/);
+    await expect(page.locator("#h-results tbody tr").first().locator('td[title="550\u00a0000"]')).toHaveText("550 k");
   });
 });
 
@@ -91,7 +91,7 @@ test.describe("auction-house tax", () => {
     await expect(page.locator(".toast")).toContainText("Cape vendu : +145 %");
 
     await page.click('#tabs a[data-v="historique"]');
-    await expect(page.locator("#h-results tbody tr").first()).toContainText(/1\s450\s000/);
+    await expect(page.locator("#h-results tbody tr").first().locator('td[title="1\u00a0450\u00a0000"]')).toHaveCount(1);
     await expect(page.locator(".kpis")).toContainText("1,45 M");
   });
 
@@ -114,13 +114,13 @@ test.describe("auction-house tax", () => {
     await addTrade(page, { item: "Cape", cat: "resale", cost: "1m", expected: "2m", date: "2026-01-10" });
     await page.click('#tabs a[data-v="historique"]');
     const row = page.locator("#h-results tbody tr").first();
-    await expect(row).toContainText(/1\s000\s000/);
+    await expect(row.locator('td[title="1\u00a0000\u00a0000"]').first()).toBeVisible();
 
     await row.click();
     await expect(page.locator("#e-tax")).toHaveValue("0");
     await page.selectOption("#e-tax", "2");
     await page.getByRole("button", { name: "Enregistrer" }).click();
-    await expect(row).toContainText(/960\s000/);
+    await expect(row.locator('td[title="960\u00a0000"]')).toHaveCount(1);
   });
 
   test("the form remembers the last rate chosen on this browser", async ({ page }) => {
