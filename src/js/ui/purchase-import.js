@@ -14,7 +14,7 @@
 
 import { SCREENSHOTS } from "../config.js";
 import { evaluateKamas, formatKamas, isKamas } from "../domain/kamas.js";
-import { purchaseTotal, readOcrLines, reviewLines } from "../domain/purchases.js";
+import { combineReadings, purchaseTotal, readOcrLines, reviewLines } from "../domain/purchases.js";
 import { plural } from "../domain/text.js";
 import { $, $$, closest, esc, toast } from "./dom.js";
 import { createScreenshotReader } from "./screenshot-ocr.js";
@@ -180,9 +180,9 @@ export function mountPurchaseImport({ dialog, button, costInput }) {
       delete shot.error;
       try {
         shot.image?.close();
-        const { lines, image } = await reader.read(shot.file);
+        const { readings, image } = await reader.read(shot.file);
         shot.image = image;
-        perShot.push(readOcrLines(lines));
+        perShot.push(combineReadings(readings.map(readOcrLines)));
       } catch (error) {
         console.warn("Could not read a screenshot", error);
         shot.error = "Cette image n'a pas pu être lue.";

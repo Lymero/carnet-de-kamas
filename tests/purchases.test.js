@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   CONFIDENCE_MIN,
+  combineReadings,
   overlappingLines,
   purchaseTotal,
   readOcrLine,
@@ -121,6 +122,56 @@ test("readOcrLines keeps purchases in order and notices skipped lines", () => {
   assert.deepEqual(skipped.box, { x0: 2, y0: 21 + 3 * 17, x1: 300, y1: 21 + 4 * 17 });
   assert.deepEqual(readOcrLines(/** @type {any} */ ("nothing")), []);
   assert.equal(readOcrLines([ocr("1 x [A] (5 kamas)")]).length, 1, "one line, no spacing to compare");
+});
+
+test("combineReadings keeps the prices most readings agree on", () => {
+  const reading = (...prices) =>
+    readOcrLines(
+      prices.map((price, row) =>
+        price === null
+          ? ocr("Vous êtes arrivé à destination !", { row })
+          : ocr(`1 x [Corne] (${price} kamas)`, { row }),
+      ),
+    );
+  const lines = combineReadings([
+    reading("1 400", "2 036", "1 589", "1 900"),
+    reading("1 900", "2 034", "1 589", "1 900"),
+    reading("1 900", "2 056", "1 589", "1 900"),
+  ]);
+  assert.deepEqual(
+    lines.map(({ price, sure }) => ({ price, sure })),
+    [
+      { price: 1900, sure: false }, // outvoted: right, but worth a look
+      { price: 2036, sure: false }, // no majority: the first reading, flagged
+      { price: 1589, sure: true },
+      { price: 1900, sure: true },
+    ],
+  );
+  // A line the first reading skipped is filled in when the others agree on it.
+  const filled = combineReadings([
+    readOcrLines([
+      ocr("1 x [A] (5 kamas)", { row: 0 }),
+      ocr("1 x [A] (6 kamas)", { row: 1 }),
+      ocr("1 x [A] (8 kamas)", { row: 3 }),
+    ]),
+    reading("5", "6", "7", "8"),
+    reading("5", "6", "7", "8"),
+  ]);
+  assert.deepEqual(
+    filled.map(({ price, item, sure, skipped }) => ({ price, item, sure, skipped })),
+    [
+      { price: 5, item: "A", sure: true, skipped: false },
+      { price: 6, item: "A", sure: true, skipped: false },
+      { price: 7, item: "Corne", sure: false, skipped: false },
+      { price: 8, item: "A", sure: true, skipped: false },
+    ],
+  );
+  // Agreeing readings none of which was sure of a price stay doubtful; one reading is kept as is.
+  const unsure = (row) => ocr("1 x [A] (1O0 kamas)", { row });
+  assert.equal(combineReadings([[readOcrLine(unsure(0))], [readOcrLine(unsure(0))]])[0].sure, false);
+  const single = reading("1 900");
+  assert.equal(combineReadings([single]), single);
+  assert.deepEqual(combineReadings([]), []);
 });
 
 test("overlappingLines finds the lines repeated where screenshots overlap, in either order", () => {

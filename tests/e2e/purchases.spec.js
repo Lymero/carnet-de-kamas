@@ -38,13 +38,20 @@ test("reads a chat screenshot offline, lets the player fix it, and fills the inv
     .locator("canvas")
     .evaluate((c) => c.width);
   expect(pictureWidth).toBeGreaterThan(200);
-  // A misread digit ("1 400" for "1 900") is flagged; most lines are not.
-  const flagged = rows(page).filter({ hasText: "à vérifier" });
-  expect(await flagged.count()).toBeGreaterThanOrEqual(1);
-  expect(await flagged.count()).toBeLessThan(8);
-  await expect(
-    flagged.locator('[data-f="price"][value="1 400"]').or(flagged.locator('[data-f="price"]')).first(),
-  ).toBeVisible();
+  // Each price read, checked against the screenshot: at most one is wrong, and it is flagged.
+  const truth = [
+    800, 951, 952, 952, 952, 952, 952, 9788, 21798, 21798, 21799, 21799, 21799, 21799, 21799, 21798, 21799, 21799,
+    228223, 9889, 9889, 1587, 1587, 1588, 1588, 1588, 1589, 1589, 1589, 1589, 1589, 1590, 1899, 1899, 1900, 1900, 1900,
+    2036, 2036, 2036, 2036, 29998,
+  ];
+  const wrong = [];
+  for (const [i, expected] of truth.entries()) {
+    if ((await price(rows(page).nth(i))) !== expected) wrong.push(i);
+  }
+  expect(wrong.length).toBeLessThanOrEqual(1);
+  for (const i of wrong) await expect(rows(page).nth(i)).toContainText("à vérifier");
+  expect(await rows(page).filter({ hasText: "à vérifier" }).count()).toBeLessThan(6);
+  expect(await rows(page).filter({ hasText: "ligne sautée" }).count()).toBe(0);
 
   // Fix a price, leave a line out, add one by hand: the total follows.
   const before = await total(page);
@@ -73,6 +80,7 @@ test("reads a light chat theme as well", async ({ page }) => {
   await readScreenshots(page, ["chat-light.png"]);
   await expect(rows(page)).toHaveCount(42);
   expect(await price(rows(page).nth(18))).toBe(228223);
+  expect(await rows(page).filter({ hasText: "à vérifier" }).count()).toBeLessThan(6);
 });
 
 test("flags the lines two overlapping screenshots share, and leaves them out", async ({ page }) => {

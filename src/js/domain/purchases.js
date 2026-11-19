@@ -8,6 +8,9 @@
  * the price is the total paid for the lot and uses spaces as thousands separators
  * (`10 x [Griffe de Buboxor] (228 223 kamas)`). Other chat lines are not purchases.
  *
+ * Each screenshot is read several times, prepared a little differently each time; a
+ * price counts as read when most readings agree on it (`combineReadings`).
+ *
  * Nothing here trusts the reader: every line that might be wrong is flagged for the
  * player, who checks the list before the total is used.
  */
@@ -148,6 +151,57 @@ export function readOcrLines(lines) {
     if (box) previous = purchase ? box : null;
   }
   return result;
+}
+
+/**
+ * Combines several readings of the same screenshot (each from `readOcrLines`), line by
+ * line: a price is kept when more than half of the readings found it, and a line is
+ * `sure` only when every reading found the same price and at least one was sure of it.
+ * Lines follow the first reading; a line it skipped is filled in when the others agree.
+ * Different preparations of the picture make different mistakes, so agreeing readings
+ * are far more often right than any single one.
+ * @param {PurchaseLine[][]} readings  the first one gives the lines
+ * @returns {PurchaseLine[]}
+ */
+export function combineReadings(readings) {
+  const [first = [], ...others] = readings;
+  if (others.length === 0) return first;
+  return first.map((line) => {
+    const versions = [line, ...others.map((lines) => sameLine(line, lines))];
+    const counts = new Map();
+    for (const version of versions) {
+      if (version && !Number.isNaN(version.price)) counts.set(version.price, (counts.get(version.price) ?? 0) + 1);
+    }
+    const [price, votes] = [...counts].reduce((best, entry) => (entry[1] > best[1] ? entry : best), [NaN, 0]);
+    if (votes * 2 <= versions.length) return { ...line, sure: false };
+    const agreeing = versions.filter((version) => version?.price === price);
+    const source = line.skipped ? /** @type {PurchaseLine} */ (agreeing[0]) : line;
+    return {
+      ...source,
+      box: line.box,
+      price,
+      sure: votes === versions.length && agreeing.some((version) => version?.sure),
+    };
+  });
+}
+
+/**
+ * The line of `lines` at the same height as `line`, if any.
+ * @param {PurchaseLine} line
+ * @param {PurchaseLine[]} lines
+ */
+function sameLine(line, lines) {
+  if (!line.box) return null;
+  const middle = (/** @type {Box} */ box) => (box.y0 + box.y1) / 2;
+  const reach = Math.max(4, (line.box.y1 - line.box.y0) / 2);
+  let best = null;
+  let distance = reach;
+  for (const other of lines) {
+    if (!other.box || other.skipped) continue;
+    const d = Math.abs(middle(other.box) - middle(line.box));
+    if (d < distance) [best, distance] = [other, d];
+  }
+  return best;
 }
 
 /**

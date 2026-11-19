@@ -5,7 +5,9 @@
  *
  * Before reading, each screenshot is cleaned up for the reader: enlarged when small,
  * turned into dark text on a light background whatever the chat theme (coloured text
- * on a dark background is the game's default), in shades of grey.
+ * on a dark background is the game's default), in shades of grey. It is read three
+ * times, with the greys more or less darkened: each version trips the reader on
+ * different digits, so purchases.js keeps the prices most readings agree on.
  *
  * Loaded only when a screenshot is read: the engine and models are a few MB.
  */
@@ -16,10 +18,16 @@ const VENDOR = new URL("../../vendor/tesseract/", import.meta.url);
 const ENLARGE_BELOW = 800;
 /** Largest canvas drawn (pixels), so a huge screenshot cannot exhaust memory. */
 const MAX_PIXELS = 16_000_000;
+/**
+ * Each reading darkens the greys by one of these powers (1: unchanged). Chosen on real
+ * screenshots: together they halve the misread prices of any single reading.
+ */
+const READINGS = [1, 1.6, 2.2];
 
 /**
  * @typedef {Object} ReadScreenshot
- * @property {import("../domain/purchases.js").OcrLine[]} lines  every line found, top to bottom, in screenshot pixels
+ * @property {import("../domain/purchases.js").OcrLine[][]} readings  for each reading, every line
+ *   found, top to bottom, in screenshot pixels
  * @property {ImageBitmap} image  the screenshot, to show each line's picture
  */
 
@@ -49,25 +57,13 @@ export function createScreenshotReader() {
     async read(file) {
       worker ??= start();
       const image = await createImageBitmap(file);
-      const { canvas, scale } = prepare(image);
-      const { data } = await (await worker).recognize(canvas, {}, { blocks: true, text: false });
-      /** @type {import("../domain/purchases.js").OcrLine[]} */
-      const lines = (data.blocks ?? []).flatMap((block) =>
-        block.paragraphs.flatMap((paragraph) =>
-          paragraph.lines.map((line) => ({
-            text: line.text.trim(),
-            words: line.words.map((word) => ({ text: word.text, confidence: word.confidence })),
-            box: {
-              x0: line.bbox.x0 / scale,
-              y0: line.bbox.y0 / scale,
-              x1: line.bbox.x1 / scale,
-              y1: line.bbox.y1 / scale,
-            },
-          })),
-        ),
-      );
-      lines.sort((a, b) => a.box.y0 - b.box.y0);
-      return { lines, image };
+      const readings = [];
+      for (const darken of READINGS) {
+        const { canvas, scale } = prepare(image, darken);
+        const { data } = await (await worker).recognize(canvas, {}, { blocks: true, text: false });
+        readings.push(linesOf(data, scale));
+      }
+      return { readings, image };
     },
     async close() {
       const running = worker;
@@ -78,13 +74,35 @@ export function createScreenshotReader() {
 }
 
 /**
+ * The lines the reader found, top to bottom, in screenshot pixels.
+ * @param {any} data  the reader's result
+ * @param {number} scale  how much the screenshot was enlarged
+ * @returns {import("../domain/purchases.js").OcrLine[]}
+ */
+function linesOf(data, scale) {
+  /** @type {import("../domain/purchases.js").OcrLine[]} */
+  const lines = (data.blocks ?? []).flatMap((block) =>
+    block.paragraphs.flatMap((paragraph) =>
+      paragraph.lines.map((line) => ({
+        text: line.text.trim(),
+        words: line.words.map((word) => ({ text: word.text, confidence: word.confidence })),
+        box: { x0: line.bbox.x0 / scale, y0: line.bbox.y0 / scale, x1: line.bbox.x1 / scale, y1: line.bbox.y1 / scale },
+      })),
+    ),
+  );
+  return lines.sort((a, b) => a.box.y0 - b.box.y0);
+}
+
+/**
  * Draws the screenshot as the reader reads best: dark text on white, in greys,
  * enlarged when small. On a dark background the brightest channel of each pixel is the
- * text, whatever its colour; on a light one, the darkest.
+ * text, whatever its colour; on a light one, the darkest. `darken` above 1 darkens the
+ * greys, thickening faint strokes.
  * @param {ImageBitmap} image
+ * @param {number} darken
  * @returns {{canvas: HTMLCanvasElement, scale: number}}
  */
-function prepare(image) {
+function prepare(image, darken) {
   let scale = image.width < ENLARGE_BELOW ? 2 : 1;
   if (image.width * image.height * scale * scale > MAX_PIXELS) scale = 1;
   const canvas = document.createElement("canvas");
@@ -100,7 +118,7 @@ function prepare(image) {
   const dark = sum / (p.length / 4) < 128;
   for (let i = 0; i < p.length; i += 4) {
     const v = dark ? 255 - Math.max(p[i], p[i + 1], p[i + 2]) : Math.min(p[i], p[i + 1], p[i + 2]);
-    p[i] = p[i + 1] = p[i + 2] = v;
+    p[i] = p[i + 1] = p[i + 2] = darken === 1 ? v : 255 * (v / 255) ** darken;
   }
   context.putImageData(pixels, 0, 0);
   return { canvas, scale };

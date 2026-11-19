@@ -108,7 +108,8 @@ history toolbar is not rebuilt while one of its controls has focus.
   `Lx`, other brackets) but marking a line unsure when the price had to be forgiven, is not
   grouped by three, or has a digit read with low confidence. `readOcrLines` adds a `skipped`
   entry where the spacing between two purchase lines leaves room for one the reader missed;
-  `overlappingLines` finds lines repeated where two screenshots overlap; `reviewLines` builds
+  `combineReadings` keeps, line by line, the price most of a
+  screenshot's readings agree on (sure only when all agree); `overlappingLines` finds lines repeated where two screenshots overlap; `reviewLines` builds
   the list the player checks.
 - `text.js`: `normalize` (accent-, case- and punctuation-insensitive keys), `escapeHtml`, `plural`.
 
@@ -159,7 +160,8 @@ history toolbar is not rebuilt while one of its controls has focus.
 - `screenshot-ocr.js`: the offline text reader. It loads Tesseract (WebAssembly, English and
   French models, vendored in `src/vendor/tesseract/` by `npm run vendor:ocr`) only when a
   screenshot is read, and prepares each image first: enlarged when small, dark text on white
-  in greys whatever the chat theme.
+  in greys whatever the chat theme. Each screenshot is read three times, with the greys more
+  or less darkened, since each version misreads different digits.
 - `purchase-import.js`: the screenshot dialog (pick, drop or paste; reading; the editable
   review list with each line's picture, flags and running total) that fills the investment.
 - `chart.js` draws one SVG bar chart; a chart library would be most of the page weight for one chart.
