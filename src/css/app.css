@@ -411,6 +411,10 @@ input.kamas {
   justify-content: space-between;
   align-items: center;
 }
+/* The screenshot buttons (ui/purchase-import.js) move here while a recipe is shown. */
+.recipe .slot:empty {
+  display: none;
+}
 .recipe .qty {
   display: flex;
   align-items: center;

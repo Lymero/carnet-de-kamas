@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   CONFIDENCE_MIN,
   combineReadings,
+  ingredientPrices,
   overlappingLines,
   purchaseTotal,
   readOcrLine,
@@ -172,6 +173,33 @@ test("combineReadings keeps the prices most readings agree on", () => {
   const single = reading("1 900");
   assert.equal(combineReadings([single]), single);
   assert.deepEqual(combineReadings([]), []);
+});
+
+test("ingredientPrices gives each ingredient's unit price from the lots bought", () => {
+  const lot = (quantity, item, price) => ({ quantity, item, price });
+  const { prices, used } = ingredientPrices(
+    [
+      lot(1, "Serre d'Ikargn", 800),
+      lot(10, 'Serre d"Ikargn', 9788), // punctuation misread
+      lot(10, "oeil de harpille", 9889), // case and ligature
+      lot(1, "Corne de Mejaire", 1589),
+      lot(1, "Corne de Méjajre", 1591), // one letter misread
+      lot(3, "Rune Pa", 999), // not in the recipe
+      lot(1, "Boucle des Égarés", NaN), // unreadable price
+    ],
+    [
+      { id: 1, name: "Serre d'Ikargn" },
+      { id: 2, name: "Œil de Harpille" },
+      { id: 3, name: "Corne de Méjaire" },
+      { id: 4, name: "Boucle des Égarés" },
+      { id: 5, name: "Poisskaille" },
+    ],
+  );
+  assert.deepEqual(prices, { 1: Math.round(10588 / 11), 2: 989, 3: 1590 });
+  assert.deepEqual([...used], [0, 1, 2, 3, 4]);
+  // Too different to be the same name.
+  assert.deepEqual(ingredientPrices([lot(1, "Serre", 5)], [{ id: 1, name: "Terre" }]).prices, {});
+  assert.deepEqual(ingredientPrices([lot(1, "", 5)], [{ id: 1, name: "A" }]).prices, {});
 });
 
 test("overlappingLines finds the lines repeated where screenshots overlap, in either order", () => {

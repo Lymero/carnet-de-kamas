@@ -269,6 +269,67 @@ export function reviewLines(perShot) {
 }
 
 /**
+ * The unit price of each ingredient of a recipe, from the lots bought: what was paid for
+ * an ingredient divided by how many were bought, rounded to the kamas. Names are matched
+ * ignoring case, accents and punctuation, and forgiving a letter or two misread.
+ * @param {{quantity: number, item: string, price: number}[]} lines  the lots counted
+ * @param {{id: number, name: string}[]} ingredients
+ * @returns {{prices: Record<number, number>, used: Set<number>}}  `used`: indexes of the lines
+ *   that are ingredients
+ */
+export function ingredientPrices(lines, ingredients) {
+  const names = ingredients.map(({ id, name }) => ({ id, key: normalize(name) }));
+  /** @type {Map<number, {quantity: number, price: number}>} */
+  const bought = new Map();
+  const used = new Set();
+  lines.forEach((line, i) => {
+    if (!isCount(line.quantity) || !isAmount(line.price)) return;
+    const id = closestName(normalize(line.item), names);
+    if (!id) return;
+    const sum = bought.get(id) ?? { quantity: 0, price: 0 };
+    sum.quantity += line.quantity;
+    sum.price += line.price;
+    bought.set(id, sum);
+    used.add(i);
+  });
+  const prices = Object.fromEntries([...bought].map(([id, sum]) => [id, Math.round(sum.price / sum.quantity)]));
+  return { prices, used };
+}
+
+/**
+ * The ingredient whose name is closest to `key`, allowing about one misread letter in eight.
+ * @param {string} key
+ * @param {{id: number, key: string}[]} names
+ */
+function closestName(key, names) {
+  if (!key) return null;
+  let best = null;
+  let bestDistance = Infinity;
+  for (const name of names) {
+    const distance = editDistance(key, name.key);
+    if (distance < bestDistance) [best, bestDistance] = [name.id, distance];
+  }
+  return bestDistance <= Math.floor(key.length / 8) ? best : null;
+}
+
+/**
+ * Letters to add, remove or change to turn `a` into `b`.
+ * @param {string} a
+ * @param {string} b
+ */
+function editDistance(a, b) {
+  let row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i += 1) {
+    const next = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    row = next;
+  }
+  return row[b.length];
+}
+
+/**
  * Sum of the lots' prices.
  * @param {{price: number}[]} lines
  * @returns {number}

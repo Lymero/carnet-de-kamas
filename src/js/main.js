@@ -111,6 +111,7 @@ async function start() {
   mountPurchaseImport({
     dialog: /** @type {HTMLDialogElement} */ ($("#dlg")),
     form: /** @type {HTMLFormElement} */ ($("#addForm")),
+    recipe: form.recipe,
   });
 
   // ----- routing -----

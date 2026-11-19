@@ -2,7 +2,8 @@
 // text reader on real screenshots (tests/e2e/screenshots/): the game's default dark chat,
 // the same in light colours, and two overlapping halves of it.
 import { readFileSync } from "node:fs";
-import { expect, openApp, test } from "./fixtures.js";
+import { formatKamas as formatted } from "../../src/js/domain/kamas.js";
+import { expect, openApp, pickCatalogItem, test } from "./fixtures.js";
 
 const shot = (name) => `tests/e2e/screenshots/${name}`;
 const rows = (page) => page.locator("#r-rows tr[data-i]");
@@ -153,4 +154,31 @@ test("refuses files that are not images; adding the trade forgets the screenshot
   await page.click("#f-submit");
   await expect(page.locator("#f-cost")).toHaveValue("");
   await expect(page.locator("#f-shots-check")).toBeHidden();
+});
+
+test("with a craft's recipe shown, the lots bought fill its unit prices", async ({ page }) => {
+  await openApp(page);
+  await pickCatalogItem(page, "Clef de l'Œil de Vortex", "Clef de l'Œil de Vortex");
+  // The buttons move into the recipe box.
+  await expect(page.locator("#recipeBox #f-shots")).toBeVisible();
+  await paste(page, "chat-purchases.png");
+  await expect(page.locator(".toast")).toContainText("Recette : 5 prix remplis", { timeout: 60_000 });
+
+  // Unit price = what was paid for the ingredient / how many were bought.
+  const unit = (from, to, count) => Math.round(TRUTH.slice(from, to).reduce((a, b) => a + b, 0) / count);
+  const field = (name) => page.getByLabel(`Prix unitaire ${name}`);
+  await expect(field("Serre d'Ikargn")).toHaveValue(formatted(unit(0, 8, 17)));
+  await expect(field("Œil de Harpille")).toHaveValue(formatted(unit(19, 21, 20)));
+  await expect(field("Boucle des Égarés")).toHaveValue(formatted(unit(41, 42, 10)));
+  await expect(field("Poisskaille")).toHaveValue("");
+  // The investment follows the recipe's computed cost.
+  expect(await cost(page)).toBe(kamas(await page.locator("#r-tot").textContent()));
+  await expect(page.locator("#f-shots-check")).toHaveText("Vérifier (42)");
+
+  // Achat / revente: no recipe, the buttons go back under the investment, which gets the total.
+  await page.click('#f-cat button[data-v="resale"]');
+  await expect(page.locator("#recipeBox #f-shots")).toHaveCount(0);
+  await expect(page.locator("#f-shots")).toBeVisible();
+  const truthTotal = TRUTH.reduce((a, b) => a + b, 0);
+  await expect.poll(async () => Math.abs((await cost(page)) - truthTotal)).toBeLessThan(1000);
 });

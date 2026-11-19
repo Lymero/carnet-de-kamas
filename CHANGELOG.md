@@ -5,8 +5,8 @@
 ### Added
 
 - **Investment from chat screenshots**: paste (Ctrl+V), drop or pick screenshots of the game
-  chat and the app reads the purchase lines (`N x [Item] (price kamas)`) and fills the
-  investment with their total. The text is read on the computer (Tesseract, bundled), with no
+  chat and the app reads the purchase lines (`N x [Item] (price kamas)`): with a craft's recipe
+  shown, they fill the ingredients' unit prices; otherwise their total fills the investment. The text is read on the computer (Tesseract, bundled), with no
   internet connection. A button opens the lines read, each with its picture, to double-check
   and fix them; unsure readings, missed lines and lines repeated across overlapping
   screenshots are flagged there.

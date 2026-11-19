@@ -65,7 +65,9 @@ runes after), becomes the runes cost of the whole operation.
 **Investment from chat screenshots.** Copy a screenshot of the game chat and paste it
 anywhere in the app (Ctrl+V), drop it on the form, or use _Captures_. The
 purchase lines (`10 x [Griffe de Buboxor] (228 223 kamas)`) are read on your computer, with no
-internet connection, and their total goes straight into the investment field. Paste the next
+internet connection. With a craft's recipe shown, the buttons sit in the recipe box and the
+lots bought fill the ingredients' unit prices (paid ÷ bought), so the investment follows the
+recipe; otherwise their total goes straight into the investment field. Paste the next
 screenshot to add it (up to 10); lines repeated where two screenshots overlap are left out.
 Other chat lines are ignored.
 

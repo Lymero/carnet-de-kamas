@@ -21,9 +21,18 @@ import { $, $$, esc, runAction, toast } from "./dom.js";
 const QTY_MAX = 9999;
 
 /**
+ * @typedef {Object} RecipeHook  Lets the screenshot reader (ui/purchase-import.js) fill the recipe.
+ * @property {() => {id: number, ingredients: {id: number, name: string}[], slot: HTMLElement}|null} current
+ *   the recipe shown, with a place for the screenshot buttons; null when none is shown.
+ *   The form fires "recipechange" each time it redraws the recipe box.
+ * @property {(prices: Record<string, number>) => void} setUnitPrices  fills these unit prices; the
+ *   investment follows the computed cost again
+ */
+
+/**
  * @param {HTMLFormElement} form
  * @param {{state: ReturnType<typeof import("../state.js").createState>, actions: ReturnType<typeof import("../actions.js").createActions>, onAdded: (trade: import("../domain/trade.js").Trade) => void}} ctx
- * @returns {{refresh: () => void}}
+ * @returns {{refresh: () => void, recipe: RecipeHook}}
  */
 export function mountEntryForm(form, { state, actions, onAdded }) {
   const el = {
@@ -122,6 +131,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     const item = draft.craftItem;
     if (!item || draft.cat !== CATEGORY.CRAFT) {
       el.recipe.innerHTML = "";
+      form.dispatchEvent(new Event("recipechange"));
       return;
     }
     const { catalog } = state.get();
@@ -134,6 +144,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       .join("");
     el.recipe.innerHTML = `<div class="recipe">
       <div class="head"><span class="lbl">Recette · niv. ${item.level}</span><label class="qty">×<input type="text" inputmode="numeric" id="f-qty" class="num" value="${draft.qty}" aria-label="Nombre de crafts"></label></div>
+      <div class="slot"></div>
       <table><tbody>${rows}
         <tr><td class="q num" data-q="runes">${runesQtyLabel()}</td><td>Runes / FM</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût runes et forgemagie"${runesFromBalance() == null ? "" : " readonly"}></td></tr>
       </tbody></table>
@@ -152,6 +163,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       <div class="hint">Les prix unitaires sont mémorisés pour la prochaine fois.
         ${draft.costFollowsRecipe ? "L'investissement suit ce calcul." : `<button type="button" class="btn small" id="r-use">Utiliser le coût calculé</button>`}</div>
     </div>`;
+    form.dispatchEvent(new Event("recipechange"));
   }
   el.recipe.addEventListener("input", (e) => {
     const t = /** @type {HTMLInputElement} */ (e.target);
@@ -297,5 +309,22 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   return {
     /** Re-render parts that depend on loaded data (catalog, remembered prices). */
     refresh: syncItem,
+    recipe: {
+      current() {
+        const item = draft.craftItem;
+        const slot = $(".recipe .slot", el.recipe);
+        if (!item || draft.cat !== CATEGORY.CRAFT || !slot) return null;
+        const { catalog } = state.get();
+        const ingredients = item.recipe.map(([id]) => ({ id, name: catalog.ingredientName(id) }));
+        return { id: item.id, ingredients, slot };
+      },
+      setUnitPrices(prices) {
+        Object.assign(draft.unitPrices, prices);
+        draft.costFollowsRecipe = true;
+        el.cost.value = currentRecipeTotal() ? formatKamas(currentRecipeTotal()) : "";
+        renderRecipe();
+        updatePreview();
+      },
+    },
   };
 }

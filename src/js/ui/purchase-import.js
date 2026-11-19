@@ -4,9 +4,11 @@
  * reader (ui/screenshot-ocr.js).
  *
  * Screenshots come in by pasting one anywhere on the page (Ctrl+V, no other dialog open),
- * dropping them on the entry form, or the "Captures" button. Each is read at once
- * and the total goes straight into the investment field: the reading is trusted. Further
- * screenshots add to the same purchase, lines repeated where two overlap left out.
+ * dropping them on the entry form, or the "Captures" button. Each is read at once and
+ * used straight away: the reading is trusted. While a craft's recipe is shown, the
+ * buttons sit in the recipe box and the lots bought fill the ingredients' unit prices
+ * (the investment follows the recipe); otherwise their total goes into the investment.
+ * Further screenshots add to the same purchase, lines repeated where two overlap left out.
  *
  * "Vérifier (N)" opens the list of lines read, each as its picture cut from the
  * screenshot, to double-check and fix (counted or not, price; lines added or removed)
@@ -18,7 +20,7 @@
 
 import { SCREENSHOTS } from "../config.js";
 import { evaluateKamas, formatKamas, isKamas } from "../domain/kamas.js";
-import { combineReadings, purchaseTotal, readOcrLines, reviewLines } from "../domain/purchases.js";
+import { combineReadings, ingredientPrices, purchaseTotal, readOcrLines, reviewLines } from "../domain/purchases.js";
 import { plural } from "../domain/text.js";
 import { $, $$, closest, esc, toast } from "./dom.js";
 import { createScreenshotReader } from "./screenshot-ocr.js";
@@ -42,12 +44,13 @@ const FLAGS = {
   check: ["à vérifier", "Lecture douteuse : compare le prix à l'image."],
   skipped: ["manquante ?", "Une ligne semble manquer ici : tape son prix ou décoche-la."],
   overlap: ["doublon ?", "Déjà sur la capture précédente, donc pas comptée : coche-la si ce sont deux achats."],
+  outside: ["hors recette", "Pas un ingrédient de la recette : pas compté dans son coût."],
 };
 
 /**
- * @param {{dialog: HTMLDialogElement, form: HTMLFormElement}} options
+ * @param {{dialog: HTMLDialogElement, form: HTMLFormElement, recipe?: import("./entry-form.js").RecipeHook}} options
  */
-export function mountPurchaseImport({ dialog, form }) {
+export function mountPurchaseImport({ dialog, form, recipe }) {
   const body = /** @type {HTMLFormElement} */ ($(".dlg", dialog));
   const costInput = /** @type {HTMLInputElement} */ ($("#f-cost", form));
   const pick = /** @type {HTMLButtonElement} */ ($("#f-shots", form));
@@ -55,6 +58,10 @@ export function mountPurchaseImport({ dialog, form }) {
   const status = /** @type {HTMLElement} */ ($("#f-shots-status", form));
   const fileInput = /** @type {HTMLInputElement} */ ($("#f-shots-file", form));
   const pickLabel = /** @type {HTMLElement} */ ($("span", pick));
+  const bar = /** @type {HTMLElement} */ (pick.parentElement);
+  /** Where the buttons go back to when no recipe is shown. */
+  const home = document.createComment("screenshot buttons");
+  bar.before(home);
   const reader = createScreenshotReader();
 
   /** @type {Shot[]} */
@@ -70,6 +77,11 @@ export function mountPurchaseImport({ dialog, form }) {
   let waiting = 0;
   /** @type {ReturnType<typeof setTimeout>|undefined} */
   let idle;
+  /** The recipe the lots were last used for (its item id), or null for the investment. */
+  /** @type {number|null} */
+  let usedFor = null;
+  /** Lines of the list being checked that are not ingredients of the recipe shown. */
+  let outsideRows = new Set();
 
   // ----- screenshots in -----
   fileInput.accept = SCREENSHOTS.TYPES.join(",");
@@ -102,6 +114,15 @@ export function mountPurchaseImport({ dialog, form }) {
     e.preventDefault();
     form.classList.remove("drop-over");
     addFiles([...(e.dataTransfer?.files ?? [])]);
+  });
+
+  // ----- in the recipe box while a recipe is shown -----
+  form.addEventListener("recipechange", () => {
+    const target = recipe?.current();
+    if (target) target.slot.append(bar);
+    else home.after(bar);
+    // Another item picked after pasting: the lots now go to it.
+    if (rows.length && (target?.id ?? null) !== usedFor) apply(rows);
   });
 
   // ----- the screenshots belong to the investment shown -----
@@ -186,6 +207,23 @@ export function mountPurchaseImport({ dialog, form }) {
    */
   function apply(lines) {
     const counted = lines.filter((row) => row.counted && isKamas(row.price));
+    const target = recipe?.current();
+    usedFor = target?.id ?? null;
+    if (target) {
+      const { prices, used } = ingredientPrices(counted, target.ingredients);
+      const filled = Object.keys(prices).length;
+      if (filled) {
+        /** @type {NonNullable<typeof recipe>} */ (recipe).setUnitPrices(prices);
+        written = costInput.value;
+        const outside = counted.length - used.size;
+        toast(
+          `Recette : ${plural(filled, "prix rempli", "prix remplis")}` +
+            (outside ? ` · ${plural(outside, "lot")} hors recette, pas compté${outside > 1 ? "s" : ""}` : ""),
+        );
+        return;
+      }
+      // None of these lots is an ingredient: their total is the investment, as without a recipe.
+    }
     const total = purchaseTotal(counted);
     written = formatKamas(total);
     costInput.value = written;
@@ -270,6 +308,15 @@ export function mountPurchaseImport({ dialog, form }) {
     const tbody = $("#r-rows", body);
     if (!tbody || !draft) return;
     const list = draft;
+    const target = recipe?.current();
+    // With a recipe, lots that are not ingredients are not counted in its cost.
+    const used = target
+      ? ingredientPrices(
+          list.map((row) => (row.counted ? row : { ...row, price: NaN })),
+          target.ingredients,
+        ).used
+      : null;
+    outsideRows = used ? new Set(list.map((_, i) => i).filter((i) => !used.has(i) && list[i].counted)) : new Set();
     let html = "";
     shots.forEach((shot, s) => {
       // Headers only tell several screenshots apart.
@@ -288,7 +335,9 @@ export function mountPurchaseImport({ dialog, form }) {
 
   /** @param {Row} row @param {number} i */
   function rowHtml(row, i) {
-    const flag = row.flag ? `<span class="pill warn" title="${FLAGS[row.flag][1]}">${FLAGS[row.flag][0]}</span>` : "";
+    const pill = (/** @type {keyof typeof FLAGS} */ key) =>
+      `<span class="pill warn" title="${FLAGS[key][1]}">${FLAGS[key][0]}</span>`;
+    const flag = (row.flag ? pill(row.flag) : "") + (outsideRows.has(i) ? pill("outside") : "");
     const label = esc(row.item || (row.flag === "skipped" ? "ligne manquante" : "ligne ajoutée"));
     // The picture is the line itself: what was read only goes to screen readers.
     const read =

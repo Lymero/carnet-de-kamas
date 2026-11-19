@@ -108,7 +108,8 @@ history toolbar is not rebuilt while one of its controls has focus.
   `Lx`, other brackets) but marking a line unsure when the price had to be forgiven, is not
   grouped by three, or has a digit read with low confidence. `readOcrLines` adds a `skipped`
   entry where the spacing between two purchase lines leaves room for one the reader missed;
-  `combineReadings` keeps, line by line, the price most of a
+  `ingredientPrices` turns the lots bought into a recipe's unit
+  prices (names matched loosely); `combineReadings` keeps, line by line, the price most of a
   screenshot's readings agree on (sure only when all agree); `overlappingLines` finds lines repeated where two screenshots overlap; `reviewLines` builds
   the list the player checks.
 - `text.js`: `normalize` (accent-, case- and punctuation-insensitive keys), `escapeHtml`, `plural`.
@@ -164,7 +165,9 @@ history toolbar is not rebuilt while one of its controls has focus.
   engines, with the greys more or less darkened, since each version misreads different
   digits; only the first also loads the French model, for item names.
 - `purchase-import.js`: screenshots pasted anywhere, dropped on the form or picked are read
-  in turn and their total goes straight into the investment. "Vérifier (N)" opens
+  in turn and used straight away: with a recipe shown (the form's `RecipeHook` and its
+  "recipechange" event), the buttons move into the recipe box and `ingredientPrices` fills the
+  unit prices; otherwise the total goes into the investment. "Vérifier (N)" opens
   the editable list (each line's picture, flags, running total) on a copy, kept only by
   "Utiliser". Changing the investment by hand or adding the trade forgets them.
 - `chart.js` draws one SVG bar chart; a chart library would be most of the page weight for one chart.
