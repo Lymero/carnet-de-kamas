@@ -1,51 +1,35 @@
 # Changelog
 
-## Unreleased
+## 3.1.0 (2026-11-19)
 
-### Added
+### Nouveautés
 
-- **Investment from chat screenshots**: paste (Ctrl+V), drop or pick screenshots of the game
-  chat and the app reads the purchase lines (`N x [Item] (price kamas)`): with a craft's recipe
-  shown, they fill the ingredients' unit prices; otherwise their total fills the investment. The text is read on the computer (Tesseract, bundled), with no
-  internet connection. A button opens the lines read, each with its picture, to double-check
-  and fix them; unsure readings, missed lines and lines repeated across overlapping
-  screenshots are flagged there.
-- **Number of crafts** in the recipe box: craft 10 keys at once and the ingredient quantities,
-  investment and planned sale are multiplied. Unit prices stay per unit, and the FM cost is a
-  total for the operation.
-- **FM cost from before / after**, in its own panel in the _FM_ box: type your
-  kamas and rune value before and after forging; what you spent, (kamas + runes before) −
-  (kamas + runes after), is shown as you type and becomes the runes cost of the whole
-  operation. The ingredients still count on top.
-- The recipe box is compact: _Recette_ starts folded, with its subtotal (and the number of crafts
-  when more than one) shown, and the explanatory notes are gone. Forgemagie moves out of it into
-  its own _FM_ box under the recipe, also folded with its subtotal: one small grid of kamas and
-  runes before and after, its total in the header like the recipe's (typed there directly, or
-  given by before / after; the subtraction shows on hovering it). The computed
-  cost (ingredients + FM) sits under both.
-- **FM cost in the history and the analysis**: a _dont FM_ column next to _Investi_ in
-  _Historique_ (with its total), the share of the investment spent on FM in the _Craft / FM_
-  panel, and a _dont FM_ column in _Par objet_ (sold operations).
-- After an update, the desktop app keeps the data file exactly as the previous version left it,
-  in `carnet.before-<version>.backup.json` next to it, and never overwrites that copy. The
-  copies of the last 3 versions are kept; older ones are deleted. Before,
-  the only backup was replaced at each start, so a second launch of a faulty new version could
-  leave no good copy.
-- _En cours_ can be sorted by date, item, type, investment, planned sale or margin, as in
-  _Historique_. Craft and resale cards line up the same, the days for sale staying on one line.
-- A reset button (circular arrow) next to _Nouvelle opération_ empties the form.
-- A click outside closes what is open: any dialog (as its cancel button does) and the
-  _Recette_ / _FM_ folds.
-- _Historique_ shows the status as a dot (hollow: for sale, green: sold, red: sold at a loss; the
-  word on hover), and long item names end in an ellipsis, so the whole table fits its card.
-- Amounts can be typed with the suffix as the decimal point: `6m5` is 6 500 000, `300k5` is 300 500.
-- Every kamas field writes its amount in full with separators once you leave it (`100000` →
-  `100 000`, `1.2m` → `1 200 000`), not only after a calculation.
-- _Historique_ and _Analyse_ > _Par objet_ fit their card: amounts are shown short (`32,7 M`, the
-  exact amount on hover). An arrow on hover shows that a row opens the item in _Historique_.
-- The _Craft/FM_ and _Achat/revente_ badges share one shape, filled, only their colour differs.
-- _Bénéfice prévu_ no longer spells out the HDV tax; it is still deducted.
-- _Analyse_ > _Par objet_ sorts by any column, as _Historique_ does (most profitable first by default).
+- **Achats depuis des captures d'écran** : colle (Ctrl+V), dépose ou choisis des captures du
+  chat du jeu, et l'appli lit les lignes d'achat. Avec une recette affichée, elles remplissent
+  les prix unitaires des ingrédients ; sinon, leur total remplit l'investissement. La lecture
+  se fait sur l'ordinateur, sans connexion. Un bouton montre les lignes lues pour les vérifier
+  et les corriger.
+- **Nombre de crafts** : crafte 10 objets d'un coup, les quantités, l'investissement et la vente
+  prévue sont multipliés.
+- **Coût FM par avant / après** : tape tes kamas et la valeur de tes runes avant et après la
+  forgemagie, la différence devient le coût FM de l'opération.
+- **Coût FM dans l'historique et l'analyse** : colonne _dont FM_ dans _Historique_ et
+  _Par objet_, et part de la FM dans le panneau _Craft / FM_.
+- **Sauvegardes par version** : après une mise à jour, l'appli de bureau garde le fichier de
+  données tel que la version précédente l'a laissé. Les copies des 3 dernières versions sont
+  conservées.
+- _En cours_ et _Analyse_ > _Par objet_ se trient par n'importe quelle colonne.
+- Un bouton à côté de _Nouvelle opération_ vide le formulaire.
+
+### Améliorations
+
+- Les blocs _Recette_ et _FM_ sont repliés par défaut, avec leur sous-total visible.
+- Un clic à l'extérieur ferme ce qui est ouvert : fenêtres, blocs _Recette_ et _FM_.
+- Les montants s'écrivent en entier avec séparateurs (`100000` → `100 000`), et `6m5` se lit
+  6 500 000.
+- _Historique_ et _Par objet_ tiennent dans leur carte : montants abrégés (`32,7 M`, le montant
+  exact au survol), statut affiché par une pastille de couleur.
+- Les badges _Craft/FM_ et _Achat/revente_ ont la même forme.
 
 ## 3.0.1 (2026-11-18)
 
