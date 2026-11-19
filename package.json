@@ -24,6 +24,7 @@
     "build:catalog": "python3 scripts/build_catalog.py",
     "build:desktop": "tauri build",
     "icons": "node scripts/render-icon.js",
+    "vendor:ocr": "node scripts/vendor-ocr.js",
     "prepare": "node scripts/install-hooks.js"
   },
   "engines": {
@@ -33,9 +34,13 @@
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.64.1",
     "@tauri-apps/cli": "2.12.4",
+    "@tesseract.js-data/eng": "1.0.0",
+    "@tesseract.js-data/fra": "1.0.0",
     "eslint": "10.14.0",
     "globals": "17.14.0",
     "prettier": "3.9.10",
+    "tesseract.js": "6.0.1",
+    "tesseract.js-core": "6.1.2",
     "typescript": "6.0.3"
   }
 }

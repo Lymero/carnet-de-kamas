@@ -1,0 +1,9 @@
+Offline text reader for chat screenshots (src/js/ui/screenshot-ocr.js).
+Copied from node_modules by scripts/vendor-ocr.js (npm run vendor:ocr); do not edit.
+
+tesseract.js 6.0.1, tesseract.js-core 6.1.2:
+  Apache License 2.0 (LICENSE-tesseract.js.txt, core/LICENSE.txt).
+  https://github.com/naptha/tesseract.js
+lang/eng.traineddata.gz, lang/fra.traineddata.gz: Tesseract "best_int" models
+  (@tesseract.js-data/eng and /fra 1.0.0), from tesseract-ocr/tessdata_best,
+  Apache License 2.0. https://github.com/tesseract-ocr/tessdata_best

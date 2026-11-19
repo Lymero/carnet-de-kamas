@@ -103,6 +103,13 @@ history toolbar is not rebuilt while one of its controls has focus.
 - `stats.js`: every aggregate shown on screen (`summarize`, `byCategory`, `byMonth`, `byItem`).
 - `sheet-io.js`: spreadsheet paste parsing (rows checked with `validateTrade`), duplicate
   detection that counts occurrences, and a TSV export that re-imports without loss.
+- `purchases.js`: purchases read from chat screenshots. `readOcrLine` matches each line the
+  text reader found against `N x [Item] (price kamas)`, forgiving its usual slips ("komas",
+  `Lx`, other brackets) but marking a line unsure when the price had to be forgiven, is not
+  grouped by three, or has a digit read with low confidence. `readOcrLines` adds a `skipped`
+  entry where the spacing between two purchase lines leaves room for one the reader missed;
+  `overlappingLines` finds lines repeated where two screenshots overlap; `reviewLines` builds
+  the list the player checks.
 - `text.js`: `normalize` (accent-, case- and punctuation-insensitive keys), `escapeHtml`, `plural`.
 
 ### `data/`
@@ -149,6 +156,12 @@ history toolbar is not rebuilt while one of its controls has focus.
   The toast is a permanent live region; it moves into an open modal dialog, because the dialog's
   top layer would otherwise cover it. `runAction` shows `ActionError` messages as they are and
   logs anything else as a bug.
+- `screenshot-ocr.js`: the offline text reader. It loads Tesseract (WebAssembly, English and
+  French models, vendored in `src/vendor/tesseract/` by `npm run vendor:ocr`) only when a
+  screenshot is read, and prepares each image first: enlarged when small, dark text on white
+  in greys whatever the chat theme.
+- `purchase-import.js`: the screenshot dialog (pick, drop or paste; reading; the editable
+  review list with each line's picture, flags and running total) that fills the investment.
 - `chart.js` draws one SVG bar chart; a chart library would be most of the page weight for one chart.
 
 ### `src-tauri/` (desktop shell, Rust)
@@ -159,7 +172,8 @@ history toolbar is not rebuilt while one of its controls has focus.
   location (`$CARNET_DATA`, else the per-user data folder); the page never passes a path. Unit
   tests cover the atomic write and the backup name.
 - `tauri.conf.json`: the window, a strict content security policy (only the app's own files and
-  Tauri's IPC; fonts ship in `src/fonts/`), and the installers: NSIS and MSI in French on
+  Tauri's IPC; fonts ship in `src/fonts/`; `'wasm-unsafe-eval'` lets the text reader compile
+  its WebAssembly), and the installers: NSIS and MSI in French on
   Windows, a universal `.dmg` (ad-hoc signed) on macOS, `.AppImage` and `.deb` on Linux. The
   version is read from `package.json`.
 - `capabilities/default.json`: the main window gets Tauri's core permissions only.
@@ -180,16 +194,17 @@ history toolbar is not rebuilt while one of its controls has focus.
 
 ## Design decisions
 
-| Decision                          | Why                                                                          | Trade-off                                                                      |
-| --------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| One local JSON file for storage   | Private, works offline, easy to read, back up and restore.                   | One computer; no sync between devices.                                         |
-| Tauri for the desktop app         | Installers of a few MB using the system's web engine; the page is unchanged. | Rust toolchain to build; per-OS builds (done by CI); unsigned installers warn. |
-| One data-file module, two disks   | Desktop and server follow identical rules; only the disk access differs.     | `data-file.js` must stay free of browser- and Node-specific code.              |
-| The shell decides the file's path | The page cannot read or write anything else on the computer.                 | A different location needs `$CARNET_DATA`.                                     |
-| Fonts and catalog ship in `src/`  | Works offline; a strict content security policy with no third-party hosts.   | The catalog must be regenerated after game updates (`npm run build:catalog`).  |
-| No framework, no build            | Nothing to install or upgrade; source is what runs.                          | Manual DOM updates; kept manageable by the view contract.                      |
-| Dedup key = date + investment     | Survives spelling fixes of item names. Matching counts occurrences.          | A re-typed row with another date or cost is not recognised as a duplicate.     |
-| French UI, English code           | The player reads French item names in game; code follows common practice.    | —                                                                              |
+| Decision                                | Why                                                                          | Trade-off                                                                              |
+| --------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| One local JSON file for storage         | Private, works offline, easy to read, back up and restore.                   | One computer; no sync between devices.                                                 |
+| Tauri for the desktop app               | Installers of a few MB using the system's web engine; the page is unchanged. | Rust toolchain to build; per-OS builds (done by CI); unsigned installers warn.         |
+| One data-file module, two disks         | Desktop and server follow identical rules; only the disk access differs.     | `data-file.js` must stay free of browser- and Node-specific code.                      |
+| The shell decides the file's path       | The page cannot read or write anything else on the computer.                 | A different location needs `$CARNET_DATA`.                                             |
+| Fonts and catalog ship in `src/`        | Works offline; a strict content security policy with no third-party hosts.   | The catalog must be regenerated after game updates (`npm run build:catalog`).          |
+| No framework, no build                  | Nothing to install or upgrade; source is what runs.                          | Manual DOM updates; kept manageable by the view contract.                              |
+| Dedup key = date + investment           | Survives spelling fixes of item names. Matching counts occurrences.          | A re-typed row with another date or cost is not recognised as a duplicate.             |
+| Offline OCR (Tesseract) for screenshots | No internet, no account or key; the screenshots never leave the computer.    | About 12 MB more in the app; readings can be wrong, so every line is shown for review. |
+| French UI, English code                 | The player reads French item names in game; code follows common practice.    | —                                                                                      |
 
 ## Error handling
 

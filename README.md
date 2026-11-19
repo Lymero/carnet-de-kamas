@@ -58,6 +58,14 @@ this option have no tax.
 recipe box. Editing the investment by hand stops the auto-fill; _Utiliser le coût calculé_
 turns it back on.
 
+**Investment from chat screenshots.** _Investissement depuis des captures du chat…_ reads the
+purchase lines (`10 x [Griffe de Buboxor] (228 223 kamas)`) from one or more screenshots of
+the game chat: pick, drop or paste them (up to 10). The text is read on your computer, with no
+internet connection. Every line shows next to its picture in a list you can edit: lines
+marked _à vérifier_ (unsure reading), _ligne sautée ?_ (a line the reader missed) or
+_doublon ?_ (probably repeated where two screenshots overlap, left out of the total) deserve
+a look. _Utiliser ce total_ puts the sum in the investment field. Other chat lines are ignored.
+
 **Record a sale.** _En cours_ → _Vendu_ → confirm the real price and date.
 
 **Fix or delete.** Click any row (or _Modifier_). Delete asks for a second click. Leaving the

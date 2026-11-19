@@ -8,3 +8,7 @@ src/data/dofus-data.json linguist-generated=true
 *.jpg binary
 *.ico binary
 *.woff2 binary
+*.gz binary
+
+# Copied by scripts/vendor-ocr.js: third-party, minified, collapsed in GitHub diffs.
+src/vendor/** linguist-vendored=true -diff

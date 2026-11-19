@@ -60,3 +60,9 @@ export const CHART_MONTHS = 12;
 
 /** Retry policy for local server failures worth retrying. */
 export const RETRY = Object.freeze({ ATTEMPTS: 4, BASE_DELAY_MS: 400, JITTER_MS: 300 });
+
+/** Screenshots of the chat read for the investment (ui/purchase-import.js): accepted formats, and how many at once. */
+export const SCREENSHOTS = Object.freeze({
+  TYPES: Object.freeze(["image/png", "image/jpeg", "image/webp", "image/gif", "image/bmp"]),
+  MAX: 10,
+});

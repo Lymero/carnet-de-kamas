@@ -634,6 +634,105 @@ dialog::backdrop {
 .dlg .actions .left {
   margin-right: auto;
 }
+/* Investment from chat screenshots (ui/purchase-import.js). */
+dialog.wide {
+  width: min(780px, calc(100% - 32px));
+}
+.shots-btn {
+  justify-self: start;
+}
+.drop {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  padding: 18px;
+  border: 1px dashed var(--muted);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+}
+.drop.over,
+.drop:focus-within {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.drop input {
+  max-width: 100%;
+}
+.shots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+.shots li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+table.grid.lots tbody tr {
+  cursor: default;
+}
+table.grid.lots td {
+  padding: 3px 4px;
+}
+table.grid.lots input[type="text"] {
+  padding: 4px 6px;
+  min-width: 0;
+}
+table.grid.lots input[data-f="item"] {
+  width: 16em;
+}
+table.grid.lots input.kamas {
+  width: 8.5em;
+}
+/* The line as it is in the screenshot, so the price read can be compared at a glance. */
+table.grid.lots td.pic {
+  white-space: normal;
+}
+table.grid.lots td.pic canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 3px;
+}
+table.grid.lots .read {
+  font-size: 12px;
+  color: var(--muted);
+}
+table.grid.lots tr.shot td {
+  font-size: 12px;
+  color: var(--muted);
+  padding-top: 10px;
+  white-space: normal;
+}
+table.grid.lots tr.off td:not(:first-child) {
+  opacity: 0.5;
+}
+.add-lot {
+  justify-self: start;
+}
+.pill.warn {
+  background: var(--bad-soft);
+  border-color: transparent;
+  color: var(--bad);
+}
+.bad-text {
+  color: var(--bad);
+}
+/* Read by screen readers only. */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 textarea {
   min-height: 160px;
   font-size: 13px;
@@ -690,6 +789,15 @@ textarea {
   }
 }
 @media (max-width: 560px) {
+  table.grid.lots td {
+    padding: 3px 2px;
+  }
+  table.grid.lots input[data-f="item"] {
+    width: 9em;
+  }
+  table.grid.lots input.kamas {
+    width: 6em;
+  }
   .wrap {
     padding: 12px 16px 40px;
   }
