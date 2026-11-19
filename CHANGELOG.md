@@ -15,6 +15,11 @@
 - **Avant / Après** under _Runes / FM_: type your kamas and rune value before and after forging;
   what you spent, (kamas + runes before) − (kamas + runes after), is the runes cost of the
   whole operation.
+- After an update, the desktop app keeps the data file exactly as the previous version left it,
+  in `carnet.before-<version>.backup.json` next to it, and never overwrites that copy. The
+  copies of the last 3 versions are kept; older ones are deleted. Before,
+  the only backup was replaced at each start, so a second launch of a faulty new version could
+  leave no good copy.
 
 ## 3.0.1 (2026-11-18)
 

@@ -31,7 +31,11 @@ folder exists (portable mode), else the same per-user folder.
 **Writing** (`src/js/data/data-file.js`, the same code in both hosts): the file is read once;
 every change is applied to a copy, and the whole file is replaced atomically (temporary file,
 fsync, rename), one change at a time. Each start first copies the previous file to
-`carnet.backup.json` next to it. The local server also checks the shape of what it receives
+`carnet.backup.json` next to it. The desktop app also copies it, the first time a given version
+opens it, to `carnet.before-<version>.backup.json`, which is never overwritten: after an update,
+the file exactly as the previous version left it stays there, even once the new version has
+started several times. Only the copies of the 3 most recent versions are kept (always
+including the running version's); older ones are deleted. The local server also checks the shape of what it receives
 (ids, a JSON object per trade, whole non-negative prices); the field-level rules are
 `validateTrade`'s, applied in the page.
 
