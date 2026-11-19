@@ -12,7 +12,7 @@ test("autocomplete suggests catalog items and the recipe helper prices the craft
   // Apostrophes and case don't matter in the search.
   await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
   await expect(page.locator("#f-item")).toHaveAttribute("aria-expanded", "false");
-  const recipe = page.locator("#recipeBox .recipe");
+  const recipe = page.locator("#recipeBox");
   await expect(recipe).toBeVisible();
   // The details start folded, with their subtotals in view.
   await expect(recipe.locator("details.fold[open]")).toHaveCount(0);
@@ -36,7 +36,7 @@ test("the number of crafts multiplies the recipe, the investment and the planned
   await page.selectOption("#f-tax", "0");
   await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
   await openRecipeFolds(page);
-  const recipe = page.locator("#recipeBox .recipe");
+  const recipe = page.locator("#recipeBox");
   const firstQty = recipe.locator("td[data-q]").first();
   const unitQty = Number((await firstQty.textContent()).replace("×", ""));
   await recipe.locator("input[data-ing]").first().fill("1000");
@@ -92,7 +92,7 @@ test("the kamas and rune value before and after forging give the FM cost", async
   await page.selectOption("#f-tax", "0");
   await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
   await openRecipeFolds(page);
-  const recipe = page.locator("#recipeBox .recipe");
+  const recipe = page.locator("#recipeBox");
   await recipe.locator("#f-runes").fill("1000");
   await expect(page.locator("#f-cost")).toHaveValue(/^1\s000$/);
   await expect(recipe.locator("#bal-used")).toHaveText("—");
@@ -121,16 +121,16 @@ test("the kamas and rune value before and after forging give the FM cost", async
   await recipe.locator("#f-qty").fill("10");
   await expect(page.locator("#f-cost")).toHaveValue(/^3\s000\s000$/);
 
-  // "After" higher than "before" is flagged and ignored.
+  // "After" higher than "before" is flagged and ignored; the cost typed counts, once.
   await recipe.locator('[data-bal="ka"]').fill("20m");
   await expect(recipe.locator("#bal-used")).toHaveText("Après > Avant");
-  await expect(page.locator("#f-cost")).toHaveValue(/^10\s000$/);
+  await expect(page.locator("#f-cost")).toHaveValue(/^1\s000$/);
 
   // Clearing the "after" values goes back to the runes typed directly.
   await recipe.locator('[data-bal="ka"]').fill("");
   await recipe.locator('[data-bal="ra"]').fill("");
   await expect(recipe.locator("#f-runes")).toHaveJSProperty("readOnly", false);
-  await expect(page.locator("#f-cost")).toHaveValue(/^10\s000$/);
+  await expect(page.locator("#f-cost")).toHaveValue(/^1\s000$/);
 });
 
 test("the FM cost shows in the history and in the analysis", async ({ page }) => {
@@ -138,7 +138,7 @@ test("the FM cost shows in the history and in the analysis", async ({ page }) =>
   await page.selectOption("#f-tax", "0");
   await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
   await openRecipeFolds(page);
-  const recipe = page.locator("#recipeBox .recipe");
+  const recipe = page.locator("#recipeBox");
   await recipe.locator("[data-ing]").first().fill("500k");
   await recipe.locator('[data-bal="kb"]').fill("10m");
   await recipe.locator('[data-bal="ka"]').fill("7m");

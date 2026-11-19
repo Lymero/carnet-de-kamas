@@ -60,14 +60,14 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     /**
      * Kamas and rune value held before and after forging (kb, rb, ka, ra). When a "before" and an
      * "after" are set, what was spent, (kb + rb) − (ka + ra), is the FM cost of the whole operation:
-     * it replaces the Runes / FM line, and the ingredients still count on top.
+     * it replaces the FM cost typed, and the ingredients still count on top.
      * @type {Partial<Record<"kb"|"rb"|"ka"|"ra", number>>}
      */
     balance: {},
-    /** Number of crafts: multiplies the ingredient quantities and the runes. Unit prices stay per unit. */
+    /** Number of crafts: multiplies the ingredient quantities. Unit prices stay per unit; FM is a total. */
     qty: 1,
     costFollowsRecipe: true,
-    /** Which folds of the recipe box are open; both start closed for each new item. */
+    /** Which folds are open (ingredients, FM); both start closed for each new item. */
     open: { ing: false, fm: false },
   };
 
@@ -81,21 +81,19 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     if ((kb == null && rb == null) || (ka == null && ra == null)) return null;
     return (kb ?? 0) + (rb ?? 0) - (ka ?? 0) - (ra ?? 0);
   };
-  /** FM cost once the balance gives a usable amount; null otherwise (the Runes / FM line counts then). */
+  /** FM cost once the balance gives a usable amount; null otherwise (the cost typed counts then). */
   const balanceFm = () => {
     const used = balanceUsed();
     return used != null && used >= 0 ? used : null;
   };
-  /** Runes / FM cost of the whole operation: from the balance when set, else the typed cost per craft. */
-  const runesTotal = () => balanceFm() ?? draft.runes * draft.qty;
+  /** FM cost of the whole operation: from the balance when set, else the cost typed. */
+  const runesTotal = () => balanceFm() ?? draft.runes;
   const ingredientsTotal = () => (draft.craftItem ? recipeCost(draft.craftItem.recipe, priceOf).total * draft.qty : 0);
   const currentRecipeTotal = () => (draft.craftItem ? ingredientsTotal() + runesTotal() : 0);
-  const runesQtyLabel = () => (balanceFm() == null ? qtyLabel(draft.qty) : "");
   const runesValue = () => {
     const v = balanceFm() ?? draft.runes;
     return v ? formatKamas(v) : "";
   };
-  const qtyLabel = (n) => (n === 1 ? "" : `${n}×`);
   const balanceInput = (key, label) =>
     `<td class="r"><input type="text" class="kamas" data-bal="${key}" value="${draft.balance[key] != null ? formatKamas(draft.balance[key]) : ""}" placeholder="0" aria-label="${key[0] === "k" ? "Kamas" : "Valeur des runes"} ${label.toLowerCase()}"></td>`;
   /** The live line under the balance: the subtraction and what it gives. */
@@ -166,6 +164,8 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
         return `<tr><td class="q num" data-q="${qty}">${qty * draft.qty}×</td><td>${name}</td><td class="r"><input type="text" class="kamas" data-ing="${id}" value="${p != null ? formatKamas(p) : ""}" placeholder="prix/u" aria-label="Prix unitaire ${name}"></td></tr>`;
       })
       .join("");
+    // The recipe (ingredients, × crafts), then FM in a box of its own: forging comes after the
+    // craft and is counted once for the whole operation.
     el.recipe.innerHTML = `<div class="recipe">
       <div class="head"><span class="lbl">Recette · niv. ${item.level}</span><label class="qty">×<input type="text" inputmode="numeric" id="f-qty" class="num" value="${draft.qty}" aria-label="Nombre de crafts"></label></div>
       <div class="slot"></div>
@@ -173,10 +173,12 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
         <summary><span>Ingrédients</span><span class="num" id="r-ing"></span></summary>
         <table><tbody>${rows}</tbody></table>
       </details>
+    </div>
+    <div class="recipe fm">
       <details class="fold" data-fold="fm"${draft.open.fm ? " open" : ""}>
-        <summary><span>Runes / FM</span><span class="num" id="r-fm"></span></summary>
+        <summary><span>FM</span><span class="num" id="r-fm"></span></summary>
         <table><tbody>
-          <tr><td class="q num" data-q="runes">${runesQtyLabel()}</td><td>Coût</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût runes et forgemagie"${balanceFm() == null ? "" : " readonly"}></td></tr>
+          <tr><td>Coût</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût FM"${balanceFm() == null ? "" : " readonly"}></td></tr>
         </tbody></table>
         <div class="bal">
           <table><thead><tr><td></td><th>Kamas</th><th></th><th>Runes</th></tr></thead><tbody>
@@ -187,6 +189,8 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
           <div class="formula num" id="bal-calc"></div>
         </div>
       </details>
+    </div>
+    <div class="recipe-tot">
       <div class="tot"><span>Coût calculé</span><span class="num" id="r-tot">${formatKamas(currentRecipeTotal())}</span></div>
       ${draft.costFollowsRecipe ? "" : `<button type="button" class="btn small" id="r-use">Utiliser le coût calculé</button>`}
     </div>`;
@@ -211,7 +215,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     } else return;
     refreshTotals();
   });
-  /** Updates the live difference and shows it, read only, in the Runes / FM line once it is set. */
+  /** Updates the live difference and shows it, read only, in the FM cost once it is set. */
   function syncBalance() {
     const { text, calc, cls } = balanceSummary();
     const used = $("#bal-used", el.recipe);
@@ -221,7 +225,6 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     const runes = /** @type {HTMLInputElement} */ ($("#f-runes", el.recipe));
     runes.readOnly = balanceFm() != null;
     runes.value = runesValue();
-    $('td[data-q="runes"]', el.recipe).textContent = runesQtyLabel();
     syncSubtotals();
   }
   /** Subtotals on the folds, so the cost reads without opening them. */
@@ -247,8 +250,8 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     }
   }
   /**
-   * Changes the number of crafts. Everything follows: ingredient quantities, the
-   * computed cost, and the investment and planned sale already typed.
+   * Changes the number of crafts. Ingredient quantities, the computed cost, and the
+   * investment and planned sale already typed follow; the FM cost, a total, does not.
    * @param {string} raw
    */
   function setQuantity(raw) {
@@ -257,7 +260,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     const ratio = n / draft.qty;
     draft.qty = n;
     $$("td[data-q]", el.recipe).forEach((td) => {
-      td.textContent = td.dataset.q === "runes" ? runesQtyLabel() : `${Number(td.dataset.q) * n}×`;
+      td.textContent = `${Number(td.dataset.q) * n}×`;
     });
     const scale = (/** @type {HTMLInputElement} */ input) => {
       const v = evaluateKamas(input.value);
@@ -366,7 +369,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     recipe: {
       current() {
         const item = draft.craftItem;
-        const slot = $(".recipe .slot", el.recipe);
+        const slot = $(".slot", el.recipe);
         if (!item || draft.cat !== CATEGORY.CRAFT || !slot) return null;
         const { catalog } = state.get();
         const ingredients = item.recipe.map(([id]) => ({ id, name: catalog.ingredientName(id) }));

@@ -371,6 +371,16 @@ input.kamas {
   font-weight: 600;
 }
 
+/* The recipe box, then the FM box and the computed cost under them. */
+#recipeBox:not(:empty) {
+  display: grid;
+  gap: 8px;
+}
+.recipe-tot {
+  display: grid;
+  gap: 6px;
+  padding: 0 10px;
+}
 .recipe {
   border: 1px dashed var(--line);
   border-radius: 6px;
@@ -402,7 +412,7 @@ input.kamas {
 .recipe input[readonly] {
   background: transparent;
 }
-/* Ingredients and Runes / FM fold away; their summary keeps the subtotal in view. */
+/* Ingredients and FM fold away; their summary keeps the subtotal in view. */
 .recipe .fold summary {
   display: flex;
   justify-content: space-between;
@@ -428,7 +438,7 @@ input.kamas {
 .recipe .fold[open] summary {
   margin-bottom: 4px;
 }
-/* Before / after: a panel of its own under the per-craft runes cost. */
+/* Before / after: a panel of its own under the FM cost typed. */
 .recipe .bal {
   display: grid;
   gap: 6px;
@@ -500,7 +510,7 @@ input.kamas {
   text-align: right;
   color: var(--ink);
 }
-.recipe .tot {
+.recipe-tot .tot {
   display: flex;
   justify-content: space-between;
   font-weight: 600;
