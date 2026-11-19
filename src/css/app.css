@@ -444,6 +444,7 @@ input.kamas {
 .recipe .fold summary {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 8px;
   cursor: pointer;
   font-size: 13px;
@@ -463,9 +464,20 @@ input.kamas {
 .recipe .fold[open] summary > span:first-child::before {
   transform: rotate(90deg);
 }
-/* Open, the FM box shows its cost in the field: the subtotal would repeat it. */
-.recipe.fm .fold[open] summary .num {
-  visibility: hidden;
+/* The FM total sits in the header like the recipe's, typed in directly unless before / after
+   give it: it reads as text until hovered or focused. */
+.recipe .fold summary input.sum {
+  width: 110px;
+  padding: 0 4px;
+  border-color: transparent;
+  background: transparent;
+  font-size: 13px;
+  text-align: right;
+}
+.recipe .fold summary input.sum:hover:not([readonly]),
+.recipe .fold summary input.sum:focus {
+  border-color: var(--line);
+  background: var(--surface);
 }
 .recipe .fold summary .muted {
   color: var(--muted);
@@ -484,13 +496,7 @@ input.kamas {
   text-align: right;
   padding-right: 8px;
 }
-.recipe .bal tr.cost td {
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-  color: var(--ink);
-  font-size: 13px;
-}
-.recipe .bal #bal-used.neg {
+.recipe #bal-used.neg {
   margin-left: 6px;
   color: var(--bad);
   font-size: 12px;

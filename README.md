@@ -65,7 +65,7 @@ stops the auto-fill; _Utiliser le coût calculé_ turns it back on. To craft sev
 _Crafts_ **×** at the top of the recipe (e.g. 10): ingredient quantities, the investment and the
 planned sale are multiplied, while unit prices stay per unit.
 
-Forgemagie has its own _FM_ box under the recipe, folded with its subtotal: type its cost for
+Forgemagie has its own _FM_ box under the recipe, its total in the header: type its cost there for
 the whole operation (it is not multiplied by **×**), or fill _Avant_ / _Après_: your kamas and the
 value of your runes before and after forging. What you spent, (kamas + runes before) − (kamas +
 runes after), shown as you type, becomes the FM cost. The investment is the ingredients plus FM.

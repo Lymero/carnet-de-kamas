@@ -20,7 +20,8 @@
 - The recipe box is compact: _Recette_ starts folded, with its subtotal (and the number of crafts
   when more than one) shown, and the explanatory notes are gone. Forgemagie moves out of it into
   its own _FM_ box under the recipe, also folded with its subtotal: one small grid of kamas and
-  runes before and after, and the cost; the subtraction shows on hovering the cost. The computed
+  runes before and after, its total in the header like the recipe's (typed there directly, or
+  given by before / after; the subtraction shows on hovering it). The computed
   cost (ingredients + FM) sits under both.
 - **FM cost in the history and the analysis**: a _dont FM_ column next to _Investi_ in
   _Historique_ (with its total), the share of the investment spent on FM in the _Craft / FM_

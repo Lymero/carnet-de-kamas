@@ -182,11 +182,10 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     </div>
     <div class="recipe fm">
       <details class="fold" data-fold="fm"${draft.open.fm ? " open" : ""}>
-        <summary><span>FM</span><span class="num" id="r-fm"></span></summary>
+        <summary><span>FM<span id="bal-used"></span></span><input type="text" class="kamas sum" id="f-runes" value="${runesValue()}" placeholder="—" aria-label="Coût FM"${balanceFm() == null ? "" : " readonly"}></summary>
         <table class="bal"><thead><tr><td></td><th>Kamas</th><th>Runes</th></tr></thead><tbody>
           <tr><td>Avant</td>${balanceInput("kb", "Avant")}${balanceInput("rb", "Avant")}</tr>
           <tr><td>Après</td>${balanceInput("ka", "Après")}${balanceInput("ra", "Après")}</tr>
-          <tr class="cost"><td colspan="2">Coût <span id="bal-used"></span></td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût FM"${balanceFm() == null ? "" : " readonly"}></td></tr>
         </tbody></table>
       </details>
     </div>
@@ -233,7 +232,6 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   function syncSubtotals() {
     const show = (v) => (v ? formatKamas(v) : "—");
     $("#r-ing", el.recipe).textContent = show(ingredientsTotal());
-    $("#r-fm", el.recipe).textContent = show(runesTotal());
   }
   el.recipe.addEventListener(
     "toggle",
@@ -279,7 +277,10 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     updatePreview();
   }
   el.recipe.addEventListener("click", (e) => {
-    if (/** @type {HTMLElement} */ (e.target).id !== "r-use") return;
+    const target = /** @type {HTMLElement} */ (e.target);
+    // The FM total in the fold's header is typed in: clicking it must not fold or unfold.
+    if (target.id === "f-runes") return e.preventDefault();
+    if (target.id !== "r-use") return;
     draft.costFollowsRecipe = true;
     el.cost.value = formatKamas(currentRecipeTotal());
     renderRecipe();

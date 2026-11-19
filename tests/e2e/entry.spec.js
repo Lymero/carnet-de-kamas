@@ -112,7 +112,6 @@ test("the kamas and rune value before and after forging give the FM cost", async
   await expect(recipe.locator("#f-runes")).toHaveValue(/^3\s000\s000$/);
   await expect(recipe.locator("#f-runes")).toHaveJSProperty("readOnly", true);
   // The amount shows once: in the cost field, not again in the open fold's header or under the grid.
-  await expect(recipe.locator("#r-fm")).toBeHidden();
   await expect(recipe.locator("#bal-used")).toBeHidden();
   await expect(page.locator("#f-cost")).toHaveValue(/^3\s000\s000$/);
   await page.fill("#f-exp", "4m");
@@ -200,4 +199,23 @@ test("a click outside an open fold closes it; typed FM cost is written with sepa
   await page.locator("h2", { hasText: "Nouvelle opération" }).click();
   await expect(fm).toHaveJSProperty("open", false);
   await expect(page.locator("#f-cost")).toHaveValue(/^100\s000$/);
+});
+
+test("the FM total sits in its header, typed in there without folding or unfolding", async ({ page }) => {
+  await openApp(page);
+  await page.selectOption("#f-tax", "0");
+  await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
+  const fm = page.locator('#recipeBox details[data-fold="fm"]');
+  await page.locator("#f-runes").click();
+  await page.keyboard.type("1 500 000");
+  await expect(fm).toHaveJSProperty("open", false);
+  await expect(page.locator("#f-cost")).toHaveValue(/^1\s500\s000$/);
+  // Open, the header still shows it; before / after then fill it.
+  await page.locator("#recipeBox summary", { hasText: "FM" }).click();
+  await expect(fm).toHaveJSProperty("open", true);
+  await page.locator('[data-bal="kb"]').fill("10m");
+  await page.locator('[data-bal="ka"]').fill("9m");
+  await expect(page.locator("#f-runes")).toHaveValue(/^1\s000\s000$/);
+  await page.locator("#f-runes").click();
+  await expect(fm).toHaveJSProperty("open", true);
 });
