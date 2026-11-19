@@ -39,6 +39,7 @@
   `100 000`, `1.2m` → `1 200 000`), not only after a calculation.
 - _Analyse_ > _Par objet_ fits its card: _dont FM_ and _Bénéfice_ are shown short (`32,7 M`, the
   exact amount on hover). An arrow on hover shows that a row opens the item in _Historique_.
+- _Analyse_ > _Par objet_ sorts by any column, as _Historique_ does (most profitable first by default).
 
 ## 3.0.1 (2026-11-18)
 

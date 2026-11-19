@@ -19,6 +19,17 @@ test("analysis shows results once something is sold, and links items to the hist
   await expect(page.locator(".chart svg rect")).toHaveCount(1);
   await expect(page.locator(".kpis")).toContainText("500 k");
 
+  // Sorted like the history: most profitable first, then by any column header.
+  const names = page.locator("tr[data-item] td:first-child");
+  await expect(names).toHaveText(["Kokulte", "Gelano"]);
+  await page.locator("#view thead").getByRole("button", { name: "En vente" }).click();
+  await expect(names).toHaveText(["Gelano", "Kokulte"]);
+  await page
+    .locator("#view thead")
+    .getByRole("button", { name: /En vente/ })
+    .click();
+  await expect(names).toHaveText(["Kokulte", "Gelano"]);
+
   await page.locator("tr[data-item]", { hasText: "Kokulte" }).click();
   await expect(page).toHaveURL(/#historique$/);
   await expect(page.locator("#h-q")).toHaveValue("Kokulte");

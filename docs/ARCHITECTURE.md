@@ -153,6 +153,8 @@ history toolbar is not rebuilt while one of its controls has focus.
 - `kamas-field.js`: calculator behaviour for every `input.kamas` (delegated from the document):
   a bubble with the result while typing; on blur, what was typed becomes the amount in full,
   with its separators.
+- `sort.js`: click-to-sort shared by Historique, Par objet (sortable headers) and En cours (a sort
+  bar): columns describe their sort value and first direction; a second click reverses.
 - `dismiss.js`: `closeOnClickOutside`, the one click-away-to-close behaviour, used by the dialog
   (`dialogs.js`, so every dialog content) and the recipe folds (`entry-form.js`). Any new panel
   that opens should use it rather than its own listeners.

@@ -24,20 +24,18 @@ import { normalize } from "../../domain/text.js";
 import { isCraft, isOpen, markSold, profit } from "../../domain/trade.js";
 import { $, closest, esc, renderKeepingFocus, runAction, toast } from "../dom.js";
 import { taxOptions } from "../hdv-tax.js";
+import { nextSort, sortButton, sortRows } from "../sort.js";
 
 /** @typedef {import("../../domain/trade.js").Trade} Trade */
 
-/**
- * Sort keys, as in the history: key, label, sort value, first direction (1 = ascending).
- * @type {Array<[key: string, label: string, value: (t: Trade) => string|number, dir: number]>}
- */
+/** Sort keys, as in the history. @type {import("../sort.js").SortColumn<Trade>[]} */
 const SORTS = [
-  ["date", "Date", (t) => t.date, 1],
-  ["item", "Objet", (t) => normalize(t.item), 1],
-  ["cat", "Type", (t) => t.cat, 1],
-  ["cost", "Investi", (t) => t.cost, -1],
-  ["expected", "Prévu", (t) => t.expected, -1],
-  ["pct", "Marge", (t) => ratioPercent(profit(t), t.cost), -1],
+  { key: "date", label: "Date", value: (t) => t.date },
+  { key: "item", label: "Objet", value: (t) => normalize(t.item) },
+  { key: "cat", label: "Type", value: (t) => t.cat },
+  { key: "cost", label: "Investi", value: (t) => t.cost, numeric: true },
+  { key: "expected", label: "Prévu", value: (t) => t.expected, numeric: true },
+  { key: "pct", label: "Marge", value: (t) => ratioPercent(profit(t), t.cost), numeric: true },
 ];
 
 /**
@@ -54,21 +52,13 @@ export function createOpenView({ actions, openEditor }) {
 
   function render() {
     const today = todayIso();
-    const [, , value] = SORTS.find((c) => c[0] === sort.key) ?? SORTS[0];
-    const open = current.trades.filter(isOpen).sort((a, b) => {
-      const x = value(a),
-        y = value(b);
-      return (x < y ? -1 : x > y ? 1 : 0) * sort.dir || a.date.localeCompare(b.date);
-    });
+    const open = sortRows(current.trades.filter(isOpen), SORTS, sort, (a, b) => a.date.localeCompare(b.date));
     if (sale && !open.some((t) => t.id === sale?.id)) sale = null; // sold or deleted meanwhile
     if (!open.length) {
       root.innerHTML = `<div class="empty">Rien en vente pour l'instant.<br>Ajoute un craft ou un achat à gauche : il apparaîtra ici jusqu'à ce que tu le marques vendu.</div>`;
       return;
     }
-    const sortBar = `<div class="open-sort" role="group" aria-label="Trier">${SORTS.map(([key, label]) => {
-      const active = sort.key === key;
-      return `<button type="button" class="th-btn${active ? " on" : ""}" data-sort="${key}" aria-pressed="${active}">${label}${active ? (sort.dir > 0 ? " ↑" : " ↓") : ""}</button>`;
-    }).join("")}</div>`;
+    const sortBar = `<div class="open-sort" role="group" aria-label="Trier">${SORTS.map((c) => sortButton(c, sort)).join("")}</div>`;
     root.innerHTML = `${sortBar}<div class="open">${open
       .map((t) => {
         const p = profit(t);
@@ -105,8 +95,7 @@ export function createOpenView({ actions, openEditor }) {
     const sortBtn = closest(e, "[data-sort]");
     if (sortBtn) {
       const key = /** @type {string} */ (sortBtn.dataset.sort);
-      const first = SORTS.find((c) => c[0] === key)?.[3] ?? 1;
-      sort = { key, dir: sort.key === key ? -sort.dir : first };
+      sort = nextSort(sort, key, SORTS);
       render();
       /** @type {HTMLElement|null} */ ($(`[data-sort="${key}"]`, root))?.focus();
       return;

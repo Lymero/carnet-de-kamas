@@ -14,23 +14,21 @@ import { fmCost } from "../../domain/stats.js";
 import { normalize, plural } from "../../domain/text.js";
 import { isCraft, profit, salePrice } from "../../domain/trade.js";
 import { $, closest, esc, toast } from "../dom.js";
+import { nextSort, sortHeader, sortRows } from "../sort.js";
 
 /** @typedef {import("../../domain/trade.js").Trade} Trade */
 
-/**
- * Sortable columns: key, label, sort value, numeric (right-aligned).
- * @type {Array<[key: string, label: string, value: (t: Trade) => string|number, numeric: boolean]>}
- */
+/** @type {import("../sort.js").SortColumn<Trade>[]} */
 const COLUMNS = [
-  ["date", "Date", (t) => t.date, false],
-  ["item", "Objet", (t) => normalize(t.item), false],
-  ["cat", "Type", (t) => t.cat, false],
-  ["cost", "Investi", (t) => t.cost, true],
-  ["fm", "dont FM", fmCost, true],
-  ["price", "Vente", salePrice, true],
-  ["profit", "Bénéfice", profit, true],
-  ["pct", "%", (t) => ratioPercent(profit(t), t.cost), true],
-  ["sold", "Statut", (t) => (t.sold ? 1 : 0), false],
+  { key: "date", label: "Date", value: (t) => t.date, first: -1 },
+  { key: "item", label: "Objet", value: (t) => normalize(t.item) },
+  { key: "cat", label: "Type", value: (t) => t.cat },
+  { key: "cost", label: "Investi", value: (t) => t.cost, numeric: true },
+  { key: "fm", label: "dont FM", value: fmCost, numeric: true },
+  { key: "price", label: "Vente", value: salePrice, numeric: true },
+  { key: "profit", label: "Bénéfice", value: profit, numeric: true },
+  { key: "pct", label: "%", value: (t) => ratioPercent(profit(t), t.cost), numeric: true },
+  { key: "sold", label: "Statut", value: (t) => (t.sold ? 1 : 0), first: -1 },
 ];
 
 /** Status filter predicates. */
@@ -82,13 +80,7 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
 
   function renderResults() {
     const out = $("#h-results", root);
-    const rows = visibleTrades();
-    const [, , value] = COLUMNS.find((c) => c[0] === sort.key) ?? COLUMNS[0];
-    rows.sort((a, b) => {
-      const x = value(a),
-        y = value(b);
-      return (x < y ? -1 : x > y ? 1 : 0) * sort.dir || b.date.localeCompare(a.date);
-    });
+    const rows = sortRows(visibleTrades(), COLUMNS, sort, (a, b) => b.date.localeCompare(a.date));
     if (!rows.length) {
       out.innerHTML = `<div class="empty">${
         current.trades.length
@@ -102,10 +94,7 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
     const totalSale = rows.reduce((s, t) => s + salePrice(t), 0);
     const totalProfit = rows.reduce((s, t) => s + profit(t), 0);
     out.innerHTML = `<div class="scroll"><table class="grid">
-      <thead><tr>${COLUMNS.map(([key, label, , numeric]) => {
-        const active = sort.key === key;
-        return `<th class="${numeric ? "n" : ""}" aria-sort="${active ? (sort.dir > 0 ? "ascending" : "descending") : "none"}"><button type="button" class="th-btn" data-sort="${key}">${label}${active ? (sort.dir > 0 ? " ↑" : " ↓") : ""}</button></th>`;
-      }).join("")}</tr></thead>
+      <thead>${sortHeader(COLUMNS, sort)}</thead>
       <tbody>${rows
         .map((t) => {
           const p = profit(t);
@@ -148,8 +137,7 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
   function onClick(e) {
     const sortBtn = closest(e, "[data-sort]");
     if (sortBtn) {
-      const key = sortBtn.dataset.sort;
-      sort = { key, dir: sort.key === key ? -sort.dir : key === "item" || key === "cat" ? 1 : -1 };
+      sort = nextSort(sort, sortBtn.dataset.sort, COLUMNS);
       return renderResults();
     }
     const act = closest(e, "[data-act]")?.dataset.act;
