@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- After an update, the desktop app keeps the data file exactly as the previous version left it,
+  in `carnet.before-<version>.backup.json` next to it, and never overwrites that copy. Before,
+  the only backup was replaced at each start, so a second launch of a faulty new version could
+  leave no good copy.
+
 ## 3.0.1 (2026-11-18)
 
 ### Fixed

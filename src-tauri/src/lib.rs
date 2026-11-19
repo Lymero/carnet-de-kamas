@@ -14,8 +14,8 @@ use std::path::{Path, PathBuf};
 
 use tauri::Manager;
 
-/// Where the data file is, decided once at start-up.
-struct DataFile(PathBuf);
+/// Where the data file is, decided once at start-up, and the app's version.
+struct DataFile(PathBuf, String);
 
 /// The data file's path, for messages and the status line.
 #[tauri::command]
@@ -35,12 +35,20 @@ fn write_data(file: tauri::State<'_, DataFile>, contents: String) -> Result<(), 
     write_atomic(&file.0, &contents).map_err(|error| error.to_string())
 }
 
-/// Copies the data file to its backup (see `backup_path`).
+/// Copies the data file to its backup (see `backup_path`), and, the first time this
+/// version of the app opens it, to a copy that is never overwritten (see
+/// `version_backup_path`): the file exactly as the previous version left it.
 #[tauri::command]
 fn backup_data(file: tauri::State<'_, DataFile>) -> Result<(), String> {
-    fs::copy(&file.0, backup_path(&file.0))
-        .map(|_| ())
-        .map_err(|error| error.to_string())
+    backup(&file.0, &file.1).map_err(|error| error.to_string())
+}
+
+fn backup(path: &Path, version: &str) -> io::Result<()> {
+    let kept = version_backup_path(path, version);
+    if !kept.exists() {
+        fs::copy(path, &kept)?;
+    }
+    fs::copy(path, backup_path(path)).map(|_| ())
 }
 
 fn read_optional(path: &Path) -> io::Result<Option<String>> {
@@ -82,6 +90,15 @@ fn backup_path(path: &Path) -> PathBuf {
     path.with_file_name(format!("{base}.backup.json"))
 }
 
+/// "carnet.json", "3.0.2" → "carnet.before-3.0.2.backup.json". Kept after an upgrade, so
+/// a bug in the new version cannot reach the data both backups were made from.
+fn version_backup_path(path: &Path, version: &str) -> PathBuf {
+    let backup = backup_path(path);
+    let name = backup.file_name().unwrap_or_default().to_string_lossy();
+    let base = &name[..name.len() - ".backup.json".len()];
+    path.with_file_name(format!("{base}.before-{version}.backup.json"))
+}
+
 /// `$CARNET_DATA`, or `carnet.json` in the per-user data folder.
 fn data_file_location(app: &tauri::App) -> tauri::Result<PathBuf> {
     if let Some(custom) = std::env::var_os("CARNET_DATA") {
@@ -107,7 +124,8 @@ pub fn run() {
         }))
         .setup(|app| {
             let location = data_file_location(app)?;
-            app.manage(DataFile(location));
+            let version = app.package_info().version.to_string();
+            app.manage(DataFile(location, version));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -162,6 +180,33 @@ mod tests {
         write_atomic(&file, "").unwrap();
         assert_eq!(read_optional(&file).unwrap(), Some(String::new()));
         fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn backup_keeps_the_file_as_the_previous_version_left_it() {
+        let dir = folder("backup");
+        let file = dir.join("carnet.json");
+        write_atomic(&file, "from 3.0.1").unwrap();
+        backup(&file, "3.0.2").unwrap();
+        write_atomic(&file, "from 3.0.2").unwrap();
+        backup(&file, "3.0.2").unwrap();
+        let read = |name: &str| fs::read_to_string(dir.join(name)).unwrap();
+        assert_eq!(read("carnet.backup.json"), "from 3.0.2");
+        assert_eq!(read("carnet.before-3.0.2.backup.json"), "from 3.0.1");
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn version_backup_path_follows_the_backup_name() {
+        let dir = Path::new("data");
+        assert_eq!(
+            version_backup_path(&dir.join("carnet.json"), "3.0.2"),
+            dir.join("carnet.before-3.0.2.backup.json")
+        );
+        assert_eq!(
+            version_backup_path(&dir.join("notes.txt"), "3.0.2"),
+            dir.join("notes.txt.before-3.0.2.backup.json")
+        );
     }
 
     #[test]

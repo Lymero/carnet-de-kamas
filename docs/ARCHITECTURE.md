@@ -155,9 +155,10 @@ history toolbar is not rebuilt while one of its controls has focus.
 
 - `src/lib.rs`: the window, a single-instance guard (a second launch focuses the open window,
   so the data file has one writer), and the commands `data_file_path`, `read_data`,
-  `write_data` (temporary file, fsync, rename) and `backup_data`. The shell decides the file's
+  `write_data` (temporary file, fsync, rename) and `backup_data` (plus, once per app version,
+  a `carnet.before-<version>.backup.json` that is never overwritten). The shell decides the file's
   location (`$CARNET_DATA`, else the per-user data folder); the page never passes a path. Unit
-  tests cover the atomic write and the backup name.
+  tests cover the atomic write and the backup names.
 - `tauri.conf.json`: the window, a strict content security policy (only the app's own files and
   Tauri's IPC; fonts ship in `src/fonts/`), and the installers: NSIS and MSI in French on
   Windows, a universal `.dmg` (ad-hoc signed) on macOS, `.AppImage` and `.deb` on Linux. The
