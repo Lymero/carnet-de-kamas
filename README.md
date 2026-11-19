@@ -66,7 +66,8 @@ ingredient quantities, runes, the investment and the planned sale are all multip
 unit prices stay per unit. For forgemagie, you can instead fill _Coût FM (avant / après)_: your
 kamas and the value of your runes before and after forging. What you spent, (kamas + runes
 before) − (kamas + runes after), shown as you type, becomes the _Runes / FM_ cost of the whole
-operation; the ingredients still count on top.
+operation; the ingredients still count on top. The FM cost recorded with each craft shows in
+_Historique_ (_dont FM_, part of _Investi_) and in _Analyse_.
 
 **Investment from chat screenshots.** Copy a screenshot of the game chat and paste it
 anywhere in the app (Ctrl+V), drop it on the form, or use _Captures_. The

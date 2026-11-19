@@ -16,6 +16,9 @@
   kamas and rune value before and after forging; what you spent, (kamas + runes before) −
   (kamas + runes after), is shown as you type and becomes the runes cost of the whole
   operation. The ingredients still count on top.
+- **FM cost in the history and the analysis**: a _dont FM_ column next to _Investi_ in
+  _Historique_ (with its total), the share of the investment spent on FM in the _Craft / FM_
+  panel, and a _dont FM_ column in _Par objet_ (sold operations).
 - After an update, the desktop app keeps the data file exactly as the previous version left it,
   in `carnet.before-<version>.backup.json` next to it, and never overwrites that copy. The
   copies of the last 3 versions are kept; older ones are deleted. Before,

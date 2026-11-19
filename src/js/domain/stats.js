@@ -17,6 +17,12 @@ import { isCraft, profit } from "./trade.js";
 const sum = (list, fn) => list.reduce((acc, x) => acc + fn(x), 0);
 
 /**
+ * Kamas spent on runes / forgemagie, part of the investment; 0 when not recorded.
+ * @param {Trade} t
+ */
+export const fmCost = (t) => t.runes ?? 0;
+
+/**
  * @typedef {Object} Summary
  * @property {number} realisedProfit
  * @property {number} realisedCost
@@ -63,7 +69,8 @@ function saleMonth(t) {
 }
 
 /**
- * @typedef {{cost: number, profit: number, count: number}} Bucket
+ * @typedef {{cost: number, fm: number, profit: number, count: number}} Bucket
+ *   fm: the part of `cost` spent on runes / forgemagie
  */
 
 /**
@@ -77,6 +84,7 @@ export function byCategory(trades) {
     if (!t.sold) continue;
     const b = out[isCraft(t) ? CATEGORY.CRAFT : CATEGORY.RESALE];
     b.cost += t.cost;
+    b.fm += fmCost(t);
     b.profit += profit(t);
     b.count += 1;
   }
@@ -108,6 +116,7 @@ export function byMonth(trades, limit) {
  * @property {number} sold
  * @property {number} open
  * @property {number} cost     realised cost
+ * @property {number} fm       realised runes / forgemagie cost, part of `cost`
  * @property {number} profit   realised profit
  * @property {number} wins
  * @property {string} lastDate
@@ -123,10 +132,20 @@ export function byItem(trades) {
   const map = new Map();
   for (const t of trades) {
     const key = normalize(t.item);
-    const s = map.get(key) ?? { name: t.item, sold: 0, open: 0, cost: 0, profit: 0, wins: 0, lastDate: t.date };
+    const s = map.get(key) ?? {
+      name: t.item,
+      sold: 0,
+      open: 0,
+      cost: 0,
+      fm: 0,
+      profit: 0,
+      wins: 0,
+      lastDate: t.date,
+    };
     if (t.sold) {
       s.sold += 1;
       s.cost += t.cost;
+      s.fm += fmCost(t);
       s.profit += profit(t);
       if (profit(t) > 0) s.wins += 1;
     } else {
@@ -160,5 +179,5 @@ export function itemHistory(trades) {
 }
 
 function emptyBucket() {
-  return { cost: 0, profit: 0, count: 0 };
+  return { cost: 0, fm: 0, profit: 0, count: 0 };
 }

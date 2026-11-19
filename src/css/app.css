@@ -927,3 +927,7 @@ textarea {
     font-size: 22px;
   }
 }
+/* "dont FM": the runes / forgemagie part of the investment, kept discreet next to it. */
+table.grid td.fm {
+  color: var(--muted);
+}

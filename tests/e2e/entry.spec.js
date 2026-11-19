@@ -125,3 +125,27 @@ test("the kamas and rune value before and after forging give the FM cost", async
   await expect(recipe.locator("#f-runes")).toHaveJSProperty("readOnly", false);
   await expect(page.locator("#f-cost")).toHaveValue(/^10\s000$/);
 });
+
+test("the FM cost shows in the history and in the analysis", async ({ page }) => {
+  await openApp(page);
+  await page.selectOption("#f-tax", "0");
+  await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
+  const recipe = page.locator("#recipeBox .recipe");
+  await recipe.locator("[data-ing]").first().fill("500k");
+  await recipe.locator('[data-bal="kb"]').fill("10m");
+  await recipe.locator('[data-bal="ka"]').fill("7m");
+  await expect(page.locator("#f-cost")).toHaveValue(/^3\s500\s000$/);
+  await page.fill("#f-exp", "5m");
+  await page.check("#f-sold");
+  await page.click("#f-submit");
+
+  await page.click('#tabs a[data-v="historique"]');
+  const history = page.locator("#view table.grid");
+  await expect(history.locator("thead")).toContainText("dont FM");
+  await expect(history.locator("tbody td.fm").first()).toHaveText(/^3\s000\s000$/);
+  await expect(history.locator("tfoot td.fm")).toHaveText(/^3\s000\s000$/);
+
+  await page.click('#tabs a[data-v="analyse"]');
+  await expect(page.locator("#view .panel").first()).toContainText(/dont FM 3\s?M · 85,7\s%/);
+  await expect(page.locator("#view tr[data-item] td.fm").first()).toHaveText(/^3\s000\s000$/);
+});

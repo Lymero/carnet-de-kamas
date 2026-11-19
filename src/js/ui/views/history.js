@@ -10,6 +10,7 @@ import { CATEGORY, CATEGORY_LABEL } from "../../config.js";
 import { formatShortDate, monthKey, monthLabel } from "../../domain/dates.js";
 import { formatKamas, formatPercent, ratioPercent, signClass } from "../../domain/kamas.js";
 import { toTsv } from "../../domain/sheet-io.js";
+import { fmCost } from "../../domain/stats.js";
 import { normalize, plural } from "../../domain/text.js";
 import { isCraft, profit, salePrice } from "../../domain/trade.js";
 import { $, closest, esc, toast } from "../dom.js";
@@ -25,6 +26,7 @@ const COLUMNS = [
   ["item", "Objet", (t) => normalize(t.item), false],
   ["cat", "Type", (t) => t.cat, false],
   ["cost", "Investi", (t) => t.cost, true],
+  ["fm", "dont FM", fmCost, true],
   ["price", "Vente", salePrice, true],
   ["profit", "Bénéfice", profit, true],
   ["pct", "%", (t) => ratioPercent(profit(t), t.cost), true],
@@ -96,6 +98,7 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
       return;
     }
     const totalCost = rows.reduce((s, t) => s + t.cost, 0);
+    const totalFm = rows.reduce((s, t) => s + fmCost(t), 0);
     const totalSale = rows.reduce((s, t) => s + salePrice(t), 0);
     const totalProfit = rows.reduce((s, t) => s + profit(t), 0);
     out.innerHTML = `<div class="scroll"><table class="grid">
@@ -111,6 +114,7 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
           <td>${esc(t.item)}</td>
           <td><span class="pill ${isCraft(t) ? "craft" : ""}">${CATEGORY_LABEL[t.cat]}</span></td>
           <td class="n">${formatKamas(t.cost)}</td>
+          <td class="n fm">${t.runes ? formatKamas(t.runes) : ""}</td>
           <td class="n">${formatKamas(salePrice(t))}</td>
           <td class="n ${signClass(p)}">${formatKamas(p)}</td>
           <td class="n ${signClass(p)}">${formatPercent(ratioPercent(p, t.cost))}</td>
@@ -120,7 +124,8 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
         .join("")}</tbody>
       <tfoot><tr>
         <td colspan="3">${plural(rows.length, "opération")}</td>
-        <td class="n">${formatKamas(totalCost)}</td><td class="n">${formatKamas(totalSale)}</td>
+        <td class="n">${formatKamas(totalCost)}</td><td class="n fm">${totalFm ? formatKamas(totalFm) : ""}</td>
+        <td class="n">${formatKamas(totalSale)}</td>
         <td class="n ${signClass(totalProfit)}">${formatKamas(totalProfit)}</td>
         <td class="n ${signClass(totalProfit)}">${formatPercent(ratioPercent(totalProfit, totalCost))}</td><td></td>
       </tr></tfoot>
