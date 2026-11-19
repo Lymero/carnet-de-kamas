@@ -74,10 +74,10 @@ export async function pickCatalogItem(page, query, expectedName) {
  * @param {import("@playwright/test").Page} page
  */
 export async function openRecipeFolds(page) {
-  for (const fold of await page.locator("#recipeBox details.fold").all()) {
-    if (!(await fold.evaluate((d) => /** @type {HTMLDetailsElement} */ (d).open)))
-      await fold.locator("summary").click();
-  }
+  // Opened directly: clicking one summary would close the other (a click outside it).
+  await page
+    .locator("#recipeBox details.fold")
+    .evaluateAll((folds) => folds.forEach((d) => /** @type {HTMLDetailsElement} */ (d.open = true)));
 }
 
 /**

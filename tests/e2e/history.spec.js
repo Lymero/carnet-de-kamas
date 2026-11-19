@@ -131,3 +131,12 @@ test("export falls back to a copy dialog when the clipboard is blocked", async (
   await page.getByRole("button", { name: "Fermer" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 });
+
+test("a click outside the edit dialog closes it without saving", async ({ page }) => {
+  await rows(page).first().click();
+  await expect(page.locator("#dlg")).toBeVisible();
+  await page.fill("#e-cost", "9m");
+  await page.mouse.click(5, 5);
+  await expect(page.locator("#dlg")).not.toBeVisible();
+  await expect(rows(page).first()).not.toContainText(/9\s000\s000/);
+});

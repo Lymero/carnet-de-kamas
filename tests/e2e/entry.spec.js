@@ -180,3 +180,19 @@ test("« Vider » empties the form", async ({ page }) => {
   await expect(page.locator("#f-sold")).not.toBeChecked();
   await expect(page.locator("#f-preview b")).toHaveText("—");
 });
+
+test("a click outside an open fold closes it; typed FM cost is written with separators", async ({ page }) => {
+  await openApp(page);
+  await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
+  await page.locator("#recipeBox summary", { hasText: "FM" }).click();
+  const fm = page.locator('#recipeBox details[data-fold="fm"]');
+  await expect(fm).toHaveJSProperty("open", true);
+  await page.fill("#f-runes", "100000");
+  // A click inside keeps it open.
+  await page.locator('[data-bal="kb"]').click();
+  await expect(fm).toHaveJSProperty("open", true);
+  await expect(page.locator("#f-runes")).toHaveValue(/^100\s000$/);
+  await page.locator("h2", { hasText: "Nouvelle opération" }).click();
+  await expect(fm).toHaveJSProperty("open", false);
+  await expect(page.locator("#f-cost")).toHaveValue(/^100\s000$/);
+});

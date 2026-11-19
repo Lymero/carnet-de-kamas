@@ -247,23 +247,6 @@ export function mountPurchaseImport({ dialog, form, recipe }) {
   // ----- checking the lines read -----
   check.addEventListener("click", showReview);
 
-  // A click outside the list closes it, as "Annuler" does. Only a press that starts outside
-  // counts, so selecting text in a price and letting go past the edge keeps it open.
-  // The backdrop belongs to the dialog element, so it is told apart by position (its own
-  // scrollbar is inside the box).
-  const outside = (/** @type {MouseEvent} */ e) => {
-    const box = dialog.getBoundingClientRect();
-    return e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom;
-  };
-  let pressedOutside = false;
-  dialog.addEventListener("pointerdown", (e) => {
-    pressedOutside = e.target === dialog && outside(e);
-  });
-  dialog.addEventListener("click", (e) => {
-    if (draft && pressedOutside && e.target === dialog && outside(e)) dialog.close();
-    pressedOutside = false;
-  });
-
   dialog.addEventListener("close", () => {
     if (!draft) return;
     draft = null;

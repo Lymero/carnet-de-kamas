@@ -14,6 +14,7 @@ import { itemHistory } from "../domain/stats.js";
 import { normalize } from "../domain/text.js";
 import { auctionTax, profit } from "../domain/trade.js";
 import { attachAutocomplete } from "./autocomplete.js";
+import { closeOnClickOutside } from "./dismiss.js";
 import { loadTaxPreference, saveTaxPreference, taxOptions } from "./hdv-tax.js";
 import { $, $$, esc, runAction, toast } from "./dom.js";
 
@@ -242,6 +243,10 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       if (fold.dataset?.fold) draft.open[/** @type {"ing"|"fm"} */ (fold.dataset.fold)] = fold.open;
     },
     true,
+  );
+  closeOnClickOutside(
+    () => /** @type {HTMLDetailsElement[]} */ ($$("details.fold[open]", el.recipe)),
+    (fold) => (fold.open = false),
   );
   function refreshTotals() {
     $("#r-tot", el.recipe).textContent = formatKamas(currentRecipeTotal());

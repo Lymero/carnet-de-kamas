@@ -3,7 +3,8 @@
  * rendered: the form, the recipe box, the sale form, the edit dialog.
  *
  * While a calculation is typed ("1.2m + 350k"), a small bubble under the field shows
- * its result; when the field loses focus, the calculation is replaced by the result.
+ * its result; when the field loses focus, what was typed (a calculation, "1.2m",
+ * "100000") is replaced by the amount written in full with its separators.
  * Code reading the field always goes through `evaluateKamas`, so it gets the same
  * number before and after. Events are delegated from the document, so fields
  * rendered later need no setup.
@@ -55,7 +56,7 @@ export function enableKamasFields() {
     if (!input) return;
     bubble.hidden = true;
     const value = evaluateKamas(input.value);
-    if (isCalculation(input.value) && !Number.isNaN(value)) input.value = formatKamas(value);
+    if (!Number.isNaN(value) && input.value !== formatKamas(value)) input.value = formatKamas(value);
   });
   // The bubble is positioned for the field where it was; hide it rather than leave it behind.
   window.addEventListener("scroll", () => (bubble.hidden = true), { capture: true, passive: true });

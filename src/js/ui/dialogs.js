@@ -10,6 +10,7 @@ import { todayIso } from "../domain/dates.js";
 import { evaluateKamas, formatCompact, formatKamas } from "../domain/kamas.js";
 import { parseSheetPaste, withoutDuplicates } from "../domain/sheet-io.js";
 import { plural } from "../domain/text.js";
+import { closeOnClickOutside } from "./dismiss.js";
 import { $, esc, runAction, toast } from "./dom.js";
 import { taxOptions } from "./hdv-tax.js";
 
@@ -23,6 +24,11 @@ export function createDialogs(dialog, { state, actions }) {
   const body = /** @type {HTMLFormElement} */ ($(".dlg", dialog));
   /** @param {string} selector */
   const input = (selector) => /** @type {HTMLInputElement} */ ($(selector, body));
+  // A click outside closes whatever the dialog shows, as its cancel button and Escape do.
+  closeOnClickOutside(
+    () => (dialog.open ? [dialog] : []),
+    () => dialog.close(),
+  );
 
   /**
    * Replaces the dialog content and opens it.

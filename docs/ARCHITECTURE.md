@@ -151,7 +151,11 @@ history toolbar is not rebuilt while one of its controls has focus.
   `#dlg-title`): edit, import, and copy-by-hand when the clipboard is blocked. Deletion is a
   two-step button rather than a `window.confirm` pop-up.
 - `kamas-field.js`: calculator behaviour for every `input.kamas` (delegated from the document):
-  a bubble with the result while typing, replaced by the result on blur.
+  a bubble with the result while typing; on blur, what was typed becomes the amount in full,
+  with its separators.
+- `dismiss.js`: `closeOnClickOutside`, the one click-away-to-close behaviour, used by the dialog
+  (`dialogs.js`, so every dialog content) and the recipe folds (`entry-form.js`). Any new panel
+  that opens should use it rather than its own listeners.
 - `hdv-tax.js`: the tax `<select>` options (form, sale form, edit dialog) and the rate the
   form remembers in `localStorage` (a per-device convenience; trades store their own rate).
 - `dom.js`: `$`, `$$`, `closest` for delegated events, `toast`, `runAction`, `renderKeepingFocus`.

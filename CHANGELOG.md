@@ -31,7 +31,10 @@
 - _En cours_ can be sorted by date, item, type, investment, planned sale or margin, as in
   _Historique_. Craft and resale cards line up the same, the days for sale staying on one line.
 - A _Vider_ button empties the _Nouvelle opération_ form.
-- The list of purchases read from screenshots closes on a click outside it, like _Annuler_.
+- A click outside closes what is open: any dialog (as its cancel button does) and the
+  _Ingrédients_ / _FM_ folds.
+- Every kamas field writes its amount in full with separators once you leave it (`100000` →
+  `100 000`, `1.2m` → `1 200 000`), not only after a calculation.
 
 ## 3.0.1 (2026-11-18)
 

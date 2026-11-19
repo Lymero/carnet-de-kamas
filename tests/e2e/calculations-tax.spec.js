@@ -33,9 +33,13 @@ test.describe("calculations in kamas fields", () => {
     await expect(page.locator("#f-cost")).toHaveValue("1.2m +");
   });
 
-  test("a single amount shows no bubble", async ({ page }) => {
+  test("a single amount shows no bubble, and is written in full on leaving the field", async ({ page }) => {
     await page.fill("#f-cost", "250k");
     await expect(bubble(page)).toBeHidden();
+    await page.fill("#f-exp", "100000");
+    await expect(page.locator("#f-cost")).toHaveValue(/^250\s000$/);
+    await page.locator("#f-date").focus();
+    await expect(page.locator("#f-exp")).toHaveValue(/^100\s000$/);
   });
 
   test("a trade can be saved straight from a calculation", async ({ page }) => {
