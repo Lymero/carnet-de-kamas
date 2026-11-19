@@ -12,9 +12,10 @@
   screenshots are flagged there.
 - **Number of crafts** in the recipe box: craft 10 keys at once and the ingredient quantities,
   runes, investment and planned sale are all multiplied. Unit prices stay per unit.
-- **Avant / Après** under _Runes / FM_: type your kamas and rune value before and after forging;
-  what you spent, (kamas + runes before) − (kamas + runes after), is the runes cost of the
-  whole operation.
+- **Coût FM (avant / après)** in the recipe box, in its own panel under _Runes / FM_: type your
+  kamas and rune value before and after forging; what you spent, (kamas + runes before) −
+  (kamas + runes after), is shown as you type and becomes the runes cost of the whole
+  operation. The ingredients still count on top.
 - After an update, the desktop app keeps the data file exactly as the previous version left it,
   in `carnet.before-<version>.backup.json` next to it, and never overwrites that copy. The
   copies of the last 3 versions are kept; older ones are deleted. Before,

@@ -58,7 +58,8 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     runes: 0,
     /**
      * Kamas and rune value held before and after forging (kb, rb, ka, ra). When a "before" and an
-     * "after" are set, what was spent, (kb + rb) − (ka + ra), is the runes cost of the operation.
+     * "after" are set, what was spent, (kb + rb) − (ka + ra), is the FM cost of the whole operation:
+     * it replaces the Runes / FM line, and the ingredients still count on top.
      * @type {Partial<Record<"kb"|"rb"|"ka"|"ra", number>>}
      */
     balance: {},
@@ -68,21 +69,40 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   };
 
   const priceOf = (id) => draft.unitPrices[id] ?? state.get().prices[id];
-  /** Runes cost read from the balance before and after, for the whole operation; null when not set. */
-  const runesFromBalance = () => {
+  /**
+   * Kamas spent on forgemagie, read from the balance before and after: (kamas + runes before) −
+   * (kamas + runes after). Null while a side is empty; negative when "after" is higher.
+   */
+  const balanceUsed = () => {
     const { kb, rb, ka, ra } = draft.balance;
     if ((kb == null && rb == null) || (ka == null && ra == null)) return null;
-    const spent = (kb ?? 0) + (rb ?? 0) - (ka ?? 0) - (ra ?? 0);
-    return spent >= 0 ? spent : null;
+    return (kb ?? 0) + (rb ?? 0) - (ka ?? 0) - (ra ?? 0);
   };
-  const runesTotal = () => runesFromBalance() ?? draft.runes * draft.qty;
+  /** FM cost once the balance gives a usable amount; null otherwise (the Runes / FM line counts then). */
+  const balanceFm = () => {
+    const used = balanceUsed();
+    return used != null && used >= 0 ? used : null;
+  };
+  /** Runes / FM cost of the whole operation: from the balance when set, else the typed cost per craft. */
+  const runesTotal = () => balanceFm() ?? draft.runes * draft.qty;
   const currentRecipeTotal = () =>
     draft.craftItem ? recipeCost(draft.craftItem.recipe, priceOf).total * draft.qty + runesTotal() : 0;
-  const qtyLabel = (n) => (n === 1 ? "" : `${n}×`);
-  const runesQtyLabel = () => (runesFromBalance() == null ? qtyLabel(draft.qty) : "");
+  const runesQtyLabel = () => (balanceFm() == null ? qtyLabel(draft.qty) : "");
   const runesValue = () => {
-    const v = runesFromBalance() ?? draft.runes;
+    const v = balanceFm() ?? draft.runes;
     return v ? formatKamas(v) : "";
+  };
+  const qtyLabel = (n) => (n === 1 ? "" : `${n}×`);
+  const balanceInput = (key, label) =>
+    `<td class="r"><input type="text" class="kamas" data-bal="${key}" value="${draft.balance[key] != null ? formatKamas(draft.balance[key]) : ""}" placeholder="0" aria-label="${key[0] === "k" ? "Kamas" : "Valeur des runes"} ${label.toLowerCase()}"></td>`;
+  /** The live line under the balance: the subtraction and what it gives. */
+  const balanceSummary = () => {
+    const used = balanceUsed();
+    if (used == null) return { text: "Remplissez Avant et Après.", calc: "", cls: "muted" };
+    const { kb = 0, rb = 0, ka = 0, ra = 0 } = draft.balance;
+    const calc = `(${formatKamas(kb)} + ${formatKamas(rb)}) − (${formatKamas(ka)} + ${formatKamas(ra)})`;
+    if (used < 0) return { text: "Après dépasse Avant, ignoré.", calc, cls: "neg" };
+    return { text: formatKamas(used), calc: `= ${calc}`, cls: "" };
   };
 
   // ----- category -----
@@ -146,23 +166,23 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       <div class="head"><span class="lbl">Recette · niv. ${item.level}</span><label class="qty">×<input type="text" inputmode="numeric" id="f-qty" class="num" value="${draft.qty}" aria-label="Nombre de crafts"></label></div>
       <div class="slot"></div>
       <table><tbody>${rows}
-        <tr><td class="q num" data-q="runes">${runesQtyLabel()}</td><td>Runes / FM</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût runes et forgemagie"${runesFromBalance() == null ? "" : " readonly"}></td></tr>
+        <tr><td class="q num" data-q="runes">${runesQtyLabel()}</td><td>Runes / FM</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût runes et forgemagie"${balanceFm() == null ? "" : " readonly"}></td></tr>
       </tbody></table>
-      <table class="bal"><thead><tr><td></td><th>Kamas</th><th>Runes</th></tr></thead><tbody>
-        ${[
-          ["Avant", "kb", "rb"],
-          ["Après", "ka", "ra"],
-        ]
-          .map(
-            ([label, k, r]) =>
-              `<tr><td>${label}</td>${[k, r].map((key) => `<td class="r"><input type="text" class="kamas" data-bal="${key}" value="${draft.balance[key] != null ? formatKamas(draft.balance[key]) : ""}" aria-label="${key[0] === "k" ? "Kamas" : "Valeur des runes"} ${label.toLowerCase()}"></td>`).join("")}</tr>`,
-          )
-          .join("")}
-      </tbody></table>
+      <section class="bal" aria-labelledby="bal-title">
+        <div class="lbl" id="bal-title">Coût FM (avant / après)</div>
+        <p class="hint">Optionnel. Vos kamas + la valeur de vos runes, avant et après la FM. La différence remplace la ligne Runes / FM ; les ingrédients s'ajoutent toujours.</p>
+        <table><thead><tr><td></td><th>Kamas</th><th></th><th>Runes</th></tr></thead><tbody>
+          <tr><td>Avant</td>${balanceInput("kb", "Avant")}<td class="op">+</td>${balanceInput("rb", "Avant")}</tr>
+          <tr><td>Après</td>${balanceInput("ka", "Après")}<td class="op">+</td>${balanceInput("ra", "Après")}</tr>
+        </tbody></table>
+        <div class="used"><span>Coût FM</span><span class="num" id="bal-used"></span></div>
+        <div class="formula num" id="bal-calc"></div>
+      </section>
       <div class="tot"><span>Coût calculé</span><span class="num" id="r-tot">${formatKamas(currentRecipeTotal())}</span></div>
       <div class="hint">Les prix unitaires sont mémorisés pour la prochaine fois.
         ${draft.costFollowsRecipe ? "L'investissement suit ce calcul." : `<button type="button" class="btn small" id="r-use">Utiliser le coût calculé</button>`}</div>
     </div>`;
+    syncBalance();
     form.dispatchEvent(new Event("recipechange"));
   }
   el.recipe.addEventListener("input", (e) => {
@@ -179,14 +199,19 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       const key = /** @type {"kb"|"rb"|"ka"|"ra"} */ (t.dataset.bal);
       if (isKamas(value)) draft.balance[key] = value;
       else delete draft.balance[key];
-      syncRunesField();
+      syncBalance();
     } else return;
     refreshTotals();
   });
-  /** Shows the runes cost from the balance (read only) once it is set, the typed one otherwise. */
-  function syncRunesField() {
+  /** Updates the live difference and shows it, read only, in the Runes / FM line once it is set. */
+  function syncBalance() {
+    const { text, calc, cls } = balanceSummary();
+    const used = $("#bal-used", el.recipe);
+    used.textContent = text;
+    used.className = `num ${cls}`;
+    $("#bal-calc", el.recipe).textContent = calc;
     const runes = /** @type {HTMLInputElement} */ ($("#f-runes", el.recipe));
-    runes.readOnly = runesFromBalance() != null;
+    runes.readOnly = balanceFm() != null;
     runes.value = runesValue();
     $('td[data-q="runes"]', el.recipe).textContent = runesQtyLabel();
   }
