@@ -44,7 +44,7 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           {
-            echo "**Installation :** télécharge l'installateur de ton système ci-dessous (Windows : \`…-setup.exe\`, macOS : \`.dmg\`, Linux : \`.AppImage\` ou \`.deb\`), puis lance-le. Aucun autre logiciel n'est nécessaire."
+            echo "**Installation:** download the installer for your system below (Windows: \`…-setup.exe\`, macOS: \`.dmg\`, Linux: \`.AppImage\` or \`.deb\`), then run it. No other software is needed."
             echo
             awk -v v="$VERSION" '$0 ~ "^## " v " " {found=1; next} /^## / {found=0} found' CHANGELOG.md
           } > notes.md
