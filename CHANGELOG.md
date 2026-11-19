@@ -4,11 +4,12 @@
 
 ### Added
 
-- **Investment from chat screenshots**: pick, drop or paste screenshots of the game chat and
-  the app reads the purchase lines (`N x [Item] (price kamas)`) to fill the investment. The
-  text is read on the computer (Tesseract, bundled), with no internet connection. Each line
-  is shown with its picture in an editable list; unsure readings, missed lines and lines
-  repeated across overlapping screenshots are flagged before the total is used.
+- **Investment from chat screenshots**: paste (Ctrl+V), drop or pick screenshots of the game
+  chat and the app reads the purchase lines (`N x [Item] (price kamas)`) and fills the
+  investment with their total. The text is read on the computer (Tesseract, bundled), with no
+  internet connection. A button opens the lines read, each with its picture, to double-check
+  and fix them; unsure readings, missed lines and lines repeated across overlapping
+  screenshots are flagged there.
 
 ## 3.0.1 (2026-11-18)
 

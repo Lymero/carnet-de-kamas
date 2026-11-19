@@ -110,8 +110,7 @@ async function start() {
 
   mountPurchaseImport({
     dialog: /** @type {HTMLDialogElement} */ ($("#dlg")),
-    button: /** @type {HTMLButtonElement} */ ($("#f-shots")),
-    costInput: /** @type {HTMLInputElement} */ ($("#f-cost")),
+    form: /** @type {HTMLFormElement} */ ($("#addForm")),
   });
 
   // ----- routing -----

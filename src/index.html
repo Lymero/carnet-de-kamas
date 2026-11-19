@@ -55,9 +55,12 @@
             </div>
           </div>
           <!-- Reads chat screenshots offline (ui/purchase-import.js). -->
-          <button type="button" class="btn small shots-btn" id="f-shots">
-            Investissement depuis des captures du chat…
-          </button>
+          <div class="shots-bar">
+            <button type="button" class="btn small" id="f-shots">Lire des captures du chat…</button>
+            <button type="button" class="btn small" id="f-shots-check" hidden></button>
+            <span class="hint" id="f-shots-status" aria-live="polite">ou colle une capture (Ctrl+V)</span>
+            <input type="file" id="f-shots-file" multiple hidden />
+          </div>
           <div class="row2">
             <div class="field">
               <label for="f-date">Date</label>

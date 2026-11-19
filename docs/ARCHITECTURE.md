@@ -160,10 +160,13 @@ history toolbar is not rebuilt while one of its controls has focus.
 - `screenshot-ocr.js`: the offline text reader. It loads Tesseract (WebAssembly, English and
   French models, vendored in `src/vendor/tesseract/` by `npm run vendor:ocr`) only when a
   screenshot is read, and prepares each image first: enlarged when small, dark text on white
-  in greys whatever the chat theme. Each screenshot is read three times, with the greys more
-  or less darkened, since each version misreads different digits.
-- `purchase-import.js`: the screenshot dialog (pick, drop or paste; reading; the editable
-  review list with each line's picture, flags and running total) that fills the investment.
+  in greys whatever the chat theme. Each screenshot is read three times at once, by three
+  engines, with the greys more or less darkened, since each version misreads different
+  digits; only the first also loads the French model, for item names.
+- `purchase-import.js`: screenshots pasted anywhere, dropped on the form or picked are read
+  in turn and their total goes straight into the investment. "Vérifier les N lots lus" opens
+  the editable list (each line's picture, flags, running total) on a copy, kept only by
+  "Utiliser ce total". Changing the investment by hand or adding the trade forgets them.
 - `chart.js` draws one SVG bar chart; a chart library would be most of the page weight for one chart.
 
 ### `src-tauri/` (desktop shell, Rust)
