@@ -37,7 +37,8 @@ path.
   closed, to restore.
 - Each start copies the previous file to `carnet.backup.json` next to it. The desktop app
   also keeps, after each update, the file as the previous version left it
-  (`carnet.before-<version>.backup.json`), never overwritten.
+  (`carnet.before-<version>.backup.json`), never overwritten; the last 3 versions' copies are
+  kept.
 - Writes are atomic: a crash or power cut cannot leave a half-written file.
 - It never leaves your computer. Updating or uninstalling the app does not touch it: installing
   a new version over the old one keeps it, and the Windows uninstaller's "delete application

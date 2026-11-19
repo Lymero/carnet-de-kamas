@@ -34,7 +34,8 @@ fsync, rename), one change at a time. Each start first copies the previous file 
 `carnet.backup.json` next to it. The desktop app also copies it, the first time a given version
 opens it, to `carnet.before-<version>.backup.json`, which is never overwritten: after an update,
 the file exactly as the previous version left it stays there, even once the new version has
-started several times. The local server also checks the shape of what it receives
+started several times. Only the copies of the 3 most recent versions are kept (always
+including the running version's); older ones are deleted. The local server also checks the shape of what it receives
 (ids, a JSON object per trade, whole non-negative prices); the field-level rules are
 `validateTrade`'s, applied in the page.
 

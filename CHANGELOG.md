@@ -5,7 +5,8 @@
 ### Added
 
 - After an update, the desktop app keeps the data file exactly as the previous version left it,
-  in `carnet.before-<version>.backup.json` next to it, and never overwrites that copy. Before,
+  in `carnet.before-<version>.backup.json` next to it, and never overwrites that copy. The
+  copies of the last 3 versions are kept; older ones are deleted. Before,
   the only backup was replaced at each start, so a second launch of a faulty new version could
   leave no good copy.
 
