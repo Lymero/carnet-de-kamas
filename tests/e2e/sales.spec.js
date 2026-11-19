@@ -41,3 +41,30 @@ test("cancelling the sale form keeps the trade for sale", async ({ page }) => {
   await expect(page.locator(".sell")).toHaveCount(0);
   await expect(page.locator(".open-row").getByRole("button", { name: "Vendu" })).toBeFocused();
 });
+
+test("the list is sorted like the history", async ({ page }) => {
+  await addTrade(page, { item: "Gelano", cat: "craft", cost: "3m", expected: "3.3m", date: "2026-01-12" });
+  await addTrade(page, { item: "Amulette", cat: "resale", cost: "100k", expected: "300k", date: "2026-01-11" });
+  const names = page.locator(".open-row .it b");
+  await expect(names).toHaveText(["Kokulte", "Amulette", "Gelano"]); // oldest first
+  await page.locator(".open-sort").getByRole("button", { name: "Investi" }).click();
+  await expect(names).toHaveText(["Gelano", "Kokulte", "Amulette"]);
+  await page
+    .locator(".open-sort")
+    .getByRole("button", { name: /Investi/ })
+    .click();
+  await expect(names).toHaveText(["Amulette", "Kokulte", "Gelano"]);
+  await page.locator(".open-sort").getByRole("button", { name: "Marge" }).click();
+  await expect(names).toHaveText(["Amulette", "Kokulte", "Gelano"]);
+  await page.locator(".open-sort").getByRole("button", { name: "Objet" }).click();
+  await expect(names).toHaveText(["Amulette", "Gelano", "Kokulte"]);
+});
+
+test("the date, the type and the days for sale stay on one line", async ({ page }) => {
+  await addTrade(page, { item: "Gelano", cat: "craft", cost: "1m", expected: "1.2m", date: "2026-01-12" });
+  for (const row of await page.locator(".open-row .it small").all()) {
+    const height = await row.evaluate((el) => el.getBoundingClientRect().height);
+    expect(height).toBeLessThan(26);
+    await expect(row).toContainText("j en vente");
+  }
+});

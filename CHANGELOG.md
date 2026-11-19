@@ -26,6 +26,10 @@
   copies of the last 3 versions are kept; older ones are deleted. Before,
   the only backup was replaced at each start, so a second launch of a faulty new version could
   leave no good copy.
+- _En cours_ can be sorted by date, item, type, investment, planned sale or margin, as in
+  _Historique_. Craft and resale cards line up the same, the days for sale staying on one line.
+- A _Vider_ button empties the _Nouvelle opération_ form.
+- The list of purchases read from screenshots closes on a click outside it, like _Annuler_.
 
 ## 3.0.1 (2026-11-18)
 

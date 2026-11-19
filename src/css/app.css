@@ -228,6 +228,12 @@ header.top {
   position: sticky;
   top: 12px;
 }
+.form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 .field {
   display: grid;
   gap: 4px;
@@ -643,13 +649,26 @@ table.grid tfoot td {
   color: var(--muted);
 }
 
+.open-sort {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 14px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.open-sort .on {
+  color: var(--ink);
+}
 .open {
   display: grid;
   gap: 8px;
 }
 .open-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)) auto;
+  /* Room for the date, the type and "NN j en vente" on one line, whatever the type. */
+  grid-template-columns: minmax(17rem, 1.6fr) repeat(3, minmax(0, 1fr)) auto;
   gap: 10px;
   align-items: center;
   padding: 10px 12px;
@@ -665,6 +684,12 @@ table.grid tfoot td {
   color: var(--muted);
   font-size: 12px;
   display: block;
+}
+.open-row .it small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
 }
 .open-row .c {
   text-align: right;

@@ -85,6 +85,13 @@ test("a pasted screenshot fills the investment at once; the lines read can be ch
   expect(await cost(page)).toBe(filled);
   await page.click("#f-shots-check");
   await expect(rows(page).first().locator('[data-f="counted"]')).toBeChecked();
+  // A click outside the list closes it as "Annuler" does.
+  await rows(page).first().locator('[data-f="counted"]').uncheck();
+  await page.mouse.click(5, 5);
+  await expect(page.locator("#dlg")).not.toBeVisible();
+  expect(await cost(page)).toBe(filled);
+  await page.click("#f-shots-check");
+  await expect(rows(page).first().locator('[data-f="counted"]')).toBeChecked();
 
   // …and kept by "Utiliser ce total": fix a price, leave a line out, add one by hand.
   const row = rows(page).nth(1);

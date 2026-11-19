@@ -6,7 +6,7 @@ maintained spreadsheet with:
 - **Quick entry** with item-name autocomplete (your own items first, then the full game catalog).
 - **Recipe cost helper**: pick a craftable item, enter unit prices once (they are remembered),
   add runes/FM spend, and the investment is computed for you.
-- **En cours**: what you have listed at the HDV, with how long each item has been for sale.
+- **En cours**: what you have listed at the HDV, with how long each item has been for sale, sortable.
 - **Historique**: every trade, searchable, filterable and sortable, with totals.
 - **Analyse**: craft vs. resale, realised profit per month, results per item.
 - **Spreadsheet import/export** by copy-paste, so old data comes in and backups go out.

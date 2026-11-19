@@ -48,6 +48,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     previewLabel: $("#f-preview span", form),
     preview: $("#f-preview b", form),
     submit: /** @type {HTMLButtonElement} */ ($("#f-submit", form)),
+    reset: /** @type {HTMLButtonElement} */ ($("#f-reset", form)),
   };
 
   /** Draft state of the recipe helper. `costFollowsRecipe` turns off once the user edits the cost by hand. */
@@ -323,6 +324,10 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     setCategory(draft.cat);
     updatePreview();
   }
+  el.reset.addEventListener("click", () => {
+    reset();
+    el.item.focus();
+  });
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     runAction(el.submit, async () => {

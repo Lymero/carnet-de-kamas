@@ -157,3 +157,22 @@ test("the FM cost shows in the history and in the analysis", async ({ page }) =>
   await expect(page.locator("#view .panel").first()).toContainText(/dont FM 3\s?M · 85,7\s%/);
   await expect(page.locator("#view tr[data-item] td.fm").first()).toHaveText(/^3\s000\s000$/);
 });
+
+test("« Vider » empties the form", async ({ page }) => {
+  await openApp(page, { catalog: false });
+  await page.fill("#f-item", "Kokulte");
+  await page.keyboard.press("Escape");
+  await page.click('#f-cat button[data-v="resale"]');
+  await page.fill("#f-cost", "1m");
+  await page.fill("#f-exp", "1.5m");
+  await page.fill("#f-date", "2026-01-10");
+  await page.check("#f-sold");
+  await page.click("#f-reset");
+  await expect(page.locator("#f-item")).toHaveValue("");
+  await expect(page.locator("#f-item")).toBeFocused();
+  await expect(page.locator("#f-cost")).toHaveValue("");
+  await expect(page.locator("#f-exp")).toHaveValue("");
+  await expect(page.locator("#f-date")).not.toHaveValue("2026-01-10");
+  await expect(page.locator("#f-sold")).not.toBeChecked();
+  await expect(page.locator("#f-preview b")).toHaveText("—");
+});
