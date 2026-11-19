@@ -1006,6 +1006,32 @@ table.grid tr:hover td.go::after,
 table.grid tr:focus-visible td.go::after {
   opacity: 1;
 }
+/* Status in Historique: a dot, hollow while for sale, filled once sold. */
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--muted);
+  vertical-align: middle;
+}
+.dot.ok {
+  background: var(--good);
+  border-color: var(--good);
+}
+.dot.ko {
+  background: var(--bad);
+  border-color: var(--bad);
+}
+/* Long item names are cut with an ellipsis (whole name on hover) so the table fits its card. */
+table.grid td.obj {
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+table.grid td.st {
+  text-align: center;
+}
 /* "dont FM": the runes / forgemagie part of the investment, kept discreet next to it. */
 table.grid td.fm {
   color: var(--muted);

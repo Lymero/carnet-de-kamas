@@ -13,6 +13,7 @@ import { esc } from "./dom.js";
  * @typedef {Object} SortColumn
  * @property {string} key
  * @property {string} label
+ * @property {string} [title]  full name, on hover and for screen readers, when the label is a symbol
  * @property {(row: T) => string|number} value  what the rows are sorted by
  * @property {1|-1} [first]  direction of the first click: 1 ascending (default for text), -1 descending
  * @property {boolean} [numeric]  right-aligned in a table
@@ -66,7 +67,8 @@ export function nextSort(sort, key, columns) {
  */
 export function sortButton(column, sort) {
   const active = sort.key === column.key;
-  return `<button type="button" class="th-btn${active ? " on" : ""}" data-sort="${esc(column.key)}">${esc(column.label)}${active ? (sort.dir > 0 ? " ↑" : " ↓") : ""}</button>`;
+  const named = column.title ? ` title="${esc(column.title)}" aria-label="${esc(column.title)}"` : "";
+  return `<button type="button" class="th-btn${active ? " on" : ""}" data-sort="${esc(column.key)}"${named}>${esc(column.label)}${active ? (sort.dir > 0 ? " ↑" : " ↓") : ""}</button>`;
 }
 
 /**

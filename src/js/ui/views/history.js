@@ -14,7 +14,7 @@ import { fmCost } from "../../domain/stats.js";
 import { normalize, plural } from "../../domain/text.js";
 import { profit, salePrice } from "../../domain/trade.js";
 import { $, closest, esc, toast } from "../dom.js";
-import { categoryPill } from "../pills.js";
+import { categoryPill, statusDot } from "../pills.js";
 import { amountCell } from "../table.js";
 import { nextSort, sortHeader, sortRows } from "../sort.js";
 
@@ -30,7 +30,7 @@ const COLUMNS = [
   { key: "price", label: "Vente", value: salePrice, numeric: true },
   { key: "profit", label: "Bénéfice", value: profit, numeric: true },
   { key: "pct", label: "%", value: (t) => ratioPercent(profit(t), t.cost), numeric: true },
-  { key: "sold", label: "Statut", value: (t) => (t.sold ? 1 : 0), first: -1 },
+  { key: "sold", label: "●", title: "Statut", value: (t) => (t.sold ? 1 : 0), first: -1 },
 ];
 
 /** Status filter predicates. */
@@ -102,14 +102,14 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
           const p = profit(t);
           return `<tr data-id="${esc(t.id)}" tabindex="0">
           <td class="num">${esc(formatShortDate(t.date))}</td>
-          <td>${esc(t.item)}</td>
+          <td class="obj" title="${esc(t.item)}">${esc(t.item)}</td>
           <td>${categoryPill(t)}</td>
           ${amountCell(t.cost)}
           ${amountCell(t.runes || null, { cls: "fm" })}
           ${amountCell(salePrice(t))}
           ${amountCell(p, { cls: signClass(p) })}
           <td class="n ${signClass(p)}">${formatPercent(ratioPercent(p, t.cost))}</td>
-          <td>${t.sold ? `<span class="pill ${p >= 0 ? "ok" : "ko"}">Vendu</span>` : `<span class="pill">En vente</span>`}</td>
+          <td class="st">${statusDot(t)}</td>
         </tr>`;
         })
         .join("")}</tbody>

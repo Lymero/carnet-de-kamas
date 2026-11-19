@@ -59,7 +59,7 @@ test.describe("edit dialog", () => {
     await page.fill("#e-sd", "");
     await page.press("#e-sp", "Enter");
     await expect(page.getByRole("dialog")).toBeHidden();
-    await expect(rows(page).filter({ hasText: "Kokulte" })).toContainText("Vendu");
+    await expect(rows(page).filter({ hasText: "Kokulte" }).getByRole("img", { name: "Vendu" })).toBeVisible();
   });
 
   test("deleting needs a second click", async ({ page }) => {
