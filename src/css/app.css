@@ -393,6 +393,23 @@ input.kamas {
 .recipe td.r {
   text-align: right;
 }
+.recipe .head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.recipe .qty {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.recipe .qty input {
+  width: 52px;
+  text-align: right;
+  color: var(--ink);
+}
 .recipe .tot {
   display: flex;
   justify-content: space-between;

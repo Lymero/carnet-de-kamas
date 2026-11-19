@@ -26,6 +26,31 @@ test("autocomplete suggests catalog items and the recipe helper prices the craft
   await expect(page.locator("#f-cost")).not.toHaveValue("5m");
 });
 
+test("the number of crafts multiplies the recipe, the investment and the planned sale", async ({ page }) => {
+  await openApp(page);
+  await page.selectOption("#f-tax", "0");
+  await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
+  const recipe = page.locator("#recipeBox .recipe");
+  const firstQty = recipe.locator("td[data-q]").first();
+  const unitQty = Number((await firstQty.textContent()).replace("×", ""));
+  await recipe.locator("input[data-ing]").first().fill("1000");
+  const unitCost = Number((await page.inputValue("#f-cost")).replace(/\s/g, ""));
+  await page.fill("#f-exp", "50k");
+
+  await recipe.locator("#f-qty").fill("10");
+  await expect(firstQty).toHaveText(`${unitQty * 10}×`);
+  await expect(page.locator("#f-cost")).toHaveValue(
+    new RegExp(`^${String(unitCost * 10).replace(/\B(?=(\d{3})+$)/g, "\\s")}$`),
+  );
+  await expect(page.locator("#f-exp")).toHaveValue(/^500\s000$/);
+  // Unit prices stay per unit.
+  await expect(recipe.locator("input[data-ing]").first()).toHaveValue(/^1\s?000$/);
+
+  // Back to one craft divides everything again.
+  await recipe.locator("#f-qty").fill("1");
+  await expect(page.locator("#f-exp")).toHaveValue(/^50\s000$/);
+});
+
 test("the preview shows expected profit and margin", async ({ page }) => {
   await openApp(page, { catalog: false });
   await page.selectOption("#f-tax", "0");

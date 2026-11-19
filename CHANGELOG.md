@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Number of crafts** in the recipe box: craft 10 keys at once and the ingredient quantities,
+  runes, investment and planned sale are all multiplied. Unit prices stay per unit.
+
 ## 3.0.1 (2026-11-18)
 
 ### Fixed
