@@ -221,6 +221,8 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     const used = $("#bal-used", el.recipe);
     used.textContent = text;
     used.className = `num ${cls}`;
+    // A usable amount already shows in the cost above: the line only speaks up when "after" is higher.
+    /** @type {HTMLElement} */ (used.parentElement).hidden = cls !== "neg";
     $("#bal-calc", el.recipe).textContent = calc;
     const runes = /** @type {HTMLInputElement} */ ($("#f-runes", el.recipe));
     runes.readOnly = balanceFm() != null;

@@ -108,6 +108,9 @@ test("the kamas and rune value before and after forging give the FM cost", async
   );
   await expect(recipe.locator("#f-runes")).toHaveValue(/^3\s000\s000$/);
   await expect(recipe.locator("#f-runes")).toHaveJSProperty("readOnly", true);
+  // The amount shows once: in the cost field, not again in the open fold's header or under the grid.
+  await expect(recipe.locator("#r-fm")).toBeHidden();
+  await expect(recipe.locator("#bal-used")).toBeHidden();
   await expect(page.locator("#f-cost")).toHaveValue(/^3\s000\s000$/);
   await page.fill("#f-exp", "4m");
   await expect(page.locator("#f-preview b")).toHaveText(/^1\s000\s000 /);
@@ -124,6 +127,7 @@ test("the kamas and rune value before and after forging give the FM cost", async
   // "After" higher than "before" is flagged and ignored; the cost typed counts, once.
   await recipe.locator('[data-bal="ka"]').fill("20m");
   await expect(recipe.locator("#bal-used")).toHaveText("Après > Avant");
+  await expect(recipe.locator("#bal-used")).toBeVisible();
   await expect(page.locator("#f-cost")).toHaveValue(/^1\s000$/);
 
   // Clearing the "after" values goes back to the runes typed directly.

@@ -435,6 +435,10 @@ input.kamas {
 .recipe .fold[open] summary span:first-child::before {
   transform: rotate(90deg);
 }
+/* Open, the FM box shows its cost in the field: the subtotal would repeat it. */
+.recipe.fm .fold[open] summary .num {
+  visibility: hidden;
+}
 .recipe .fold[open] summary {
   margin-bottom: 4px;
 }
@@ -469,6 +473,9 @@ input.kamas {
   gap: 8px;
   font-size: 12px;
   color: var(--muted);
+}
+.recipe .bal .used[hidden] {
+  display: none;
 }
 .recipe .bal .used .num {
   text-align: right;
