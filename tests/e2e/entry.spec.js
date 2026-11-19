@@ -81,25 +81,32 @@ test("invalid input is refused with a readable message", async ({ page }) => {
   await expect(page.locator("#c-all")).toHaveText("0");
 });
 
-test("the kamas balance before and after the runes gives the runes cost", async ({ page }) => {
+test("the kamas and rune value before and after forging give the runes cost", async ({ page }) => {
   await openApp(page);
+  await page.selectOption("#f-tax", "0");
   await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
   const recipe = page.locator("#recipeBox .recipe");
   await recipe.locator("#f-runes").fill("1000");
   await expect(page.locator("#f-cost")).toHaveValue(/^1\s000$/);
 
-  await recipe.locator("#f-kb").fill("5m");
-  await recipe.locator("#f-ka").fill("3.8m");
-  await expect(recipe.locator("#f-runes")).toHaveValue(/^1\s200\s000$/);
+  // 10m kamas + 3m of runes before, 8m + 2m after: 3m spent. Sold 4m, 1m profit.
+  await recipe.locator('[data-bal="kb"]').fill("10m");
+  await recipe.locator('[data-bal="rb"]').fill("3m");
+  await recipe.locator('[data-bal="ka"]').fill("8m");
+  await recipe.locator('[data-bal="ra"]').fill("2m");
+  await expect(recipe.locator("#f-runes")).toHaveValue(/^3\s000\s000$/);
   await expect(recipe.locator("#f-runes")).toHaveJSProperty("readOnly", true);
-  await expect(page.locator("#f-cost")).toHaveValue(/^1\s200\s000$/);
+  await expect(page.locator("#f-cost")).toHaveValue(/^3\s000\s000$/);
+  await page.fill("#f-exp", "4m");
+  await expect(page.locator("#f-preview b")).toHaveText(/^1\s000\s000 /);
 
   // The balance covers the whole operation: more crafts don't multiply it.
   await recipe.locator("#f-qty").fill("10");
-  await expect(page.locator("#f-cost")).toHaveValue(/^1\s200\s000$/);
+  await expect(page.locator("#f-cost")).toHaveValue(/^3\s000\s000$/);
 
-  // Clearing a balance goes back to the runes typed directly.
-  await recipe.locator("#f-ka").fill("");
+  // Clearing the "after" values goes back to the runes typed directly.
+  await recipe.locator('[data-bal="ka"]').fill("");
+  await recipe.locator('[data-bal="ra"]').fill("");
   await expect(recipe.locator("#f-runes")).toHaveJSProperty("readOnly", false);
   await expect(page.locator("#f-cost")).toHaveValue(/^10\s000$/);
 });

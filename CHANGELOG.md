@@ -6,8 +6,9 @@
 
 - **Number of crafts** in the recipe box: craft 10 keys at once and the ingredient quantities,
   runes, investment and planned sale are all multiplied. Unit prices stay per unit.
-- **Kamas avant / après** under _Runes / FM_: type your kamas before and after buying runes, and
-  the difference is used as the runes cost (for the whole operation).
+- **Avant / Après** under _Runes / FM_: type your kamas and rune value before and after forging;
+  what you spent, (kamas + runes before) − (kamas + runes after), is the runes cost of the
+  whole operation.
 
 ## 3.0.1 (2026-11-18)
 

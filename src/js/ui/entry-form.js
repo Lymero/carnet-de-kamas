@@ -47,20 +47,25 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     /** @type {import("../data/catalog.js").CatalogItem|null} */ craftItem: null,
     /** @type {Record<string, number>} */ unitPrices: {},
     runes: 0,
-    /** Kamas balance before and after buying runes; when both are set, their difference is the runes cost. */
-    /** @type {number|null} */ kamasBefore: null,
-    /** @type {number|null} */ kamasAfter: null,
+    /**
+     * Kamas and rune value held before and after forging (kb, rb, ka, ra). When a "before" and an
+     * "after" are set, what was spent, (kb + rb) − (ka + ra), is the runes cost of the operation.
+     * @type {Partial<Record<"kb"|"rb"|"ka"|"ra", number>>}
+     */
+    balance: {},
     /** Number of crafts: multiplies the ingredient quantities and the runes. Unit prices stay per unit. */
     qty: 1,
     costFollowsRecipe: true,
   };
 
   const priceOf = (id) => draft.unitPrices[id] ?? state.get().prices[id];
-  /** Kamas spent on runes read from the balance before and after, for the whole operation. */
-  const runesFromBalance = () =>
-    draft.kamasBefore != null && draft.kamasAfter != null && draft.kamasBefore >= draft.kamasAfter
-      ? draft.kamasBefore - draft.kamasAfter
-      : null;
+  /** Runes cost read from the balance before and after, for the whole operation; null when not set. */
+  const runesFromBalance = () => {
+    const { kb, rb, ka, ra } = draft.balance;
+    if ((kb == null && rb == null) || (ka == null && ra == null)) return null;
+    const spent = (kb ?? 0) + (rb ?? 0) - (ka ?? 0) - (ra ?? 0);
+    return spent >= 0 ? spent : null;
+  };
   const runesTotal = () => runesFromBalance() ?? draft.runes * draft.qty;
   const currentRecipeTotal = () =>
     draft.craftItem ? recipeCost(draft.craftItem.recipe, priceOf).total * draft.qty + runesTotal() : 0;
@@ -91,8 +96,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
         craftItem,
         unitPrices: {},
         runes: 0,
-        kamasBefore: null,
-        kamasAfter: null,
+        balance: {},
         qty: 1,
         costFollowsRecipe: true,
       });
@@ -132,8 +136,17 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       <div class="head"><span class="lbl">Recette · niv. ${item.level}</span><label class="qty">×<input type="text" inputmode="numeric" id="f-qty" class="num" value="${draft.qty}" aria-label="Nombre de crafts"></label></div>
       <table><tbody>${rows}
         <tr><td class="q num" data-q="runes">${runesQtyLabel()}</td><td>Runes / FM</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût runes et forgemagie"${runesFromBalance() == null ? "" : " readonly"}></td></tr>
-        <tr class="bal"><td class="q"></td><td>Kamas avant</td><td class="r"><input type="text" class="kamas" id="f-kb" value="${draft.kamasBefore != null ? formatKamas(draft.kamasBefore) : ""}" aria-label="Kamas avant les runes"></td></tr>
-        <tr class="bal"><td class="q"></td><td>Kamas après</td><td class="r"><input type="text" class="kamas" id="f-ka" value="${draft.kamasAfter != null ? formatKamas(draft.kamasAfter) : ""}" aria-label="Kamas après les runes"></td></tr>
+      </tbody></table>
+      <table class="bal"><thead><tr><td></td><th>Kamas</th><th>Runes</th></tr></thead><tbody>
+        ${[
+          ["Avant", "kb", "rb"],
+          ["Après", "ka", "ra"],
+        ]
+          .map(
+            ([label, k, r]) =>
+              `<tr><td>${label}</td>${[k, r].map((key) => `<td class="r"><input type="text" class="kamas" data-bal="${key}" value="${draft.balance[key] != null ? formatKamas(draft.balance[key]) : ""}" aria-label="${key[0] === "k" ? "Kamas" : "Valeur des runes"} ${label.toLowerCase()}"></td>`).join("")}</tr>`,
+          )
+          .join("")}
       </tbody></table>
       <div class="tot"><span>Coût calculé</span><span class="num" id="r-tot">${formatKamas(currentRecipeTotal())}</span></div>
       <div class="hint">Les prix unitaires sont mémorisés pour la prochaine fois.
@@ -150,13 +163,15 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       else delete draft.unitPrices[t.dataset.ing];
     } else if (t.id === "f-runes") {
       draft.runes = isKamas(value) ? value : 0;
-    } else if (t.id === "f-kb" || t.id === "f-ka") {
-      draft[t.id === "f-kb" ? "kamasBefore" : "kamasAfter"] = isKamas(value) ? value : null;
+    } else if (t.dataset.bal) {
+      const key = /** @type {"kb"|"rb"|"ka"|"ra"} */ (t.dataset.bal);
+      if (isKamas(value)) draft.balance[key] = value;
+      else delete draft.balance[key];
       syncRunesField();
     } else return;
     refreshTotals();
   });
-  /** Shows the runes cost from the balance (read only) when both amounts are set, the typed one otherwise. */
+  /** Shows the runes cost from the balance (read only) once it is set, the typed one otherwise. */
   function syncRunesField() {
     const runes = /** @type {HTMLInputElement} */ ($("#f-runes", el.recipe));
     runes.readOnly = runesFromBalance() != null;
@@ -240,8 +255,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       craftItem: null,
       unitPrices: {},
       runes: 0,
-      kamasBefore: null,
-      kamasAfter: null,
+      balance: {},
       qty: 1,
       costFollowsRecipe: true,
     });
