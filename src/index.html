@@ -56,9 +56,21 @@
           </div>
           <!-- Reads chat screenshots offline (ui/purchase-import.js). -->
           <div class="shots-bar">
-            <button type="button" class="btn small" id="f-shots">Lire des captures du chat…</button>
-            <button type="button" class="btn small" id="f-shots-check" hidden></button>
-            <span class="hint" id="f-shots-status" aria-live="polite">ou colle une capture (Ctrl+V)</span>
+            <button
+              type="button"
+              class="chip"
+              id="f-shots"
+              title="Lire des captures du chat, ou en coller une (Ctrl+V)"
+              aria-label="Lire des captures du chat, ou en coller une avec Ctrl+V"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 8h3l2-2.5h6L17 8h3v11H4z" />
+                <circle cx="12" cy="13.5" r="3.5" />
+              </svg>
+              <span>Captures</span>
+            </button>
+            <button type="button" class="chip" id="f-shots-check" title="Vérifier les lots lus" hidden></button>
+            <span class="sr" id="f-shots-status" aria-live="polite"></span>
             <input type="file" id="f-shots-file" multiple hidden />
           </div>
           <div class="row2">

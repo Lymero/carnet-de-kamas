@@ -164,9 +164,9 @@ history toolbar is not rebuilt while one of its controls has focus.
   engines, with the greys more or less darkened, since each version misreads different
   digits; only the first also loads the French model, for item names.
 - `purchase-import.js`: screenshots pasted anywhere, dropped on the form or picked are read
-  in turn and their total goes straight into the investment. "Vérifier les N lots lus" opens
+  in turn and their total goes straight into the investment. "Vérifier (N)" opens
   the editable list (each line's picture, flags, running total) on a copy, kept only by
-  "Utiliser ce total". Changing the investment by hand or adding the trade forgets them.
+  "Utiliser". Changing the investment by hand or adding the trade forgets them.
 - `chart.js` draws one SVG bar chart; a chart library would be most of the page weight for one chart.
 
 ### `src-tauri/` (desktop shell, Rust)

@@ -39,7 +39,7 @@ async function paste(page, name) {
 
 /** Waits until the screenshots are read and the investment filled. */
 async function waitForReading(page, lots) {
-  await expect(page.locator("#f-shots-check")).toHaveText(`Vérifier les ${lots} lots lus`, { timeout: 60_000 });
+  await expect(page.locator("#f-shots-check")).toHaveText(`Vérifier (${lots})`, { timeout: 60_000 });
 }
 
 test("a pasted screenshot fills the investment at once; the lines read can be checked and fixed", async ({ page }) => {
@@ -58,10 +58,10 @@ test("a pasted screenshot fills the investment at once; the lines read can be ch
 
   // Checking: every line with its picture, in order; at most one price is wrong, and it is flagged.
   await page.click("#f-shots-check");
-  await expect(page.locator("#dlg-title")).toHaveText("Vérifie les achats lus");
+  await expect(page.locator("#dlg-title")).toHaveText("Achats lus");
   await expect(rows(page)).toHaveCount(42);
-  await expect(rows(page).first()).toContainText("1 × Serre d'Ikargn");
-  await expect(rows(page).last()).toContainText("10 × Boucle des");
+  await expect(rows(page).first().locator("canvas")).toHaveAttribute("aria-label", /1 x \[Serre d.Ikargn\]/);
+  await expect(rows(page).last().locator("canvas")).toHaveAttribute("aria-label", /10 x \[Boucle des/);
   expect(await total(page)).toBe(filled);
   const pictureWidth = await rows(page)
     .first()
@@ -75,7 +75,7 @@ test("a pasted screenshot fills the investment at once; the lines read can be ch
   expect(wrong.length).toBeLessThanOrEqual(1);
   for (const i of wrong) await expect(rows(page).nth(i)).toContainText("à vérifier");
   expect(await rows(page).filter({ hasText: "à vérifier" }).count()).toBeLessThan(6);
-  expect(await rows(page).filter({ hasText: "ligne sautée" }).count()).toBe(0);
+  expect(await rows(page).filter({ hasText: "manquante ?" }).count()).toBe(0);
 
   // Changes are dropped on "Annuler"…
   await rows(page).first().locator('[data-f="counted"]').uncheck();
@@ -92,21 +92,21 @@ test("a pasted screenshot fills the investment at once; the lines read can be ch
   await rows(page).first().locator('[data-f="counted"]').uncheck();
   await page.click("#r-add");
   await expect(page.locator("#r-use")).toBeDisabled(); // the new line has no price yet
-  await expect(page.locator("#r-count")).toContainText("1 prix manquant");
+  await expect(page.locator("#r-count")).toContainText("1 sans prix");
   await rows(page).last().locator('[data-f="item"]').fill("Plume de Tofu");
   await rows(page).last().locator('[data-f="price"]').fill("2 x 150"); // a calculation works here too
   const final = filled - old + 1000 - 800 + 300;
   expect(await total(page)).toBe(final);
-  await expect(page.locator("#r-count")).toHaveText("Total de 42 lots");
+  await expect(page.locator("#r-count")).toHaveText("42 lots");
   await page.click("#r-use");
   await expect(page.locator("#dlg")).not.toBeVisible();
   expect(await cost(page)).toBe(final);
-  await expect(page.locator("#f-shots-check")).toHaveText("Vérifier les 42 lots lus");
+  await expect(page.locator("#f-shots-check")).toHaveText("Vérifier (42)");
 
   // Typing another investment by hand forgets the screenshots.
   await page.fill("#f-cost", "1.2m");
   await expect(page.locator("#f-shots-check")).toBeHidden();
-  await expect(page.locator("#f-shots-status")).toHaveText("ou colle une capture (Ctrl+V)");
+  await expect(page.locator("#f-shots-status")).toHaveText("");
 });
 
 test("reads a light chat theme as well, picked as a file", async ({ page }) => {
@@ -121,14 +121,14 @@ test("reads a light chat theme as well, picked as a file", async ({ page }) => {
 test("a second screenshot adds to the first, without the lines both show", async ({ page }) => {
   await openApp(page, { catalog: false });
   await paste(page, "chat-top.png");
-  await expect(page.locator("#f-shots-status")).toHaveText(/1 capture · colle la suivante/, { timeout: 60_000 });
+  await expect(page.locator("#f-shots-status")).toHaveText(/, 1 capture$/, { timeout: 60_000 });
   const first = await cost(page);
   await paste(page, "chat-bottom.png");
-  await expect(page.locator("#f-shots-status")).toHaveText(/2 captures/, { timeout: 60_000 });
+  await expect(page.locator("#f-shots-status")).toHaveText(/, 2 captures$/, { timeout: 60_000 });
   expect(await cost(page)).toBeGreaterThan(first);
 
   await page.click("#f-shots-check");
-  await expect(page.locator("#r-rows tr.shot")).toHaveText([/1\. chat-top\.png · \d+ lignes/, /2\. chat-bottom\.png/]);
+  await expect(page.locator("#r-rows tr.shot")).toHaveText(["Capture 1", "Capture 2"]);
   const repeats = rows(page).filter({ hasText: "doublon ?" });
   expect(await repeats.count()).toBeGreaterThanOrEqual(4);
   for (const box of await repeats.locator('[data-f="counted"]').all()) await expect(box).not.toBeChecked();

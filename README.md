@@ -59,15 +59,15 @@ recipe box. Editing the investment by hand stops the auto-fill; _Utiliser le co�
 turns it back on.
 
 **Investment from chat screenshots.** Copy a screenshot of the game chat and paste it
-anywhere in the app (Ctrl+V), drop it on the form, or use _Lire des captures du chat…_. The
+anywhere in the app (Ctrl+V), drop it on the form, or use _Captures_. The
 purchase lines (`10 x [Griffe de Buboxor] (228 223 kamas)`) are read on your computer, with no
 internet connection, and their total goes straight into the investment field. Paste the next
 screenshot to add it (up to 10); lines repeated where two screenshots overlap are left out.
 Other chat lines are ignored.
 
-To double-check, _Vérifier les N lots lus_ shows every line next to its picture in a list you
-can edit: _à vérifier_ marks an unsure reading, _ligne sautée ?_ a line the reader missed and
-_doublon ?_ a probable repeat. _Utiliser ce total_ puts the corrected sum in the field. Typing
+To double-check, _Vérifier (N)_ shows every line as its picture from the screenshot, in a list you
+can edit: _à vérifier_ marks an unsure reading, _manquante ?_ a line the reader missed and
+_doublon ?_ a probable repeat. _Utiliser_ puts the corrected sum in the field. Typing
 another investment or adding the trade forgets the screenshots.
 
 **Record a sale.** _En cours_ → _Vendu_ → confirm the real price and date.

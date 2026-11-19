@@ -636,17 +636,61 @@ dialog::backdrop {
 }
 /* Investment from chat screenshots (ui/purchase-import.js). */
 dialog.wide {
-  width: min(780px, calc(100% - 32px));
+  width: min(600px, calc(100% - 32px));
+}
+table.grid.lots [data-remove] {
+  border-color: transparent;
+  background: none;
+  color: var(--muted);
+}
+table.grid.lots [data-remove]:hover {
+  color: var(--bad);
 }
 .shots-bar {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
-  font-size: 13px;
+  gap: 6px;
 }
-.shots-bar .hint {
-  margin: 0;
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.chip[hidden] {
+  display: none;
+}
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+.chip:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+.chip svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+#f-shots-check {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--ink);
+}
+#f-shots-check.warn {
+  background: var(--bad-soft);
+  color: var(--bad);
 }
 /* Shown while screenshots are dragged over the form. */
 form.drop-over {
@@ -679,10 +723,6 @@ table.grid.lots td.pic canvas {
   height: auto;
   border-radius: 3px;
 }
-table.grid.lots .read {
-  font-size: 12px;
-  color: var(--muted);
-}
 table.grid.lots tr.shot td {
   font-size: 12px;
   color: var(--muted);
@@ -697,9 +737,19 @@ table.grid.lots tr.off td:not(:first-child) {
   flex-wrap: wrap;
   gap: 8px;
 }
-.shots-bar .btn.warn {
-  border-color: var(--bad);
-  color: var(--bad);
+/* The review list's footer: hand-added lines and screenshots, then the total. */
+.lots-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.lots-foot .preview {
+  margin-left: auto;
+}
+table.grid.lots td.pic .pill {
+  margin-top: 2px;
+  cursor: help;
 }
 .pill.warn {
   background: var(--bad-soft);

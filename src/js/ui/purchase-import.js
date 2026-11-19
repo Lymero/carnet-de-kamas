@@ -4,13 +4,13 @@
  * reader (ui/screenshot-ocr.js).
  *
  * Screenshots come in by pasting one anywhere on the page (Ctrl+V, no other dialog open),
- * dropping them on the entry form, or "Lire des captures du chat…". Each is read at once
+ * dropping them on the entry form, or the "Captures" button. Each is read at once
  * and the total goes straight into the investment field: the reading is trusted. Further
  * screenshots add to the same purchase, lines repeated where two overlap left out.
  *
- * "Vérifier les N lots lus" opens the list of lines read, each next to its picture cut
- * from the screenshot, to double-check and fix (counted or not, price; lines added or
- * removed) with a running total; "Utiliser ce total" writes it to the field.
+ * "Vérifier (N)" opens the list of lines read, each as its picture cut from the
+ * screenshot, to double-check and fix (counted or not, price; lines added or removed)
+ * with a running total; "Utiliser" writes it to the field.
  *
  * The screenshots belong to the investment shown: changing the field by hand or adding
  * the trade forgets them. Nothing is saved, so no action is involved.
@@ -37,7 +37,12 @@ import { createScreenshotReader } from "./screenshot-ocr.js";
 const PICTURE_MARGIN = 2;
 /** The reader's engines are freed after this long without a screenshot (ms). */
 const IDLE_CLOSE = 60_000;
-const STATUS_IDLE = "ou colle une capture (Ctrl+V)";
+/** Why a line is flagged in the review list: short label, and the explanation on hover. */
+const FLAGS = {
+  check: ["à vérifier", "Lecture douteuse : compare le prix à l'image."],
+  skipped: ["manquante ?", "Une ligne semble manquer ici : tape son prix ou décoche-la."],
+  overlap: ["doublon ?", "Déjà sur la capture précédente, donc pas comptée : coche-la si ce sont deux achats."],
+};
 
 /**
  * @param {{dialog: HTMLDialogElement, form: HTMLFormElement}} options
@@ -49,13 +54,14 @@ export function mountPurchaseImport({ dialog, form }) {
   const check = /** @type {HTMLButtonElement} */ ($("#f-shots-check", form));
   const status = /** @type {HTMLElement} */ ($("#f-shots-status", form));
   const fileInput = /** @type {HTMLInputElement} */ ($("#f-shots-file", form));
+  const pickLabel = /** @type {HTMLElement} */ ($("span", pick));
   const reader = createScreenshotReader();
 
   /** @type {Shot[]} */
   let shots = [];
   /** @type {Row[]} the lines of all screenshots, as last used for the investment */
   let rows = [];
-  /** @type {Row[]|null} the list being checked in the dialog: a copy, kept only by "Utiliser ce total" */
+  /** @type {Row[]|null} the list being checked in the dialog: a copy, kept only by "Utiliser" */
   let draft = null;
   /** The value written to the investment field, to notice when it is changed by hand. */
   let written = "";
@@ -140,6 +146,7 @@ export function mountPurchaseImport({ dialog, form }) {
     pick.disabled = true;
     for (const file of files) {
       status.textContent = waiting > 1 ? `Lecture des captures… (${waiting} restantes)` : "Lecture de la capture…";
+      pickLabel.textContent = "Lecture…";
       try {
         const { readings, image } = await reader.read(file);
         const lines = combineReadings(readings.map(readOcrLines));
@@ -161,6 +168,7 @@ export function mountPurchaseImport({ dialog, form }) {
       waiting -= 1;
     }
     pick.disabled = false;
+    pickLabel.textContent = "Captures";
     if (waiting === 0) {
       idle = setTimeout(() => {
         reader.close().catch((error) => console.warn("Could not stop the text reader", error));
@@ -190,13 +198,12 @@ export function mountPurchaseImport({ dialog, form }) {
     const counted = rows.filter((row) => row.counted);
     const missing = counted.filter((row) => !isKamas(row.price)).length;
     check.hidden = !rows.length;
-    check.textContent = counted.length === 1 ? "Vérifier le lot lu" : `Vérifier les ${counted.length} lots lus`;
+    check.textContent = `Vérifier (${counted.length})`;
+    check.title = missing
+      ? `${plural(missing, "ligne illisible non comptée", "lignes illisibles non comptées")} : vérifier les lots lus`
+      : `Vérifier les ${plural(counted.length, "lot")} lus · colle une autre capture pour l'ajouter`;
     check.classList.toggle("warn", missing > 0);
-    status.textContent = !rows.length
-      ? STATUS_IDLE
-      : missing
-        ? `${plural(missing, "ligne illisible non comptée", "lignes illisibles non comptées")}`
-        : `${plural(shots.length, "capture")} · colle la suivante pour l'ajouter`;
+    status.textContent = rows.length ? `${plural(counted.length, "lot")} lus, ${plural(shots.length, "capture")}` : "";
   }
 
   // ----- checking the lines read -----
@@ -212,22 +219,19 @@ export function mountPurchaseImport({ dialog, form }) {
     draft = rows.map((row) => ({ ...row }));
     dialog.classList.add("wide");
     body.innerHTML = `
-      <h2 id="dlg-title">Vérifie les achats lus</h2>
-      <p class="hint">Compare chaque prix à la ligne de la capture, corrige-le si besoin, décoche ce qui ne compte pas.
-      « à vérifier » : la lecture est douteuse. « ligne sautée ? » : une ligne semble manquer ici ; tape son prix ou décoche-la.
-      « doublon ? » : la ligne apparaît aussi au bord de la capture précédente, elle n'est pas comptée ; coche-la si ce sont bien deux achats.</p>
+      <h2 id="dlg-title">Achats lus</h2>
       <div class="scroll"><table class="grid lots">
-        <thead><tr><th><span class="sr">Compter</span></th><th>Ligne de la capture</th><th class="n">Prix du lot</th><th><span class="sr">Retirer</span></th></tr></thead>
+        <thead class="sr"><tr><th>Compter</th><th>Ligne de la capture</th><th>Prix du lot</th><th>Retirer</th></tr></thead>
         <tbody id="r-rows"></tbody>
       </table></div>
-      <div class="add-lot">
-        <button type="button" class="btn small" id="r-add">Ajouter une ligne</button>
-        <button type="button" class="btn small" id="r-more">Ajouter des captures…</button>
+      <div class="lots-foot">
+        <button type="button" class="btn small" id="r-add">+ Ligne</button>
+        <button type="button" class="btn small" id="r-more">+ Capture</button>
+        <div class="preview"><span id="r-count"></span>&nbsp;<b class="num" id="r-total"></b></div>
       </div>
-      <div class="preview"><span id="r-count"></span><b class="num" id="r-total"></b></div>
       <div class="actions">
         <button type="button" class="btn" data-close>Annuler</button>
-        <button type="submit" class="btn primary" id="r-use">Utiliser ce total</button>
+        <button type="submit" class="btn primary" id="r-use">Utiliser</button>
       </div>`;
     body.onsubmit = (e) => {
       e.preventDefault();
@@ -268,14 +272,15 @@ export function mountPurchaseImport({ dialog, form }) {
     const list = draft;
     let html = "";
     shots.forEach((shot, s) => {
-      const count = list.filter((row) => row.shot === s).length;
-      html += `<tr class="shot"><td colspan="4">${s + 1}. ${esc(shot.name)} · ${plural(count, "ligne", "lignes")}</td></tr>`;
+      // Headers only tell several screenshots apart.
+      if (shots.length > 1)
+        html += `<tr class="shot"><td colspan="4" title="${esc(shot.name)}">Capture ${s + 1}</td></tr>`;
       list.forEach((row, i) => {
         if (row.shot === s) html += rowHtml(row, i);
       });
     });
     const added = list.map((row, i) => (row.shot === -1 ? rowHtml(row, i) : "")).join("");
-    if (added) html += `<tr class="shot"><td colspan="4">Ajoutées à la main</td></tr>${added}`;
+    if (added) html += `<tr class="shot"><td colspan="4">À la main</td></tr>${added}`;
     tbody.innerHTML = html || `<tr><td colspan="4" class="hint">Aucun achat lu.</td></tr>`;
     $$("canvas[data-pic]", tbody).forEach((canvas) => drawPicture(/** @type {HTMLCanvasElement} */ (canvas)));
     renderTotal();
@@ -283,18 +288,13 @@ export function mountPurchaseImport({ dialog, form }) {
 
   /** @param {Row} row @param {number} i */
   function rowHtml(row, i) {
-    const flag = {
-      "": "",
-      check: `<span class="pill warn">à vérifier</span>`,
-      skipped: `<span class="pill warn">ligne sautée ?</span>`,
-      overlap: `<span class="pill warn">doublon ?</span>`,
-    }[row.flag];
-    const label = esc(row.item || (row.flag === "skipped" ? "ligne sautée" : "ligne ajoutée"));
+    const flag = row.flag ? `<span class="pill warn" title="${FLAGS[row.flag][1]}">${FLAGS[row.flag][0]}</span>` : "";
+    const label = esc(row.item || (row.flag === "skipped" ? "ligne manquante" : "ligne ajoutée"));
+    // The picture is the line itself: what was read only goes to screen readers.
     const read =
       row.shot === -1
         ? `<input type="text" data-f="item" value="${esc(row.item)}" placeholder="Objet (facultatif)" aria-label="Objet">`
-        : `<canvas data-pic="${i}" role="img" aria-label="${esc(row.text || "Zone sans ligne lue")}"></canvas>
-           <div class="read">${row.item ? `${Number.isNaN(row.quantity) ? "" : `${row.quantity} × `}${esc(row.item)}` : ""} ${flag}</div>`;
+        : `<canvas data-pic="${i}" role="img" aria-label="${esc(row.text || "Zone sans ligne lue")}"></canvas>${flag}`;
     return `<tr data-i="${i}" class="${row.counted ? "" : "off"}">
       <td><input type="checkbox" data-f="counted" ${row.counted ? "checked" : ""} aria-label="Compter ${label}"></td>
       <td class="pic">${read}</td>
@@ -329,8 +329,7 @@ export function mountPurchaseImport({ dialog, form }) {
     const unreadable = counted.filter((row) => !isKamas(row.price)).length;
     const total = purchaseTotal(counted.filter((row) => isKamas(row.price)));
     /** @type {HTMLElement} */ ($("#r-count", body)).textContent =
-      `Total de ${plural(counted.length, "lot")}` +
-      (unreadable ? ` · ${plural(unreadable, "prix manquant", "prix manquants")}` : "");
+      plural(counted.length, "lot") + (unreadable ? ` · ${plural(unreadable, "sans prix", "sans prix")}` : "");
     /** @type {HTMLElement} */ ($("#r-total", body)).textContent = formatKamas(total);
     /** @type {HTMLButtonElement} */ ($("#r-use", body)).disabled = !counted.length || unreadable > 0;
   }
