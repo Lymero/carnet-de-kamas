@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Investment from chat screenshots**: paste (Ctrl+V), drop or pick screenshots of the game
+  chat and the app reads the purchase lines (`N x [Item] (price kamas)`): with a craft's recipe
+  shown, they fill the ingredients' unit prices; otherwise their total fills the investment. The text is read on the computer (Tesseract, bundled), with no
+  internet connection. A button opens the lines read, each with its picture, to double-check
+  and fix them; unsure readings, missed lines and lines repeated across overlapping
+  screenshots are flagged there.
+- **Number of crafts** in the recipe box: craft 10 keys at once and the ingredient quantities,
+  runes, investment and planned sale are all multiplied. Unit prices stay per unit.
+- **Avant / Après** under _Runes / FM_: type your kamas and rune value before and after forging;
+  what you spent, (kamas + runes before) − (kamas + runes after), is the runes cost of the
+  whole operation.
+
 ## 3.0.1 (2026-11-18)
 
 ### Fixed

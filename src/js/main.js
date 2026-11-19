@@ -22,6 +22,7 @@ import { createState } from "./state.js";
 import { createDialogs } from "./ui/dialogs.js";
 import { $, $$ } from "./ui/dom.js";
 import { mountEntryForm } from "./ui/entry-form.js";
+import { mountPurchaseImport } from "./ui/purchase-import.js";
 import { enableKamasFields } from "./ui/kamas-field.js";
 import { renderSummary } from "./ui/summary.js";
 import { createAnalysisView } from "./ui/views/analysis.js";
@@ -105,6 +106,12 @@ async function start() {
     onAdded: (trade) => {
       if (isOpen(trade) && state.get().view !== "en-cours") go("en-cours");
     },
+  });
+
+  mountPurchaseImport({
+    dialog: /** @type {HTMLDialogElement} */ ($("#dlg")),
+    form: /** @type {HTMLFormElement} */ ($("#addForm")),
+    recipe: form.recipe,
   });
 
   // ----- routing -----

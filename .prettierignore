@@ -6,3 +6,6 @@ playwright-report/
 test-results/
 src-tauri/target/
 src-tauri/gen/
+
+# Third-party files copied by scripts/vendor-ocr.js.
+src/vendor/
