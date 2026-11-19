@@ -36,6 +36,7 @@
 - A reset button (circular arrow) next to _Nouvelle opération_ empties the form.
 - A click outside closes what is open: any dialog (as its cancel button does) and the
   _Recette_ / _FM_ folds.
+- Amounts can be typed with the suffix as the decimal point: `6m5` is 6 500 000, `300k5` is 300 500.
 - Every kamas field writes its amount in full with separators once you leave it (`100000` →
   `100 000`, `1.2m` → `1 200 000`), not only after a calculation.
 - _Historique_ and _Analyse_ > _Par objet_ fit their card: amounts are shown short (`32,7 M`, the

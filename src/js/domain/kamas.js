@@ -18,6 +18,7 @@ const STRIP = /[\s\u00a0\u202f']/g;
  *
  * Accepted forms (all case-insensitive):
  * - suffixes: `250k`, `1.8m`, `3,5M`, `1,5kk` (kk = million, as players write it)
+ * - suffix as the decimal point: `6m5` (6 500 000), `1m25`, `300k5` (300 500)
  * - grouped: `1 850 000`, `1,850,000.00` (English), `1.850.000,00` (French)
  * - plain: `3368480`, `-106492`
  *
@@ -127,6 +128,10 @@ function parseAmount(raw) {
     .replace(STRIP, "")
     .replace(/kamas?$/, "");
   if (!s) return NaN;
+
+  // "6m5": the suffix stands for the decimal point, as players say "six millions cinq".
+  const inner = s.match(/^(-?\d+)(kk|m|k)(\d+)$/);
+  if (inner) s = `${inner[1]}.${inner[3]}${inner[2]}`;
 
   let multiplier = 1;
   const suffix = s.match(/^(.*?)(kk|m|k)$/);

@@ -50,7 +50,8 @@ path.
 
 **Calculate in any amount field.** Type `1.2m + 350k + 80k` (craft + FM + extras), `3 x 450k`,
 `(2.6m - 100k) / 2`: operators `+ - * /` (also `x`, `×`, `÷`) and parentheses. The result shows
-under the field while you type and replaces the calculation when you leave the field.
+under the field while you type and replaces the calculation when you leave the field. Amounts
+can be short: `250k`, `1.8m`, or `6m5` for 6 500 000.
 
 **Auction-house tax.** Pick the _Taxe HDV_ paid on the trade: **2 %** when the item is put up
 for sale (the default), **1 %** when its price was updated, or none. That share of the price is

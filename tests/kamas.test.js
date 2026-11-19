@@ -22,6 +22,17 @@ test("parseKamas reads shorthand suffixes", () => {
   assert.equal(parseKamas("2 kamas"), 2);
 });
 
+test("parseKamas reads the suffix as the decimal point when digits follow it", () => {
+  assert.equal(parseKamas("6m5"), 6_500_000);
+  assert.equal(parseKamas("1m25"), 1_250_000);
+  assert.equal(parseKamas("300k5"), 300_500);
+  assert.equal(parseKamas("1kk2"), 1_200_000);
+  assert.equal(parseKamas("6M05"), 6_050_000);
+  assert.equal(parseKamas("-2m5"), -2_500_000);
+  assert.equal(evaluateKamas("6m5 + 500k"), 7_000_000);
+  for (const bad of ["6m5m", "6.5m5", "m5", "6m 5k"]) assert.ok(Number.isNaN(parseKamas(bad)), bad);
+});
+
 test("parseKamas reads grouped numbers in English and French formats", () => {
   assert.equal(parseKamas("1 850 000"), 1_850_000);
   assert.equal(parseKamas(`1${NBSP}850${NBSP}000`), 1_850_000);
