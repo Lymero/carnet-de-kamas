@@ -70,6 +70,17 @@ export async function pickCatalogItem(page, query, expectedName) {
 }
 
 /**
+ * Opens the recipe box folds (ingredients, runes / FM), closed by default.
+ * @param {import("@playwright/test").Page} page
+ */
+export async function openRecipeFolds(page) {
+  for (const fold of await page.locator("#recipeBox details.fold").all()) {
+    if (!(await fold.evaluate((d) => /** @type {HTMLDetailsElement} */ (d).open)))
+      await fold.locator("summary").click();
+  }
+}
+
+/**
  * Adds a trade through the entry form and waits for the confirmation.
  * @param {import("@playwright/test").Page} page
  * @param {{item: string, cost: string, expected: string, date?: string, cat?: "craft"|"resale", sold?: boolean, tax?: number}} trade

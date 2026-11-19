@@ -66,6 +66,8 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     /** Number of crafts: multiplies the ingredient quantities and the runes. Unit prices stay per unit. */
     qty: 1,
     costFollowsRecipe: true,
+    /** Which folds of the recipe box are open; both start closed for each new item. */
+    open: { ing: false, fm: false },
   };
 
   const priceOf = (id) => draft.unitPrices[id] ?? state.get().prices[id];
@@ -85,8 +87,8 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   };
   /** Runes / FM cost of the whole operation: from the balance when set, else the typed cost per craft. */
   const runesTotal = () => balanceFm() ?? draft.runes * draft.qty;
-  const currentRecipeTotal = () =>
-    draft.craftItem ? recipeCost(draft.craftItem.recipe, priceOf).total * draft.qty + runesTotal() : 0;
+  const ingredientsTotal = () => (draft.craftItem ? recipeCost(draft.craftItem.recipe, priceOf).total * draft.qty : 0);
+  const currentRecipeTotal = () => (draft.craftItem ? ingredientsTotal() + runesTotal() : 0);
   const runesQtyLabel = () => (balanceFm() == null ? qtyLabel(draft.qty) : "");
   const runesValue = () => {
     const v = balanceFm() ?? draft.runes;
@@ -98,10 +100,10 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   /** The live line under the balance: the subtraction and what it gives. */
   const balanceSummary = () => {
     const used = balanceUsed();
-    if (used == null) return { text: "Remplissez Avant et Après.", calc: "", cls: "muted" };
+    if (used == null) return { text: "—", calc: "", cls: "muted" };
     const { kb = 0, rb = 0, ka = 0, ra = 0 } = draft.balance;
     const calc = `(${formatKamas(kb)} + ${formatKamas(rb)}) − (${formatKamas(ka)} + ${formatKamas(ra)})`;
-    if (used < 0) return { text: "Après dépasse Avant, ignoré.", calc, cls: "neg" };
+    if (used < 0) return { text: "Après > Avant", calc, cls: "neg" };
     return { text: formatKamas(used), calc: `= ${calc}`, cls: "" };
   };
 
@@ -128,6 +130,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
         balance: {},
         qty: 1,
         costFollowsRecipe: true,
+        open: { ing: false, fm: false },
       });
     }
     renderRecipe();
@@ -165,22 +168,26 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     el.recipe.innerHTML = `<div class="recipe">
       <div class="head"><span class="lbl">Recette · niv. ${item.level}</span><label class="qty">×<input type="text" inputmode="numeric" id="f-qty" class="num" value="${draft.qty}" aria-label="Nombre de crafts"></label></div>
       <div class="slot"></div>
-      <table><tbody>${rows}
-        <tr><td class="q num" data-q="runes">${runesQtyLabel()}</td><td>Runes / FM</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût runes et forgemagie"${balanceFm() == null ? "" : " readonly"}></td></tr>
-      </tbody></table>
-      <section class="bal" aria-labelledby="bal-title">
-        <div class="lbl" id="bal-title">Coût FM (avant / après)</div>
-        <p class="hint">Optionnel. Vos kamas + la valeur de vos runes, avant et après la FM. La différence remplace la ligne Runes / FM ; les ingrédients s'ajoutent toujours.</p>
-        <table><thead><tr><td></td><th>Kamas</th><th></th><th>Runes</th></tr></thead><tbody>
-          <tr><td>Avant</td>${balanceInput("kb", "Avant")}<td class="op">+</td>${balanceInput("rb", "Avant")}</tr>
-          <tr><td>Après</td>${balanceInput("ka", "Après")}<td class="op">+</td>${balanceInput("ra", "Après")}</tr>
+      <details class="fold" data-fold="ing"${draft.open.ing ? " open" : ""}>
+        <summary><span>Ingrédients</span><span class="num" id="r-ing"></span></summary>
+        <table><tbody>${rows}</tbody></table>
+      </details>
+      <details class="fold" data-fold="fm"${draft.open.fm ? " open" : ""}>
+        <summary><span>Runes / FM</span><span class="num" id="r-fm"></span></summary>
+        <table><tbody>
+          <tr><td class="q num" data-q="runes">${runesQtyLabel()}</td><td>Coût</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût runes et forgemagie"${balanceFm() == null ? "" : " readonly"}></td></tr>
         </tbody></table>
-        <div class="used"><span>Coût FM</span><span class="num" id="bal-used"></span></div>
-        <div class="formula num" id="bal-calc"></div>
-      </section>
+        <div class="bal">
+          <table><thead><tr><td></td><th>Kamas</th><th></th><th>Runes</th></tr></thead><tbody>
+            <tr><td>Avant</td>${balanceInput("kb", "Avant")}<td class="op">+</td>${balanceInput("rb", "Avant")}</tr>
+            <tr><td>Après</td>${balanceInput("ka", "Après")}<td class="op">+</td>${balanceInput("ra", "Après")}</tr>
+          </tbody></table>
+          <div class="used"><span>Coût FM</span><span class="num" id="bal-used"></span></div>
+          <div class="formula num" id="bal-calc"></div>
+        </div>
+      </details>
       <div class="tot"><span>Coût calculé</span><span class="num" id="r-tot">${formatKamas(currentRecipeTotal())}</span></div>
-      <div class="hint">Les prix unitaires sont mémorisés pour la prochaine fois.
-        ${draft.costFollowsRecipe ? "L'investissement suit ce calcul." : `<button type="button" class="btn small" id="r-use">Utiliser le coût calculé</button>`}</div>
+      ${draft.costFollowsRecipe ? "" : `<button type="button" class="btn small" id="r-use">Utiliser le coût calculé</button>`}
     </div>`;
     syncBalance();
     form.dispatchEvent(new Event("recipechange"));
@@ -214,9 +221,25 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     runes.readOnly = balanceFm() != null;
     runes.value = runesValue();
     $('td[data-q="runes"]', el.recipe).textContent = runesQtyLabel();
+    syncSubtotals();
   }
+  /** Subtotals on the folds, so the cost reads without opening them. */
+  function syncSubtotals() {
+    const show = (v) => (v ? formatKamas(v) : "—");
+    $("#r-ing", el.recipe).textContent = show(ingredientsTotal());
+    $("#r-fm", el.recipe).textContent = show(runesTotal());
+  }
+  el.recipe.addEventListener(
+    "toggle",
+    (e) => {
+      const fold = /** @type {HTMLDetailsElement} */ (e.target);
+      if (fold.dataset?.fold) draft.open[/** @type {"ing"|"fm"} */ (fold.dataset.fold)] = fold.open;
+    },
+    true,
+  );
   function refreshTotals() {
     $("#r-tot", el.recipe).textContent = formatKamas(currentRecipeTotal());
+    syncSubtotals();
     if (draft.costFollowsRecipe) {
       el.cost.value = currentRecipeTotal() ? formatKamas(currentRecipeTotal()) : "";
       updatePreview();
@@ -295,6 +318,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       balance: {},
       qty: 1,
       costFollowsRecipe: true,
+      open: { ing: false, fm: false },
     });
     setCategory(draft.cat);
     updatePreview();

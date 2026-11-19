@@ -396,18 +396,41 @@ input.kamas {
 .recipe input[readonly] {
   background: transparent;
 }
-/* "Coût FM (avant / après)": its own panel, apart from the ingredients and Runes / FM. */
+/* Ingredients and Runes / FM fold away; their summary keeps the subtotal in view. */
+.recipe .fold summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 0;
+  list-style: none;
+}
+.recipe .fold summary::-webkit-details-marker {
+  display: none;
+}
+.recipe .fold summary span:first-child::before {
+  content: "▸";
+  display: inline-block;
+  width: 14px;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+.recipe .fold[open] summary span:first-child::before {
+  transform: rotate(90deg);
+}
+.recipe .fold[open] summary {
+  margin-bottom: 4px;
+}
+/* Before / after: a panel of its own under the per-craft runes cost. */
 .recipe .bal {
   display: grid;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: 6px;
   padding: 10px;
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 6px;
-}
-.recipe .bal p {
-  margin: 0;
 }
 .recipe .bal th,
 .recipe .bal td:first-child,

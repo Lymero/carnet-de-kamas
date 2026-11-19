@@ -60,10 +60,10 @@ be changed when recording the sale (_Vendu_) or in the edit dialog. Trades recor
 this option have no tax.
 
 **Price a craft.** Pick a craftable item with type _Craft / FM_ and enter unit prices in the
-recipe box. Editing the investment by hand stops the auto-fill; _Utiliser le coût calculé_
+recipe box (_Ingrédients_ and _Runes / FM_ start folded, showing their subtotal). Editing the investment by hand stops the auto-fill; _Utiliser le coût calculé_
 turns it back on. To craft several at once, set the **×** next to the recipe title (e.g. 10):
 ingredient quantities, runes, the investment and the planned sale are all multiplied, while
-unit prices stay per unit. For forgemagie, you can instead fill _Coût FM (avant / après)_: your
+unit prices stay per unit. For forgemagie, you can instead fill _Avant_ / _Après_ under _Runes / FM_: your
 kamas and the value of your runes before and after forging. What you spent, (kamas + runes
 before) − (kamas + runes after), shown as you type, becomes the _Runes / FM_ cost of the whole
 operation; the ingredients still count on top. The FM cost recorded with each craft shows in

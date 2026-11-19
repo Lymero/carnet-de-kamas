@@ -12,10 +12,12 @@
   screenshots are flagged there.
 - **Number of crafts** in the recipe box: craft 10 keys at once and the ingredient quantities,
   runes, investment and planned sale are all multiplied. Unit prices stay per unit.
-- **Coût FM (avant / après)** in the recipe box, in its own panel under _Runes / FM_: type your
+- **FM cost from before / after** in the recipe box, in its own panel under _Runes / FM_: type your
   kamas and rune value before and after forging; what you spent, (kamas + runes before) −
   (kamas + runes after), is shown as you type and becomes the runes cost of the whole
   operation. The ingredients still count on top.
+- The recipe box is compact: _Ingrédients_ and _Runes / FM_ start folded, with their subtotal
+  shown, and the explanatory notes are gone.
 - **FM cost in the history and the analysis**: a _dont FM_ column next to _Investi_ in
   _Historique_ (with its total), the share of the investment spent on FM in the _Craft / FM_
   panel, and a _dont FM_ column in _Par objet_ (sold operations).

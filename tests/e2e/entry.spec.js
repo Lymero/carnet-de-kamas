@@ -1,5 +1,5 @@
 // The entry form: autocomplete, recipe helper, preview, adding trades.
-import { addTrade, expect, openApp, pickCatalogItem, test } from "./fixtures.js";
+import { addTrade, expect, openApp, openRecipeFolds, pickCatalogItem, test } from "./fixtures.js";
 
 test("served without the data API, the status says nothing is saved", async ({ page }) => {
   await openApp(page, { catalog: false });
@@ -14,11 +14,16 @@ test("autocomplete suggests catalog items and the recipe helper prices the craft
   await expect(page.locator("#f-item")).toHaveAttribute("aria-expanded", "false");
   const recipe = page.locator("#recipeBox .recipe");
   await expect(recipe).toBeVisible();
+  // The details start folded, with their subtotals in view.
+  await expect(recipe.locator("details.fold[open]")).toHaveCount(0);
+  await expect(recipe.locator("#r-ing")).toHaveText("—");
+  await openRecipeFolds(page);
 
   // A unit price fills the investment while it follows the recipe.
   await recipe.locator("input[data-ing]").first().fill("1000");
   await expect(page.locator("#f-cost")).not.toHaveValue("");
-  await expect(recipe).toContainText("L'investissement suit ce calcul");
+  await expect(recipe.locator("#r-ing")).not.toHaveText("—");
+  await expect(recipe.getByRole("button", { name: "Utiliser le coût calculé" })).toHaveCount(0);
 
   // Typing the investment by hand stops following; the button turns it back on.
   await page.fill("#f-cost", "5m");
@@ -30,6 +35,7 @@ test("the number of crafts multiplies the recipe, the investment and the planned
   await openApp(page);
   await page.selectOption("#f-tax", "0");
   await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
+  await openRecipeFolds(page);
   const recipe = page.locator("#recipeBox .recipe");
   const firstQty = recipe.locator("td[data-q]").first();
   const unitQty = Number((await firstQty.textContent()).replace("×", ""));
@@ -85,10 +91,11 @@ test("the kamas and rune value before and after forging give the FM cost", async
   await openApp(page);
   await page.selectOption("#f-tax", "0");
   await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
+  await openRecipeFolds(page);
   const recipe = page.locator("#recipeBox .recipe");
   await recipe.locator("#f-runes").fill("1000");
   await expect(page.locator("#f-cost")).toHaveValue(/^1\s000$/);
-  await expect(recipe.locator("#bal-used")).toHaveText("Remplissez Avant et Après.");
+  await expect(recipe.locator("#bal-used")).toHaveText("—");
 
   // 10m kamas + 3m of runes before, 8m + 2m after: 3m spent on FM, shown as typed.
   await recipe.locator('[data-bal="kb"]').fill("10m");
@@ -116,7 +123,7 @@ test("the kamas and rune value before and after forging give the FM cost", async
 
   // "After" higher than "before" is flagged and ignored.
   await recipe.locator('[data-bal="ka"]').fill("20m");
-  await expect(recipe.locator("#bal-used")).toHaveText(/Après dépasse Avant/);
+  await expect(recipe.locator("#bal-used")).toHaveText("Après > Avant");
   await expect(page.locator("#f-cost")).toHaveValue(/^10\s000$/);
 
   // Clearing the "after" values goes back to the runes typed directly.
@@ -130,6 +137,7 @@ test("the FM cost shows in the history and in the analysis", async ({ page }) =>
   await openApp(page);
   await page.selectOption("#f-tax", "0");
   await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
+  await openRecipeFolds(page);
   const recipe = page.locator("#recipeBox .recipe");
   await recipe.locator("[data-ing]").first().fill("500k");
   await recipe.locator('[data-bal="kb"]').fill("10m");

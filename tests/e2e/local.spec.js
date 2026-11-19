@@ -1,7 +1,7 @@
 // Local mode: the page served by `npm start`, saving to a data file (a throwaway one here).
 // These tests share one server and data file, so each uses its own item names.
 import { readFile } from "node:fs/promises";
-import { addTrade, expect, openApp, pickCatalogItem, test } from "./fixtures.js";
+import { addTrade, expect, openApp, openRecipeFolds, pickCatalogItem, test } from "./fixtures.js";
 import { E2E_DATA_FILE, LOCAL_URL } from "./servers.js";
 
 test.use({ baseURL: LOCAL_URL });
@@ -62,6 +62,7 @@ test("a sale and a deletion are saved too", async ({ page }) => {
 test("remembered unit prices are saved and offered again", async ({ page }) => {
   await openApp(page);
   await pickCatalogItem(page, "Cape d'Ogivol", "Cape d'Ogivol");
+  await openRecipeFolds(page);
   const price = page.locator("#recipeBox input[data-ing]").first();
   const ingredient = await price.getAttribute("data-ing");
   await price.fill("4321");

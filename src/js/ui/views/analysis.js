@@ -46,7 +46,7 @@ export function createAnalysisView({ onItem }) {
         </tr>`,
           )
           .join("")}</tbody>
-      </table></div><div class="hint">Clique un objet pour voir ses opérations dans l'historique.</div></div>`;
+      </table></div></div>`;
   }
 
   const onClick = (e) => {
