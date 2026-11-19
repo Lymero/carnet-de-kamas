@@ -58,7 +58,8 @@ this option have no tax.
 recipe box. Editing the investment by hand stops the auto-fill; _Utiliser le coût calculé_
 turns it back on. To craft several at once, set the **×** next to the recipe title (e.g. 10):
 ingredient quantities, runes, the investment and the planned sale are all multiplied, while
-unit prices stay per unit.
+unit prices stay per unit. For runes, you can also type your kamas before and after buying
+them (_Kamas avant_ / _après_): the difference becomes the runes cost of the whole operation.
 
 **Record a sale.** _En cours_ → _Vendu_ → confirm the real price and date.
 

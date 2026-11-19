@@ -80,3 +80,26 @@ test("invalid input is refused with a readable message", async ({ page }) => {
   await expect(page.locator(".toast")).toContainText("Investissement illisible");
   await expect(page.locator("#c-all")).toHaveText("0");
 });
+
+test("the kamas balance before and after the runes gives the runes cost", async ({ page }) => {
+  await openApp(page);
+  await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
+  const recipe = page.locator("#recipeBox .recipe");
+  await recipe.locator("#f-runes").fill("1000");
+  await expect(page.locator("#f-cost")).toHaveValue(/^1\s000$/);
+
+  await recipe.locator("#f-kb").fill("5m");
+  await recipe.locator("#f-ka").fill("3.8m");
+  await expect(recipe.locator("#f-runes")).toHaveValue(/^1\s200\s000$/);
+  await expect(recipe.locator("#f-runes")).toHaveJSProperty("readOnly", true);
+  await expect(page.locator("#f-cost")).toHaveValue(/^1\s200\s000$/);
+
+  // The balance covers the whole operation: more crafts don't multiply it.
+  await recipe.locator("#f-qty").fill("10");
+  await expect(page.locator("#f-cost")).toHaveValue(/^1\s200\s000$/);
+
+  // Clearing a balance goes back to the runes typed directly.
+  await recipe.locator("#f-ka").fill("");
+  await expect(recipe.locator("#f-runes")).toHaveJSProperty("readOnly", false);
+  await expect(page.locator("#f-cost")).toHaveValue(/^10\s000$/);
+});

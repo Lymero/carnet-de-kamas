@@ -393,6 +393,13 @@ input.kamas {
 .recipe td.r {
   text-align: right;
 }
+.recipe tr.bal td {
+  color: var(--muted);
+  font-size: 12px;
+}
+.recipe input[readonly] {
+  background: transparent;
+}
 .recipe .head {
   display: flex;
   justify-content: space-between;

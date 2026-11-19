@@ -47,15 +47,29 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     /** @type {import("../data/catalog.js").CatalogItem|null} */ craftItem: null,
     /** @type {Record<string, number>} */ unitPrices: {},
     runes: 0,
+    /** Kamas balance before and after buying runes; when both are set, their difference is the runes cost. */
+    /** @type {number|null} */ kamasBefore: null,
+    /** @type {number|null} */ kamasAfter: null,
     /** Number of crafts: multiplies the ingredient quantities and the runes. Unit prices stay per unit. */
     qty: 1,
     costFollowsRecipe: true,
   };
 
   const priceOf = (id) => draft.unitPrices[id] ?? state.get().prices[id];
+  /** Kamas spent on runes read from the balance before and after, for the whole operation. */
+  const runesFromBalance = () =>
+    draft.kamasBefore != null && draft.kamasAfter != null && draft.kamasBefore >= draft.kamasAfter
+      ? draft.kamasBefore - draft.kamasAfter
+      : null;
+  const runesTotal = () => runesFromBalance() ?? draft.runes * draft.qty;
   const currentRecipeTotal = () =>
-    draft.craftItem ? recipeCost(draft.craftItem.recipe, priceOf, draft.runes).total * draft.qty : 0;
+    draft.craftItem ? recipeCost(draft.craftItem.recipe, priceOf).total * draft.qty + runesTotal() : 0;
   const qtyLabel = (n) => (n === 1 ? "" : `${n}×`);
+  const runesQtyLabel = () => (runesFromBalance() == null ? qtyLabel(draft.qty) : "");
+  const runesValue = () => {
+    const v = runesFromBalance() ?? draft.runes;
+    return v ? formatKamas(v) : "";
+  };
 
   // ----- category -----
   function setCategory(cat) {
@@ -73,7 +87,15 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     const match = state.get().catalog.findByName(el.item.value);
     const craftItem = match?.recipe ? match : null;
     if (craftItem?.id !== draft.craftItem?.id) {
-      Object.assign(draft, { craftItem, unitPrices: {}, runes: 0, qty: 1, costFollowsRecipe: true });
+      Object.assign(draft, {
+        craftItem,
+        unitPrices: {},
+        runes: 0,
+        kamasBefore: null,
+        kamasAfter: null,
+        qty: 1,
+        costFollowsRecipe: true,
+      });
     }
     renderRecipe();
   }
@@ -109,7 +131,9 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     el.recipe.innerHTML = `<div class="recipe">
       <div class="head"><span class="lbl">Recette · niv. ${item.level}</span><label class="qty">×<input type="text" inputmode="numeric" id="f-qty" class="num" value="${draft.qty}" aria-label="Nombre de crafts"></label></div>
       <table><tbody>${rows}
-        <tr><td class="q num" data-q="runes">${qtyLabel(draft.qty)}</td><td>Runes / FM</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${draft.runes ? formatKamas(draft.runes) : ""}" placeholder="0" aria-label="Coût runes et forgemagie"></td></tr>
+        <tr><td class="q num" data-q="runes">${runesQtyLabel()}</td><td>Runes / FM</td><td class="r"><input type="text" class="kamas" id="f-runes" value="${runesValue()}" placeholder="0" aria-label="Coût runes et forgemagie"${runesFromBalance() == null ? "" : " readonly"}></td></tr>
+        <tr class="bal"><td class="q"></td><td>Kamas avant</td><td class="r"><input type="text" class="kamas" id="f-kb" value="${draft.kamasBefore != null ? formatKamas(draft.kamasBefore) : ""}" aria-label="Kamas avant les runes"></td></tr>
+        <tr class="bal"><td class="q"></td><td>Kamas après</td><td class="r"><input type="text" class="kamas" id="f-ka" value="${draft.kamasAfter != null ? formatKamas(draft.kamasAfter) : ""}" aria-label="Kamas après les runes"></td></tr>
       </tbody></table>
       <div class="tot"><span>Coût calculé</span><span class="num" id="r-tot">${formatKamas(currentRecipeTotal())}</span></div>
       <div class="hint">Les prix unitaires sont mémorisés pour la prochaine fois.
@@ -126,9 +150,19 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       else delete draft.unitPrices[t.dataset.ing];
     } else if (t.id === "f-runes") {
       draft.runes = isKamas(value) ? value : 0;
+    } else if (t.id === "f-kb" || t.id === "f-ka") {
+      draft[t.id === "f-kb" ? "kamasBefore" : "kamasAfter"] = isKamas(value) ? value : null;
+      syncRunesField();
     } else return;
     refreshTotals();
   });
+  /** Shows the runes cost from the balance (read only) when both amounts are set, the typed one otherwise. */
+  function syncRunesField() {
+    const runes = /** @type {HTMLInputElement} */ ($("#f-runes", el.recipe));
+    runes.readOnly = runesFromBalance() != null;
+    runes.value = runesValue();
+    $('td[data-q="runes"]', el.recipe).textContent = runesQtyLabel();
+  }
   function refreshTotals() {
     $("#r-tot", el.recipe).textContent = formatKamas(currentRecipeTotal());
     if (draft.costFollowsRecipe) {
@@ -147,7 +181,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     const ratio = n / draft.qty;
     draft.qty = n;
     $$("td[data-q]", el.recipe).forEach((td) => {
-      td.textContent = td.dataset.q === "runes" ? qtyLabel(n) : `${Number(td.dataset.q) * n}×`;
+      td.textContent = td.dataset.q === "runes" ? runesQtyLabel() : `${Number(td.dataset.q) * n}×`;
     });
     const scale = (/** @type {HTMLInputElement} */ input) => {
       const v = evaluateKamas(input.value);
@@ -202,7 +236,15 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     form.reset();
     el.date.value = todayIso();
     el.tax.value = String(loadTaxPreference());
-    Object.assign(draft, { craftItem: null, unitPrices: {}, runes: 0, qty: 1, costFollowsRecipe: true });
+    Object.assign(draft, {
+      craftItem: null,
+      unitPrices: {},
+      runes: 0,
+      kamasBefore: null,
+      kamasAfter: null,
+      qty: 1,
+      costFollowsRecipe: true,
+    });
     setCategory(draft.cat);
     updatePreview();
   }
@@ -225,7 +267,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       };
       if (draft.craftItem && draft.cat === CATEGORY.CRAFT) {
         trade.recipe = draft.craftItem.recipe.map(([id, qty]) => [id, qty * draft.qty, priceOf(id) ?? null]);
-        trade.runes = draft.runes * draft.qty;
+        trade.runes = runesTotal();
       }
       const { trade: saved, warning } = await actions.addTrade(trade, draft.unitPrices);
       reset();
