@@ -620,6 +620,10 @@ table.grid tfoot td {
   background: var(--accent-soft);
   border-color: transparent;
 }
+.pill.resale {
+  background: var(--line);
+  border-color: transparent;
+}
 .pill.ok {
   background: var(--good-soft);
   color: var(--good);

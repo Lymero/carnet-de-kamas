@@ -40,6 +40,7 @@
   `100 000`, `1.2m` → `1 200 000`), not only after a calculation.
 - _Analyse_ > _Par objet_ fits its card: _dont FM_ and _Bénéfice_ are shown short (`32,7 M`, the
   exact amount on hover). An arrow on hover shows that a row opens the item in _Historique_.
+- The _Craft/FM_ and _Achat/revente_ badges share one shape, filled, only their colour differs.
 - _Bénéfice prévu_ no longer spells out the HDV tax; it is still deducted.
 - _Analyse_ > _Par objet_ sorts by any column, as _Historique_ does (most profitable first by default).
 

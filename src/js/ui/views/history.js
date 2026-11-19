@@ -12,8 +12,9 @@ import { formatKamas, formatPercent, ratioPercent, signClass } from "../../domai
 import { toTsv } from "../../domain/sheet-io.js";
 import { fmCost } from "../../domain/stats.js";
 import { normalize, plural } from "../../domain/text.js";
-import { isCraft, profit, salePrice } from "../../domain/trade.js";
+import { profit, salePrice } from "../../domain/trade.js";
 import { $, closest, esc, toast } from "../dom.js";
+import { categoryPill } from "../pills.js";
 import { nextSort, sortHeader, sortRows } from "../sort.js";
 
 /** @typedef {import("../../domain/trade.js").Trade} Trade */
@@ -101,7 +102,7 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
           return `<tr data-id="${esc(t.id)}" tabindex="0">
           <td class="num">${esc(formatShortDate(t.date))}</td>
           <td>${esc(t.item)}</td>
-          <td><span class="pill ${isCraft(t) ? "craft" : ""}">${CATEGORY_LABEL[t.cat]}</span></td>
+          <td>${categoryPill(t)}</td>
           <td class="n">${formatKamas(t.cost)}</td>
           <td class="n fm">${t.runes ? formatKamas(t.runes) : ""}</td>
           <td class="n">${formatKamas(salePrice(t))}</td>

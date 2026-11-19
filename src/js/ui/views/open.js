@@ -10,7 +10,7 @@
  * re-render caused by a live update keeps what the player is typing.
  */
 
-import { CATEGORY_LABEL, SLOW_SALE_DAYS } from "../../config.js";
+import { SLOW_SALE_DAYS } from "../../config.js";
 import { daysBetween, formatShortDate, todayIso } from "../../domain/dates.js";
 import {
   evaluateKamas,
@@ -21,9 +21,10 @@ import {
   signClass,
 } from "../../domain/kamas.js";
 import { normalize } from "../../domain/text.js";
-import { isCraft, isOpen, markSold, profit } from "../../domain/trade.js";
+import { isOpen, markSold, profit } from "../../domain/trade.js";
 import { $, closest, esc, renderKeepingFocus, runAction, toast } from "../dom.js";
 import { taxOptions } from "../hdv-tax.js";
+import { categoryPill } from "../pills.js";
 import { nextSort, sortButton, sortRows } from "../sort.js";
 
 /** @typedef {import("../../domain/trade.js").Trade} Trade */
@@ -66,7 +67,7 @@ export function createOpenView({ actions, openEditor }) {
         const age =
           days >= SLOW_SALE_DAYS ? `<span class="pill slow">${days} j en vente</span>` : `<span>${days} j</span>`;
         return `<div class="open-row" data-id="${esc(t.id)}">
-        <div class="it"><b>${esc(t.item)}</b><small><span>${esc(formatShortDate(t.date))} ·</span><span class="pill ${isCraft(t) ? "craft" : ""}">${CATEGORY_LABEL[t.cat]}</span>${age}</small></div>
+        <div class="it"><b>${esc(t.item)}</b><small><span>${esc(formatShortDate(t.date))} ·</span>${categoryPill(t)}${age}</small></div>
         <div class="c"><small>Investi</small><span class="num">${formatCompact(t.cost)}</span></div>
         <div class="c"><small>Prévu</small><span class="num">${formatCompact(t.expected)}</span></div>
         <div class="c"><small>Marge</small><span class="num ${signClass(p)}">${formatPercent(ratioPercent(p, t.cost))}</span></div>
