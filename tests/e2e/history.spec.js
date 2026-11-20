@@ -19,7 +19,35 @@ test("search filters while typing, keeping focus", async ({ page }) => {
   await expect(page.locator("#h-results tfoot")).toContainText("1 opération");
 });
 
+test("the filter button shows the filters and counts the ones in use", async ({ page }) => {
+  const toggle = page.locator("#h-filter-btn");
+  await expect(page.locator("#h-cat")).toBeHidden();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await page.selectOption("#h-cat", "craft");
+  await page.selectOption("#h-status", "open");
+  await expect(rows(page)).toHaveCount(1);
+  await expect(toggle).toHaveAccessibleName("Filtres (2 actifs)");
+
+  // Hiding the row keeps the filters applied, and they survive switching tabs.
+  await toggle.click();
+  await expect(page.locator("#h-cat")).toBeHidden();
+  await expect(rows(page)).toHaveCount(1);
+  await page.click('#tabs a[data-v="en-cours"]');
+  await page.click('#tabs a[data-v="historique"]');
+  await expect(rows(page)).toHaveCount(1);
+  await expect(page.locator("#h-filter-btn")).toHaveAccessibleName("Filtres (2 actifs)");
+
+  await page.locator("#h-filter-btn").click();
+  await page.getByRole("button", { name: "Effacer les filtres" }).click();
+  await expect(rows(page)).toHaveCount(2);
+  await expect(page.locator("#h-cat")).toHaveValue("");
+  await expect(page.locator("#h-filter-btn")).toHaveAccessibleName("Filtres");
+});
+
 test("filters by type and sorts by column", async ({ page }) => {
+  await page.click("#h-filter-btn");
   await page.selectOption("#h-cat", "craft");
   await expect(rows(page)).toHaveCount(1);
   await page.selectOption("#h-cat", "");
@@ -130,6 +158,12 @@ test("export falls back to a copy dialog when the clipboard is blocked", async (
   await expect(page.locator("#x-text")).toHaveValue(/^Date\tItem\t/);
   await page.getByRole("button", { name: "Fermer" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
+});
+
+test("Enter on a focused row opens its editor", async ({ page }) => {
+  await rows(page).first().focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog")).toBeVisible();
 });
 
 test("a click outside the edit dialog closes it without saving", async ({ page }) => {
