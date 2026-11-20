@@ -42,6 +42,24 @@ test("cancelling the sale form keeps the trade for sale", async ({ page }) => {
   await expect(page.locator(".open-row").getByRole("button", { name: "Vendu" })).toBeFocused();
 });
 
+test("clicking a row opens the editor, but Vendu and the sale form don't", async ({ page }) => {
+  const row = page.locator(".open-row", { hasText: "Kokulte" });
+  await expect(row.getByRole("button", { name: "Modifier" })).toHaveCount(0);
+  await row.getByRole("button", { name: "Vendu" }).click();
+  await page.click("#s-date");
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await page.getByRole("button", { name: "Annuler" }).click();
+
+  await row.locator(".it b").click();
+  await expect(page.getByRole("dialog", { name: "Kokulte" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+
+  await row.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog", { name: "Kokulte" })).toBeVisible();
+});
+
 test("the list is sorted like the history", async ({ page }) => {
   await addTrade(page, { item: "Gelano", cat: "craft", cost: "3m", expected: "3.3m", date: "2026-01-12" });
   await addTrade(page, { item: "Amulette", cat: "resale", cost: "100k", expected: "300k", date: "2026-01-11" });
