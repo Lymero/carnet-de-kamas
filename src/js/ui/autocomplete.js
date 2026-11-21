@@ -60,8 +60,13 @@ export function attachAutocomplete({ input, list, getSuggestions, onPick, onInpu
     onInput();
   });
   input.addEventListener("focus", open);
-  // Delay so a click on an option registers before the list disappears.
-  input.addEventListener("blur", () => setTimeout(close, 150));
+  // Delay so a click on an option registers before the list disappears. Back in the field by
+  // then (focus left and came back), the list stays: closing it would let Enter submit the form.
+  input.addEventListener("blur", () =>
+    setTimeout(() => {
+      if (document.activeElement !== input) close();
+    }, 150),
+  );
   input.addEventListener("keydown", (e) => {
     if (list.hidden) return;
     if (e.key === "ArrowDown") {

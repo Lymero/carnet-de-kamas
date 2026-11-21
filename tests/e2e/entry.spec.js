@@ -295,3 +295,17 @@ test("picking a craft made before brings back its number of crafts and investmen
   await expect(recipe.getByRole("button", { name: "Utiliser le coût calculé" })).toBeVisible();
   await expect(page.locator("#f-last")).toBeHidden();
 });
+
+test("coming back to the item field at once keeps its suggestions open", async ({ page }) => {
+  await openApp(page, { catalog: false });
+  await addTrade(page, { item: "Kokulte", cat: "resale", cost: "500k", expected: "700k" });
+  await page.fill("#f-item", "koku");
+  await expect(page.locator("#f-item-list")).toBeVisible();
+  // Leaving the field closes the list 150 ms later; typing in it again before then keeps it.
+  await page.locator("#f-item").evaluate((input) => {
+    input.blur();
+    input.focus();
+  });
+  await page.waitForTimeout(300);
+  await expect(page.locator("#f-item-list")).toBeVisible();
+});
