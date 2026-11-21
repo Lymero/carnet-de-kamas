@@ -226,6 +226,27 @@ export function newTradeId() {
 }
 
 /**
+ * When the trade was added, read back from its id (see newTradeId), in ms; 0 for an id
+ * in another format, which then counts as older than any trade added since.
+ * @param {Pick<Trade, "id">} t
+ * @returns {number}
+ */
+export function addedAt(t) {
+  const match = /^t([0-9a-z]{8})[0-9a-z]{1,5}$/.exec(t.id ?? "");
+  return match ? parseInt(match[1], 36) : 0;
+}
+
+/**
+ * Sort key for "by date": the trade date, then the order trades were added that day,
+ * so a trade just added comes first among its date's trades when newest come first.
+ * @param {Pick<Trade, "id"|"date">} t
+ * @returns {string}
+ */
+export function dateOrder(t) {
+  return `${t.date}|${String(addedAt(t)).padStart(15, "0")}`;
+}
+
+/**
  * Converts a trade into the document body stored in the database:
  * drops the id (it is the document path) and stamps version and time.
  * @param {Trade} t

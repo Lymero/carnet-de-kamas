@@ -60,11 +60,20 @@ test("clicking a row opens the editor, but Vendu and the sale form don't", async
   await expect(page.getByRole("dialog", { name: "Kokulte" })).toBeVisible();
 });
 
+test("a trade added today comes first, above older trades of the same date", async ({ page }) => {
+  await addTrade(page, { item: "Gelano", cat: "resale", cost: "100k", expected: "150k", date: "2026-01-10" });
+  await addTrade(page, { item: "Amulette", cat: "resale", cost: "100k", expected: "150k", date: "2026-01-10" });
+  const names = page.locator(".open-row .it b");
+  await expect(names).toHaveText(["Amulette", "Gelano", "Kokulte"]);
+  await page.click('#tabs a[data-v="historique"]');
+  await expect(page.locator("#h-results tbody td.obj")).toHaveText(["Amulette", "Gelano", "Kokulte"]);
+});
+
 test("the list is sorted like the history", async ({ page }) => {
   await addTrade(page, { item: "Gelano", cat: "craft", cost: "3m", expected: "3.3m", date: "2026-01-12" });
   await addTrade(page, { item: "Amulette", cat: "resale", cost: "100k", expected: "300k", date: "2026-01-11" });
   const names = page.locator(".open-row .it b");
-  await expect(names).toHaveText(["Kokulte", "Amulette", "Gelano"]); // oldest first
+  await expect(names).toHaveText(["Gelano", "Amulette", "Kokulte"]); // newest first
   await page.locator(".open-sort").getByRole("button", { name: "Investi" }).click();
   await expect(names).toHaveText(["Gelano", "Kokulte", "Amulette"]);
   await page

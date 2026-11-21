@@ -1,9 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  addedAt,
   auctionTax,
+  dateOrder,
   lotSize,
   markSold,
+  newTradeId,
   normalizeTrade,
   profit,
   salePrice,
@@ -169,4 +172,17 @@ test("lot sizes are checked on write and on read", () => {
   assert.equal(normalizeTrade("x", { ...base, qty: 5 }).qty, 5);
   assert.equal("qty" in normalizeTrade("x", { ...base, qty: 1 }), false);
   assert.equal("qty" in normalizeTrade("x", { ...base, qty: "5" }), false);
+});
+
+test("addedAt reads the time from new ids; dateOrder puts the latest added last within a date", () => {
+  const before = Date.now();
+  const id = newTradeId();
+  assert.ok(addedAt({ id }) >= before && addedAt({ id }) <= Date.now());
+  assert.equal(addedAt({ id: "legacy-firestore-id" }), 0);
+  const older = { id: "t" + (1_700_000_000_000).toString(36) + "abcde", date: "2026-11-21" };
+  const newer = { id: "t" + (1_700_000_000_001).toString(36) + "abcde", date: "2026-11-21" };
+  const legacy = { id: "x1", date: "2026-11-21" };
+  const nextDay = { id: "x2", date: "2026-11-22" };
+  const sorted = [nextDay, newer, legacy, older].sort((a, b) => dateOrder(a).localeCompare(dateOrder(b)));
+  assert.deepEqual(sorted, [legacy, older, newer, nextDay]);
 });

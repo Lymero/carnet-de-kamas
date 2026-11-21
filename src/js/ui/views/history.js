@@ -13,7 +13,7 @@ import { formatPercent, ratioPercent, signClass } from "../../domain/kamas.js";
 import { toTsv } from "../../domain/sheet-io.js";
 import { fmCost } from "../../domain/stats.js";
 import { normalize, plural } from "../../domain/text.js";
-import { lotSize, profit, salePrice } from "../../domain/trade.js";
+import { dateOrder, lotSize, profit, salePrice } from "../../domain/trade.js";
 import { $, closest, esc, toast } from "../dom.js";
 import { categoryPill, statusDot } from "../pills.js";
 import { amountCell } from "../table.js";
@@ -23,7 +23,7 @@ import { nextSort, sortHeader, sortRows } from "../sort.js";
 
 /** @type {import("../sort.js").SortColumn<Trade>[]} */
 const COLUMNS = [
-  { key: "date", label: "Date", value: (t) => t.date, first: -1 },
+  { key: "date", label: "Date", value: dateOrder, first: -1 },
   { key: "item", label: "Objet", value: (t) => normalize(t.item) },
   { key: "cat", label: "Type", value: (t) => t.cat },
   { key: "cost", label: "Investi", value: (t) => t.cost, numeric: true },
@@ -161,7 +161,7 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
 
   function renderResults() {
     const out = $("#h-results", root);
-    const rows = sortRows(visibleTrades(), COLUMNS, sort, (a, b) => b.date.localeCompare(a.date));
+    const rows = sortRows(visibleTrades(), COLUMNS, sort, (a, b) => dateOrder(b).localeCompare(dateOrder(a)));
     if (!rows.length) {
       out.innerHTML = `<div class="empty">${
         current.trades.length

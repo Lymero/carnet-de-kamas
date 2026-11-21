@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Newest trades first**: _En cours_ and _Historique_ list the newest trades first by default,
+  and trades of the same date are in the order you added them, so a trade you just added is at
+  the top. Trades added before this version keep their order among themselves.
+
 ## 3.4.0 (2026-11-21)
 
 ### Changed

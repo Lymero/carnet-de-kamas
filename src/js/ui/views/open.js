@@ -1,5 +1,5 @@
 /**
- * @file "En cours" view: items listed for sale, oldest first unless sorted otherwise,
+ * @file "En cours" view: items listed for sale, newest first unless sorted otherwise,
  * with an inline "mark as sold" form. Clicking a row (outside its buttons and the
  * sale form) opens the editor.
  *
@@ -23,7 +23,7 @@ import {
 } from "../../domain/kamas.js";
 import { fmCost } from "../../domain/stats.js";
 import { normalize } from "../../domain/text.js";
-import { isOpen, lotSize, profit, splitSale } from "../../domain/trade.js";
+import { dateOrder, isOpen, lotSize, profit, splitSale } from "../../domain/trade.js";
 import { $, closest, esc, renderKeepingFocus, runAction, toast } from "../dom.js";
 import { taxOptions } from "../hdv-tax.js";
 import { categoryPill } from "../pills.js";
@@ -33,7 +33,7 @@ import { nextSort, sortButton, sortRows } from "../sort.js";
 
 /** Sort keys, as in the history. @type {import("../sort.js").SortColumn<Trade>[]} */
 const SORTS = [
-  { key: "date", label: "Date", value: (t) => t.date },
+  { key: "date", label: "Date", value: dateOrder, first: -1 },
   { key: "item", label: "Objet", value: (t) => normalize(t.item) },
   { key: "cat", label: "Type", value: (t) => t.cat },
   { key: "cost", label: "Investi", value: (t) => t.cost, numeric: true },
@@ -51,11 +51,13 @@ export function createOpenView({ actions, openEditor, redo }) {
   /** The open sale form: which trade, and what has been typed so far. */
   let sale = /** @type {{id: string, price: string, date: string, tax: number, qty: string}|null} */ (null);
   /** Survives switching tabs. */
-  let sort = { key: "date", dir: 1 };
+  let sort = { key: "date", dir: -1 };
 
   function render() {
     const today = todayIso();
-    const open = sortRows(current.trades.filter(isOpen), SORTS, sort, (a, b) => a.date.localeCompare(b.date));
+    const open = sortRows(current.trades.filter(isOpen), SORTS, sort, (a, b) =>
+      dateOrder(b).localeCompare(dateOrder(a)),
+    );
     if (sale && !open.some((t) => t.id === sale?.id)) sale = null; // sold or deleted meanwhile
     if (!open.length) {
       root.innerHTML = `<div class="empty">Rien en vente pour l'instant.<br>Ajoute un craft ou un achat à gauche : il apparaîtra ici jusqu'à ce que tu le marques vendu.</div>`;
