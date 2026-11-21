@@ -67,10 +67,14 @@ test("itemHistory keeps the latest trade and the latest sale of each item", () =
   const h = itemHistory(trades);
   const kokulte = h.get("kokulte");
   assert.equal(kokulte.last.id, "e", "latest by trade date");
-  assert.deepEqual(kokulte.lastSale, { price: 1_500, date: "2026-11-02" }, "by sale date when known");
+  assert.deepEqual(kokulte.lastSale, { price: 1_500, date: "2026-11-02", qty: 1 }, "by sale date when known");
   const coiffe = h.get("coiffe d ogivol");
   assert.equal(coiffe.last.id, "b");
-  assert.deepEqual(coiffe.lastSale, { price: 800, date: "2026-08-21" }, "by trade date when the sale date is unknown");
+  assert.deepEqual(
+    coiffe.lastSale,
+    { price: 800, date: "2026-08-21", qty: 1 },
+    "by trade date when the sale date is unknown",
+  );
   assert.equal(h.get("cape d ogivol").lastSale, null, "never sold");
 });
 
@@ -80,4 +84,9 @@ test("itemHistory takes the trade added last among trades of the same date", () 
     t("y", "2026-11-01", "Kokulte", "resale", 3_000, 4_000, false),
   ]);
   assert.equal(h.get("kokulte").last.id, "y");
+});
+
+test("itemHistory says how many items the latest sale was for", () => {
+  const h = itemHistory([t("x", "2026-11-01", "Kokulte", "resale", 1_000, 4_000, true, { qty: 4 })]);
+  assert.deepEqual(h.get("kokulte").lastSale, { price: 4_000, date: "2026-11-01", qty: 4 });
 });

@@ -130,7 +130,10 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   function showLastSale() {
     const sale = el.item.value.trim() ? pastOf(el.item.value)?.lastSale : null;
     el.lastSale.hidden = !sale;
-    el.lastSale.textContent = sale ? `Dernière vente : ${formatKamas(sale.price)} (${formatShortDate(sale.date)})` : "";
+    const lot = sale?.qty > 1 ? ` les ${sale.qty}` : "";
+    el.lastSale.textContent = sale
+      ? `Dernière vente : ${formatKamas(sale.price)}${lot} (${formatShortDate(sale.date)})`
+      : "";
   }
   /**
    * Fills the investment and planned sale from the latest trade of the item picked, and for a
@@ -157,15 +160,17 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     updatePreview();
   }
   /**
-   * Number of crafts a past trade recorded: its first ingredient's quantity over the recipe's.
+   * Number of crafts a past trade recorded: its lot size, or for a trade saved before lots had
+   * one, its first ingredient's quantity over the recipe's.
    * @param {import("../domain/trade.js").Trade} trade
-   * @returns {number|null} null when the recipe does not tell
+   * @returns {number|null} null when the trade does not tell
    */
   function craftsIn(trade) {
+    if (trade.qty != null) return trade.qty;
     const [id, perCraft] = draft.craftItem?.recipe[0] ?? [];
     const used = trade.recipe?.find(([i]) => i === id)?.[1];
     const n = used && perCraft ? used / perCraft : NaN;
-    return Number.isInteger(n) && n >= 1 && n <= QTY_MAX ? n : null;
+    return Number.isInteger(n) && n >= 1 && n <= LOT_MAX ? n : null;
   }
   function syncItem() {
     showLastSale();
