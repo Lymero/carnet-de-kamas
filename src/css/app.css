@@ -292,6 +292,12 @@ header.top h1 {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+/* The last sale of the item picked, on its own line under both amounts, so the inputs stay level. */
+.row2 .last-sale {
+  grid-column: 1 / -1;
+  margin-top: -6px;
+  text-align: right;
+}
 input[type="text"],
 input[type="date"],
 select,
