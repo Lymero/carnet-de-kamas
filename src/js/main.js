@@ -87,10 +87,12 @@ async function start() {
   const actions = createActions({ store, state });
   enableKamasFields();
   const dialogs = createDialogs(/** @type {HTMLDialogElement} */ ($("#dlg")), { state, actions });
-  const historyView = createHistoryView(dialogs);
+  /** "Refaire" on a past trade: the form starts again from it. @param {import("./domain/trade.js").Trade} trade */
+  const redo = (trade) => form.fill(trade);
+  const historyView = createHistoryView({ ...dialogs, redo });
   /** @type {Record<string, import("./ui/views/view.js").View>} */
   const views = {
-    "en-cours": createOpenView({ actions, openEditor: dialogs.openEditor }),
+    "en-cours": createOpenView({ actions, openEditor: dialogs.openEditor, redo }),
     historique: historyView,
     analyse: createAnalysisView({
       onItem: (name) => {
