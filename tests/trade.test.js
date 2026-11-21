@@ -2,10 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   auctionTax,
+  lotSize,
   markSold,
   normalizeTrade,
   profit,
   salePrice,
+  splitSale,
   toDocument,
   validateTrade,
 } from "../src/js/domain/trade.js";
@@ -130,4 +132,41 @@ test("trades recorded before the tax option have no tax; unknown rates are refus
     assert.equal(normalizeTrade("bad", { item: "x", hdvTax: bad }).hdvTax, 0, String(bad));
     assert.match(validateTrade({ ...base, hdvTax: bad })[0], /Taxe HDV/, String(bad));
   }
+});
+
+test("selling part of a lot splits its amounts in proportion", () => {
+  const lot = { ...base, cost: 1_000_003, expected: 1_500_000, runes: 99_999, qty: 10, recipe: [[7, 30, 500]] };
+  const { sold, rest } = splitSale(lot, 4, 700_000, "2026-08-25", "t2");
+  assert.equal(sold.id, "t2");
+  assert.equal(rest?.id, "t1", "the rest keeps the trade's id");
+  assert.deepEqual([sold.qty, rest?.qty], [4, 6]);
+  assert.deepEqual([sold.sold, sold.soldPrice, sold.soldDate], [true, 700_000, "2026-08-25"]);
+  assert.equal(rest?.sold, false);
+  assert.deepEqual([sold.cost, rest?.cost], [400_001, 600_002]);
+  assert.deepEqual([sold.expected, rest?.expected], [600_000, 900_000]);
+  assert.deepEqual([sold.runes, rest?.runes], [40_000, 59_999]);
+  assert.deepEqual([sold.recipe, rest?.recipe], [[[7, 12, 500]], [[7, 18, 500]]]);
+  assert.equal(lot.qty, 10, "splitSale must not mutate");
+  assert.deepEqual(validateTrade(sold), []);
+  assert.deepEqual(validateTrade(/** @type {any} */ (rest)), []);
+});
+
+test("a lot of one, or a whole lot, is sold without a split", () => {
+  const { sold, rest } = splitSale({ ...base, qty: 3 }, 3, 5_000_000, "2026-08-25", "t2");
+  assert.equal(rest, null);
+  assert.equal(sold.id, "t1");
+  const last = splitSale({ ...base, qty: 2 }, 1, 2_000_000, "2026-08-25", "t2");
+  assert.equal(last.sold.qty, undefined, "a single item stores no quantity");
+  assert.equal(last.rest?.qty, undefined);
+  assert.equal(lotSize(base), 1);
+});
+
+test("lot sizes are checked on write and on read", () => {
+  assert.deepEqual(validateTrade({ ...base, qty: 2 }), []);
+  for (const qty of [0, 1.5, 10_000, "3"]) {
+    assert.match(validateTrade({ ...base, qty: /** @type {any} */ (qty) }).join(), /Quantité invalide/);
+  }
+  assert.equal(normalizeTrade("x", { ...base, qty: 5 }).qty, 5);
+  assert.equal("qty" in normalizeTrade("x", { ...base, qty: 1 }), false);
+  assert.equal("qty" in normalizeTrade("x", { ...base, qty: "5" }), false);
 });

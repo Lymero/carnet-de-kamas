@@ -54,6 +54,7 @@ including the running version's); older ones are deleted. The local server also 
 | `hdvTax`        | `2` \| `1` \| `0`                             | no                 | Auction-house tax in % (listed, price updated, none). |
 | `recipe`        | `[ingredientId, quantity, unitPrice\|null][]` | no                 | Ingredient breakdown at the time of the craft.        |
 | `runes`         | integer                                       | no                 | Runes / forgemagie spend included in `cost`.          |
+| `qty`           | integer 2–9999                                | no                 | Items in the lot (×10 crafts); absent means 1.        |
 | `source`        | `"sheet"`                                     | no                 | Set on rows imported from a spreadsheet.              |
 | `schemaVersion` | integer                                       | written by the app | Currently `1`.                                        |
 | `updatedAt`     | ISO timestamp                                 | written by the app | Last write.                                           |
@@ -62,17 +63,24 @@ Ids: `s001`…`s033` for the rows imported at set-up; new trades use `t<time><ra
 
 **Derived values (never stored):** price = `sold ? soldPrice : expected`;
 tax = round(price × `hdvTax` / 100) (`auctionTax`; rates in `HDV_TAX`, `config.js`; absent = 0);
-profit = price − cost − tax; margin % = profit / cost. See `src/js/domain/trade.js`. The tax is
+profit = price − cost − tax; margin % = profit / cost. Amounts are for the whole lot. See `src/js/domain/trade.js`. The tax is
 derived rather than stored, so it follows any change of price.
+
+**Partial sales** (`splitSale`): selling some items of a lot writes them as a new sold trade and
+keeps the rest, still for sale, under the original id. `cost`, `expected`, `runes` and recipe
+quantities are shared in proportion to the items; the rest gets what the sold part leaves, so the
+two add up to the original amounts. The sold part is written first and removed again if the rest
+cannot be written.
 
 **Validation on write** (`validateTrade`, the same rules for the form, edits, sales and imports):
 `item` is non-empty and at most 200 characters; `date` and `soldDate` are real calendar days;
-`soldDate`, when known, is not before `date`; amounts are whole and non-negative.
+`soldDate`, when known, is not before `date`; amounts are whole and non-negative; `qty`, when
+present, is a whole number from 1 to 9999.
 
 **Reading** (`normalizeTrade`): stored documents are treated as untrusted. Missing or malformed
 fields get safe defaults (an invalid `date` becomes `1970-01-01`, an invalid `soldDate` becomes
-null), malformed `recipe` lines are dropped, and a non-numeric `runes` or non-string `source` is
-ignored. Unknown fields are kept, so a newer version's documents survive an edit by an older one.
+null), malformed `recipe` lines are dropped, a non-numeric `runes` or non-string `source` is
+ignored, and a `qty` that is not a whole number from 2 to 9999 is dropped. Unknown fields are kept, so a newer version's documents survive an edit by an older one.
 
 **Compatibility:** because of that defensive reading, documents written before `schemaVersion`
 existed still load. When the shape changes, bump `SCHEMA_VERSION` in `config.js`, keep

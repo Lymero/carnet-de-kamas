@@ -123,3 +123,34 @@ test("a sale can record another tax rate, as when the price was updated at the H
   await actions.sell(state.get().trades[0], 3_000_000, "2026-11-20");
   assert.equal(state.get().trades[0].hdvTax, 1, "the trade's own rate by default");
 });
+
+test("selling part of a lot leaves the rest for sale", async () => {
+  const { state, actions } = setup();
+  const { trade } = await actions.addTrade({ ...draft, qty: 10, hdvTax: 2 });
+  const sold = await actions.sell(trade, 1_500_000, "2026-11-20", 1, 4);
+  const byId = Object.fromEntries(state.get().trades.map((t) => [t.id, t]));
+  assert.equal(Object.keys(byId).length, 2);
+  assert.deepEqual([byId[sold.id].qty, byId[sold.id].cost, byId[sold.id].hdvTax], [4, 800_000, 1]);
+  assert.deepEqual([byId[trade.id].qty, byId[trade.id].cost, byId[trade.id].sold], [6, 1_200_000, false]);
+  assert.equal(byId[trade.id].hdvTax, 2, "the rest keeps its own tax rate");
+
+  await assert.rejects(actions.sell(byId[trade.id], 1, "2026-11-20", 2, 7), /Quantité vendue invalide/);
+  await actions.sell(byId[trade.id], 2_000_000, "2026-11-21");
+  assert.equal(state.get().trades.filter((t) => !t.sold).length, 0, "selling the rest sells the trade itself");
+});
+
+test("a partial sale whose second write fails is taken back", async () => {
+  const store = createMemoryStore();
+  const { state, actions } = setup({ store });
+  const { trade } = await actions.addTrade({ ...draft, qty: 10 });
+  const save = store.save;
+  store.save = async (t) => {
+    if (t.id === trade.id) throw new Error("disque plein");
+    return save(t);
+  };
+  await assert.rejects(actions.sell(trade, 1_000_000, "2026-11-20", 0, 4), /Enregistrement impossible/);
+  assert.deepEqual(
+    state.get().trades.map((t) => [t.id, t.qty, t.sold]),
+    [[trade.id, 10, false]],
+  );
+});

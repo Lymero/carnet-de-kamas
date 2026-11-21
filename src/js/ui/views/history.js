@@ -12,7 +12,7 @@ import { formatPercent, ratioPercent, signClass } from "../../domain/kamas.js";
 import { toTsv } from "../../domain/sheet-io.js";
 import { fmCost } from "../../domain/stats.js";
 import { normalize, plural } from "../../domain/text.js";
-import { profit, salePrice } from "../../domain/trade.js";
+import { lotSize, profit, salePrice } from "../../domain/trade.js";
 import { $, closest, esc, toast } from "../dom.js";
 import { categoryPill, statusDot } from "../pills.js";
 import { amountCell } from "../table.js";
@@ -102,7 +102,7 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
           const p = profit(t);
           return `<tr data-id="${esc(t.id)}" tabindex="0">
           <td class="num">${esc(formatShortDate(t.date))}</td>
-          <td class="obj" title="${esc(t.item)}">${esc(t.item)}</td>
+          <td class="obj" title="${esc(t.item)}">${lotSize(t) > 1 ? `<span class="lot">${lotSize(t)}×</span> ` : ""}${esc(t.item)}</td>
           <td>${categoryPill(t)}</td>
           ${amountCell(t.cost)}
           ${amountCell(t.runes || null, { cls: "fm" })}

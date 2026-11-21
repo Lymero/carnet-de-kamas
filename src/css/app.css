@@ -727,6 +727,23 @@ table.grid tfoot td {
 .sell .field {
   min-width: 140px;
 }
+.sell .field.qty {
+  min-width: 0;
+}
+.sell .of {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sell .of input {
+  width: 6ch;
+  text-align: right;
+}
+.open-row .it .lot,
+.grid .obj .lot {
+  font-weight: 600;
+  color: var(--ink);
+}
 
 .split {
   display: grid;
