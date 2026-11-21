@@ -136,7 +136,7 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
     root.innerHTML = `
       <div class="toolbar">
         <div class="search grow">
-          <input type="text" id="h-q" placeholder="Chercher un objet…" value="${esc(filters.text)}" aria-label="Chercher un objet">
+          <input type="text" id="h-q" placeholder="Chercher un objet…" value="${esc(filters.text)}" aria-label="Chercher un objet" title="Raccourci : /" aria-keyshortcuts="/">
           <button type="button" class="clear" id="h-q-clear" data-act="clear-search" title="Effacer la recherche" aria-label="Effacer la recherche" hidden>${CROSS}</button>
         </div>
         <button class="btn filter-btn" id="h-filter-btn" data-act="filters" aria-controls="h-filters" aria-expanded="false">
@@ -165,7 +165,7 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
     if (!rows.length) {
       out.innerHTML = `<div class="empty">${
         current.trades.length
-          ? "Aucune opération ne correspond à ces filtres."
+          ? `Aucune opération ne correspond à ces filtres.<br><button type="button" class="btn" data-act="reset">Tout effacer</button>`
           : "Ton carnet est vide. Ajoute une opération à gauche, ou importe ton ancien tableau avec « Importer depuis Sheets »."
       }</div>`;
       return;
@@ -253,6 +253,10 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
     renderResults();
   }
   function onKeydown(e) {
+    if (e.key === "Escape" && e.target.id === "h-q" && filters.text) {
+      e.preventDefault();
+      return clearFilters(["text"]);
+    }
     if (e.key !== "Enter" || !e.target.matches("tr[data-id]")) return;
     e.preventDefault(); // otherwise the same Enter submits the editor that just opened
     e.target.click();

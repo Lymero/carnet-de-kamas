@@ -119,14 +119,17 @@ test.describe("edit dialog", () => {
     await expect(rows(page).filter({ hasText: "Kokulte" }).getByRole("img", { name: "Vendu" })).toBeVisible();
   });
 
-  test("deleting needs a second click", async ({ page }) => {
-    const del = page.getByRole("button", { name: "Supprimer" });
-    await del.click();
-    await expect(page.getByRole("button", { name: "Confirmer la suppression" })).toBeVisible();
-    await page.getByRole("button", { name: "Confirmer la suppression" }).click();
+  test("deleting takes one click and can be undone from the message", async ({ page }) => {
+    await page.getByRole("button", { name: "Supprimer" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
-    await expect(page.locator("body > .toast")).toContainText("Kokulte supprimé");
+    const toast = page.locator("body > .toast");
+    await expect(toast).toContainText("Kokulte supprimé");
     await expect(rows(page)).toHaveCount(1);
+
+    await toast.getByRole("button", { name: "Annuler" }).click();
+    await expect(toast).toContainText("Kokulte remis");
+    await expect(rows(page)).toHaveCount(2);
+    await expect(rows(page).filter({ hasText: "Kokulte" })).toContainText(/500\s000|500 k/);
   });
 });
 
@@ -193,6 +196,34 @@ test("Enter on a focused row opens its editor", async ({ page }) => {
   await rows(page).first().focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog")).toBeVisible();
+});
+
+test("when the filters match nothing, the empty message offers to clear them", async ({ page }) => {
+  await page.fill("#h-q", "zzz");
+  await expect(rows(page)).toHaveCount(0);
+  await page.locator("#h-results").getByRole("button", { name: "Tout effacer" }).click();
+  await expect(rows(page)).toHaveCount(2);
+  await expect(page.locator("#h-q")).toHaveValue("");
+});
+
+test("keyboard: / searches, Escape clears the search, N starts a new trade", async ({ page }) => {
+  await page.click('#tabs a[data-v="en-cours"]');
+  await page.locator("body").press("/");
+  await expect(page.locator("#h-q")).toBeFocused();
+  await expect(page.locator('#tabs a[data-v="historique"]')).toHaveAttribute("aria-current", "page");
+  await page.keyboard.type("kok");
+  await expect(rows(page)).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#h-q")).toHaveValue("");
+  await expect(rows(page)).toHaveCount(2);
+
+  // Typing "n" in a field is just a letter.
+  await page.keyboard.type("n");
+  await expect(page.locator("#h-q")).toHaveValue("n");
+  await page.locator("#h-q").blur();
+  await page.locator("body").press("n");
+  await expect(page.locator("#f-item")).toBeFocused();
+  await expect(page.locator("#f-item")).toHaveValue("");
 });
 
 test("a click outside the edit dialog closes it without saving", async ({ page }) => {

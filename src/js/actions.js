@@ -154,6 +154,8 @@ export function createActions({ store, state }) {
     addTrade,
     /** Replaces a trade after editing. @param {Trade} trade */
     updateTrade: (trade) => persist(trade),
+    /** Puts back a deleted trade as it was (undo). @param {Trade} trade */
+    restoreTrade: (trade) => persist(trade),
     sell,
     removeTrade,
     importDrafts,

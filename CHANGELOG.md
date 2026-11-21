@@ -7,6 +7,15 @@
 - **Historique filters in use show as chips**: under the toolbar, each filter in use is a chip
   you can click to remove it, even while the filter row is hidden. _Tout effacer_ after the
   chips clears the search and every filter at once, and a × in the search box clears the search.
+- **Undo a delete**: _Supprimer_ deletes at once, and the message that follows has an _Annuler_
+  button for a few seconds that puts the trade back. No more second click to confirm.
+- **Clear the filters from an empty list**: when the search and filters match nothing, the
+  message has a _Tout effacer_ button.
+
+### Added
+
+- **Keyboard shortcuts**: `/` jumps to the Historique search, Escape clears it, and `N` jumps to
+  the new trade form. They do nothing while you type in a field or a dialog is open.
 
 ## 3.3.0 (2026-11-21)
 

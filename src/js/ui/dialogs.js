@@ -17,6 +17,9 @@ import { taxOptions } from "./hdv-tax.js";
 
 /** @typedef {import("../domain/trade.js").Trade} Trade */
 
+/** How long the "Annuler" button stays after a delete. */
+const UNDO_MS = 8000;
+
 /**
  * @param {HTMLDialogElement} dialog
  * @param {{state: ReturnType<typeof import("../state.js").createState>, actions: ReturnType<typeof import("../actions.js").createActions>}} ctx
@@ -99,17 +102,19 @@ export function createDialogs(dialog, { state, actions }) {
     };
 
     const del = /** @type {HTMLButtonElement} */ ($("#e-del", body));
+    // Deleting takes one click; the toast offers to undo it for a while instead of asking first.
     del.onclick = () => {
-      // Two-step delete instead of window.confirm, which the sandbox blocks.
-      if (del.dataset.armed !== "1") {
-        del.dataset.armed = "1";
-        del.textContent = "Confirmer la suppression";
-        return;
-      }
       runAction(del, async () => {
         await actions.removeTrade(trade.id);
         dialog.close();
-        toast(`${trade.item} supprimé`);
+        toast(`${trade.item} supprimé`, UNDO_MS, {
+          label: "Annuler",
+          onClick: () =>
+            actions.restoreTrade(trade).then(
+              () => toast(`${trade.item} remis`),
+              (error) => toast(error.message),
+            ),
+        });
       });
     };
 

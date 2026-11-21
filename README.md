@@ -96,7 +96,7 @@ another investment or adding the trade forgets the screenshots.
 
 **Record a sale.** _En cours_ → _Vendu_ → confirm the real price and date.
 
-**Fix or delete.** Click any row to edit it. Delete asks for a second click. Leaving the
+**Fix or delete.** Click any row to edit it. After a delete, _Annuler_ in the message puts the trade back. Leaving the
 sale date empty means "unknown".
 
 **Do it again.** _Refaire_ on an _En cours_ row (↻ in _Historique_) fills the form from that

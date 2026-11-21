@@ -816,6 +816,9 @@ table.grid tfoot td {
   text-align: center;
   color: var(--muted);
 }
+.empty .btn {
+  margin-top: 12px;
+}
 
 .open-sort {
   display: flex;
@@ -1120,6 +1123,16 @@ textarea {
 }
 .toast:empty {
   display: none;
+}
+.toast button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit; /* the toast inverts the theme, so the accent colour could be unreadable */
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
 }
 .toast {
   position: fixed;

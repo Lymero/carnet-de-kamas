@@ -132,6 +132,28 @@ async function start() {
   }
   window.addEventListener("hashchange", showView);
 
+  // ----- keyboard shortcuts -----
+  // "/" searches the Historique and "n" starts a new trade, as in many web apps; never while
+  // typing in a field, with a modifier key, or with a dialog open.
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || $("dialog[open]")) return;
+    const target = /** @type {HTMLElement} */ (e.target);
+    if (target.isContentEditable || target.closest?.("input, textarea, select")) return;
+    if (e.key === "/") {
+      e.preventDefault();
+      const focusSearch = () => /** @type {HTMLInputElement|null} */ ($("#h-q"))?.focus();
+      if (state.get().view === "historique") focusSearch();
+      else {
+        // showView, registered first, renders the view before this runs.
+        window.addEventListener("hashchange", focusSearch, { once: true });
+        go("historique");
+      }
+    } else if (e.key === "n" || e.key === "N") {
+      e.preventDefault();
+      /** @type {HTMLInputElement|null} */ ($("#f-item"))?.focus();
+    }
+  });
+
   // ----- rendering -----
   /** @param {import("./state.js").AppState} s @param {Set<string>} changed */
   function paint(s, changed) {

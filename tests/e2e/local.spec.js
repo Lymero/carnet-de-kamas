@@ -37,7 +37,7 @@ test("a change made in one tab appears in the others", async ({ page, context })
   await other.close();
 });
 
-test("a sale and a deletion are saved too", async ({ page }) => {
+test("a sale, a deletion and its undo are saved too", async ({ page }) => {
   await openApp(page, { catalog: false });
   const item = uniqueItem("Cape");
   await addTrade(page, { item, cat: "resale", cost: "1m", expected: "1.5m", date: "2026-01-12" });
@@ -53,10 +53,16 @@ test("a sale and a deletion are saved too", async ({ page }) => {
   await page.click('#tabs a[data-v="historique"]');
   await page.locator("#h-results tbody tr", { hasText: item }).click();
   await page.getByRole("button", { name: "Supprimer" }).click();
-  await page.getByRole("button", { name: "Confirmer la suppression" }).click();
   await expect(page.locator("#h-results tbody tr", { hasText: item })).toHaveCount(0);
   const remaining = Object.values((await readDataFile()).trades).filter((doc) => doc.item === item);
   expect(remaining).toEqual([]);
+
+  // Undo writes it back to the file.
+  await page.locator(".toast").getByRole("button", { name: "Annuler" }).click();
+  await expect(page.locator("#h-results tbody tr", { hasText: item })).toHaveCount(1);
+  await expect
+    .poll(async () => Object.values((await readDataFile()).trades).filter((doc) => doc.item === item).length)
+    .toBe(1);
 });
 
 test("remembered unit prices are saved and offered again", async ({ page }) => {

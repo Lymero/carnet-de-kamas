@@ -41,17 +41,30 @@ let toastTimer = 0;
  * moved inside it; otherwise errors would appear dimmed behind the backdrop.
  * @param {string} message
  * @param {number} [ms]
+ * @param {{label: string, onClick: () => void}} [action]  a button after the message, such as "Annuler"
  */
-export function toast(message, ms = 3200) {
+export function toast(message, ms = 3200, action) {
   const el = $(".toast");
   if (!el) return;
   const host = $("dialog[open]") ?? document.body;
   if (el.parentElement !== host) host.appendChild(el);
   el.textContent = message;
   clearTimeout(toastTimer);
-  toastTimer = window.setTimeout(() => {
+  const hide = () => {
+    clearTimeout(toastTimer);
     el.textContent = "";
-  }, ms);
+  };
+  if (action) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = action.label;
+    button.onclick = () => {
+      hide();
+      action.onClick();
+    };
+    el.append(" · ", button);
+  }
+  toastTimer = window.setTimeout(hide, ms);
 }
 
 /**
