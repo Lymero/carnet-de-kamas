@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **In-app updates**: the desktop app checks for a new version at start and offers it in the
+  header (_Mettre à jour_). It downloads, verifies and installs the update, then restarts.
+  Releases now carry the update feed (`latest.json`), signed with the project's updater key.
+
 ## 3.1.0 (2026-11-19)
 
 ### Nouveautés

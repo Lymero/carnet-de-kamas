@@ -164,12 +164,24 @@ header.top {
   gap: 12px;
   flex-wrap: wrap;
 }
+header.top h1 {
+  margin-right: auto;
+}
 .status {
   font-size: 13px;
   color: var(--muted);
 }
 .status.warn {
   color: var(--bad);
+}
+.update {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.update[hidden] {
+  display: none;
 }
 
 .kpis {
