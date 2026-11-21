@@ -1,12 +1,24 @@
 # Changelog
 
-## Unreleased
+## 3.2.0 (2026-11-21)
 
 ### Added
 
 - **In-app updates**: the desktop app checks for a new version at start and offers it in the
-  header (_Mettre à jour_). It downloads, verifies and installs the update, then restarts.
-  Releases now carry the update feed (`latest.json`), signed with the project's updater key.
+  header (_Mettre à jour_). It downloads the update, verifies its signature, installs it and
+  restarts. Your data file is not touched. This version is the last one to install by hand.
+- **Partial sales of a lot**: _Vendu_ asks how many items were sold. Selling part of a lot
+  (a ×10 craft, say) splits it: the sold items become a sold trade, and the rest stays in
+  _En cours_ with its share of the cost, planned price, FM cost and recipe. The editor has a
+  new _Quantité_ field.
+- **Prices from your past trades**: picking an item you traded before fills the investment,
+  planned sale and number of crafts from its latest trade, and shows its latest sale price
+  (and lot size) under the planned sale. Amounts you typed are kept.
+- **Refaire**: a button on _En cours_ rows (and ↻ in _Historique_) fills the form from that
+  trade, dated today: item, type, planned price, auction tax, and for a craft its number of
+  crafts and FM cost, with ingredients at your remembered prices.
+- **FM cost in _En cours_**: craft rows show _dont FM_ under the invested amount, as in
+  _Historique_.
 
 ## 3.1.0 (2026-11-19)
 
