@@ -63,10 +63,12 @@ export async function pickCatalogItem(page, query, expectedName) {
     await page.fill("#f-item", "");
     await page.fill("#f-item", query);
     await expect(first).toContainText(expectedName, { timeout: 1000 });
+    // The list closes 150 ms after the field loses focus: a blur just before can close it
+    // between showing the suggestion and the keys, so the pick is retried too.
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#f-item")).toHaveValue(expectedName, { timeout: 1000 });
   }).toPass();
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
-  await expect(page.locator("#f-item")).toHaveValue(expectedName);
 }
 
 /**

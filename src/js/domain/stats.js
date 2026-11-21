@@ -10,7 +10,7 @@
 import { CATEGORY } from "../config.js";
 import { monthKey } from "./dates.js";
 import { normalize } from "./text.js";
-import { isCraft, profit } from "./trade.js";
+import { isCraft, profit, salePrice } from "./trade.js";
 
 /** @typedef {import("./trade.js").Trade} Trade */
 
@@ -158,25 +158,44 @@ export function byItem(trades) {
 }
 
 /**
- * How many times the player traded each item, keyed by normalised name.
- * Used to rank autocomplete suggestions.
+ * What the player did with each item, keyed by normalised name: how many times they traded
+ * it (to rank autocomplete suggestions), their latest trade of it (to pre-fill the entry
+ * form) and their latest sale of it.
+ * The latest trade is the one with the latest date; on the same date, the one added last.
+ * The latest sale goes by sale date, or by trade date when the sale date is unknown.
  * @param {Trade[]} trades
- * @returns {Map<string, {name: string, count: number, lastCat: string, lastDate: string}>}
+ * @returns {Map<string, ItemHistory>}
  */
 export function itemHistory(trades) {
+  /** @type {Map<string, ItemHistory>} */
   const map = new Map();
   for (const t of trades) {
     const key = normalize(t.item);
-    const h = map.get(key) ?? { name: t.item, count: 0, lastCat: t.cat, lastDate: "" };
+    const h = map.get(key) ?? { name: t.item, count: 0, lastCat: t.cat, lastDate: "", last: t, lastSale: null };
     h.count += 1;
     if (t.date >= h.lastDate) {
       h.lastDate = t.date;
       h.lastCat = t.cat;
+      h.last = t;
+    }
+    if (t.sold) {
+      const date = t.soldDate ?? t.date;
+      if (!h.lastSale || date >= h.lastSale.date) h.lastSale = { price: salePrice(t), date };
     }
     map.set(key, h);
   }
   return map;
 }
+
+/**
+ * @typedef {Object} ItemHistory
+ * @property {string} name  as first written
+ * @property {number} count  trades of this item
+ * @property {string} lastCat  category of the latest trade
+ * @property {string} lastDate  date of the latest trade
+ * @property {Trade} last  the latest trade
+ * @property {{price: number, date: string}|null} lastSale  the latest sale, null if never sold
+ */
 
 function emptyBucket() {
   return { cost: 0, fm: 0, profit: 0, count: 0 };
