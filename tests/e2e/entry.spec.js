@@ -139,6 +139,23 @@ test("the kamas and rune value before and after forging give the FM cost", async
   await expect(page.locator("#f-cost")).toHaveValue(/^1\s000$/);
 });
 
+test("the FM cost shows under the investment of an open craft", async ({ page }) => {
+  await openApp(page);
+  await page.selectOption("#f-tax", "0");
+  await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
+  await openRecipeFolds(page);
+  const recipe = page.locator("#recipeBox");
+  await recipe.locator("[data-ing]").first().fill("500k");
+  await recipe.locator('[data-bal="kb"]').fill("10m");
+  await recipe.locator('[data-bal="ka"]').fill("7m");
+  await page.fill("#f-exp", "5m");
+  await page.click("#f-submit");
+
+  const fm = page.locator(".open-row .c small.fm");
+  await expect(fm).toHaveText(/^dont FM 3\sM$/);
+  await expect(fm).toHaveAttribute("title", /^3\s000\s000$/);
+});
+
 test("the FM cost shows in the history and in the analysis", async ({ page }) => {
   await openApp(page);
   await page.selectOption("#f-tax", "0");
