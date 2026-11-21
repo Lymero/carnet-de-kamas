@@ -22,7 +22,7 @@ import {
 } from "../../domain/kamas.js";
 import { fmCost } from "../../domain/stats.js";
 import { normalize } from "../../domain/text.js";
-import { isOpen, markSold, profit } from "../../domain/trade.js";
+import { isOpen, lotSize, profit, splitSale } from "../../domain/trade.js";
 import { $, closest, esc, renderKeepingFocus, runAction, toast } from "../dom.js";
 import { taxOptions } from "../hdv-tax.js";
 import { categoryPill } from "../pills.js";
@@ -48,7 +48,7 @@ export function createOpenView({ actions, openEditor, redo }) {
   /** @type {HTMLElement} */ let root;
   /** @type {import("../../state.js").AppState} */ let current;
   /** The open sale form: which trade, and what has been typed so far. */
-  let sale = /** @type {{id: string, price: string, date: string, tax: number}|null} */ (null);
+  let sale = /** @type {{id: string, price: string, date: string, tax: number, qty: string}|null} */ (null);
   /** Survives switching tabs. */
   let sort = { key: "date", dir: 1 };
 
@@ -69,7 +69,9 @@ export function createOpenView({ actions, openEditor, redo }) {
         const age =
           days >= SLOW_SALE_DAYS ? `<span class="pill slow">${days} j en vente</span>` : `<span>${days} j</span>`;
         return `<div class="open-row" data-id="${esc(t.id)}">
-        <div class="it"><b>${esc(t.item)}</b><small><span>${esc(formatShortDate(t.date))} ·</span>${categoryPill(t)}${age}</small></div>
+        <div class="it"><b>${esc(t.item)}</b><small><span>${esc(formatShortDate(t.date))} ·</span>${categoryPill(t)}${
+          lotSize(t) > 1 ? `<span class="lot" title="Lot de ${lotSize(t)}">×${lotSize(t)}</span>` : ""
+        }${age}</small></div>
         <div class="c"><small>Investi</small><span class="num">${formatCompact(t.cost)}</span>${
           fm ? `<small class="fm" title="${esc(formatKamas(fm))}">dont FM ${formatCompact(fm)}</small>` : ""
         }</div>
@@ -83,6 +85,11 @@ export function createOpenView({ actions, openEditor, redo }) {
         ${
           sale?.id === t.id
             ? `<div class="sell">
+          ${
+            lotSize(t) > 1
+              ? `<div class="field qty"><label for="s-qty">Quantité</label><span class="of"><input type="text" inputmode="numeric" id="s-qty" class="num" value="${esc(sale.qty)}"><span class="muted">/ ${lotSize(t)}</span></span></div>`
+              : ""
+          }
           <div class="field"><label for="s-price">Vendu à</label><input type="text" id="s-price" class="kamas" value="${esc(sale.price)}"></div>
           <div class="field"><label for="s-date">Le</label><input type="date" id="s-date" value="${esc(sale.date)}"></div>
           <div class="field"><label for="s-tax">Taxe HDV</label><select id="s-tax">${taxOptions(sale.tax)}</select></div>
@@ -113,7 +120,13 @@ export function createOpenView({ actions, openEditor, redo }) {
     if (!trade) return;
     switch (button.dataset.act) {
       case "sell":
-        sale = { id: trade.id, price: formatKamas(trade.expected), date: todayIso(), tax: trade.hdvTax };
+        sale = {
+          id: trade.id,
+          price: formatKamas(trade.expected),
+          date: todayIso(),
+          tax: trade.hdvTax,
+          qty: String(lotSize(trade)),
+        };
         render();
         /** @type {HTMLInputElement|null} */ ($("#s-price", root))?.select();
         break;
@@ -132,11 +145,13 @@ export function createOpenView({ actions, openEditor, redo }) {
         const price = evaluateKamas(sale?.price);
         const date = sale?.date || todayIso();
         const tax = sale?.tax ?? trade.hdvTax;
+        const qty = Number(sale?.qty ?? lotSize(trade));
         runAction(button, async () => {
-          await actions.sell(trade, price, date, tax);
+          const sold = await actions.sell(trade, price, date, tax, qty);
           sale = null;
-          const result = profit(markSold({ ...trade, hdvTax: tax }, price, date)); // after the auction tax
-          toast(`${trade.item} vendu : ${formatPercent(ratioPercent(result, trade.cost))}`);
+          render(); // the rest of a lot is still listed, under the same id: close its form
+          const part = qty < lotSize(trade) ? ` (${qty} sur ${lotSize(trade)})` : "";
+          toast(`${trade.item} vendu${part} : ${formatPercent(ratioPercent(profit(sold), sold.cost))}`);
         });
         break;
       }
@@ -147,14 +162,39 @@ export function createOpenView({ actions, openEditor, redo }) {
   function onInput(e) {
     const target = /** @type {HTMLInputElement} */ (e.target);
     if (!sale) return;
-    if (target.id === "s-price") sale.price = target.value;
+    if (target.id === "s-qty") setQuantity(target.value);
+    else if (target.id === "s-price") sale.price = target.value;
     else if (target.id === "s-date") sale.date = target.value;
     else if (target.id === "s-tax") sale.tax = Number(target.value);
   }
 
+  /**
+   * Changes how many items of the lot are sold. While the price is still the one
+   * suggested, it follows: the planned price of that many items.
+   * @param {string} raw
+   */
+  function setQuantity(raw) {
+    if (!sale) return;
+    const trade = current.trades.find((t) => t.id === sale?.id);
+    if (!trade) return;
+    const suggested = (/** @type {string} */ qty) => {
+      const n = Number(qty);
+      if (!Number.isInteger(n) || n < 1 || n > lotSize(trade)) return null;
+      return formatKamas(splitSale(trade, n, 0, todayIso(), "").sold.expected);
+    };
+    const wasSuggested = sale.price === suggested(sale.qty);
+    sale.qty = raw;
+    const next = suggested(raw);
+    if (wasSuggested && next != null) {
+      sale.price = next;
+      const field = /** @type {HTMLInputElement|null} */ ($("#s-price", root));
+      if (field) field.value = next;
+    }
+  }
+
   /** @param {KeyboardEvent} e */
   function onKeydown(e) {
-    if (e.key === "Enter" && /** @type {HTMLElement} */ (e.target).id === "s-price") {
+    if (e.key === "Enter" && ["s-price", "s-qty"].includes(/** @type {HTMLElement} */ (e.target).id)) {
       /** @type {HTMLElement|null} */ ($('[data-act="sell-ok"]', root))?.click();
     }
   }

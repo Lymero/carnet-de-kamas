@@ -10,6 +10,7 @@ import { todayIso } from "../domain/dates.js";
 import { evaluateKamas, formatCompact, formatKamas } from "../domain/kamas.js";
 import { parseSheetPaste, withoutDuplicates } from "../domain/sheet-io.js";
 import { plural } from "../domain/text.js";
+import { lotSize } from "../domain/trade.js";
 import { closeOnClickOutside } from "./dismiss.js";
 import { $, esc, runAction, toast } from "./dom.js";
 import { taxOptions } from "./hdv-tax.js";
@@ -71,9 +72,10 @@ export function createDialogs(dialog, { state, actions }) {
         <div class="field"><label for="e-exp">Vente prévue</label><input type="text" id="e-exp" class="kamas" value="${formatKamas(trade.expected)}"></div>
       </div>
       <div class="row2">
+        <div class="field"><label for="e-qty">Quantité</label><input type="text" inputmode="numeric" id="e-qty" class="num" value="${lotSize(trade)}"></div>
         <div class="field"><label for="e-tax">Taxe HDV</label><select id="e-tax">${taxOptions(trade.hdvTax)}</select></div>
-        <div class="field end"><label class="check" for="e-sold"><input type="checkbox" id="e-sold" ${trade.sold ? "checked" : ""}> Vendu</label></div>
       </div>
+      <label class="check" for="e-sold"><input type="checkbox" id="e-sold" ${trade.sold ? "checked" : ""}> Vendu</label>
       <div class="row2">
         <div class="field"><label for="e-sp">Vendu à</label><input type="text" id="e-sp" class="kamas" value="${trade.sold ? formatKamas(trade.soldPrice) : ""}" placeholder="${formatKamas(trade.expected)}"></div>
         <div class="field"><label for="e-sd">Le</label><input type="date" id="e-sd" value="${esc(trade.soldDate ?? "")}"></div>
@@ -116,7 +118,10 @@ export function createDialogs(dialog, { state, actions }) {
         const sold = input("#e-sold").checked;
         const expected = evaluateKamas(input("#e-exp").value);
         const typedSale = input("#e-sp").value.trim();
-        await actions.updateTrade({
+        const typedQty = input("#e-qty").value.trim();
+        const qty = typedQty ? Number(typedQty) : 1;
+        /** @type {Trade} */
+        const edited = {
           ...trade,
           item: input("#e-item").value.trim(),
           date: input("#e-date").value,
@@ -129,7 +134,11 @@ export function createDialogs(dialog, { state, actions }) {
           // An empty sale date is allowed: it means "unknown", as for imported rows.
           soldDate: sold ? input("#e-sd").value || null : null,
           hdvTax: Number(input("#e-tax").value),
-        });
+          qty,
+        };
+        // A lot of one is the default: not stored.
+        if (qty === 1) delete edited.qty;
+        await actions.updateTrade(edited);
         dialog.close();
       });
     }

@@ -6,7 +6,7 @@
  * for history and remembered prices, and submits through `actions.addTrade`.
  */
 
-import { CATEGORY } from "../config.js";
+import { CATEGORY, LOT_MAX } from "../config.js";
 import { recipeCost } from "../data/catalog.js";
 import { todayIso } from "../domain/dates.js";
 import { evaluateKamas, formatKamas, formatPercent, isKamas, ratioPercent, signClass } from "../domain/kamas.js";
@@ -17,9 +17,6 @@ import { attachAutocomplete } from "./autocomplete.js";
 import { closeOnClickOutside } from "./dismiss.js";
 import { loadTaxPreference, saveTaxPreference, taxOptions } from "./hdv-tax.js";
 import { $, $$, esc, runAction, toast } from "./dom.js";
-
-/** Largest number of crafts the recipe helper accepts in one operation. */
-const QTY_MAX = 9999;
 
 /**
  * @typedef {Object} RecipeHook  Lets the screenshot reader (ui/purchase-import.js) fill the recipe.
@@ -259,7 +256,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
    */
   function setQuantity(raw) {
     const n = Number(raw.trim());
-    if (!Number.isInteger(n) || n < 1 || n > QTY_MAX || n === draft.qty) return;
+    if (!Number.isInteger(n) || n < 1 || n > LOT_MAX || n === draft.qty) return;
     const ratio = n / draft.qty;
     draft.qty = n;
     $$("td[data-q]", el.recipe).forEach((td) => {
@@ -351,7 +348,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       const [firstId, firstQty] = item.recipe[0];
       const line = trade.recipe.find(([id]) => id === firstId);
       const qty = line ? line[1] / firstQty : 1;
-      draft.qty = Number.isInteger(qty) && qty >= 1 && qty <= QTY_MAX ? qty : 1;
+      draft.qty = Number.isInteger(qty) && qty >= 1 && qty <= LOT_MAX ? qty : 1;
       for (const [id, , price] of trade.recipe) {
         if (price != null && state.get().prices[id] == null) draft.unitPrices[id] = price;
       }
@@ -390,6 +387,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       if (draft.craftItem && draft.cat === CATEGORY.CRAFT) {
         trade.recipe = draft.craftItem.recipe.map(([id, qty]) => [id, qty * draft.qty, priceOf(id) ?? null]);
         trade.runes = runesTotal();
+        if (draft.qty > 1) trade.qty = draft.qty;
       }
       const { trade: saved, warning } = await actions.addTrade(trade, draft.unitPrices);
       reset();

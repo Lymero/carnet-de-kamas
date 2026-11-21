@@ -9,7 +9,7 @@
 
 import { describeStoreError } from "./data/store.js";
 import { isKamas } from "./domain/kamas.js";
-import { markSold, newTradeId, validateTrade } from "./domain/trade.js";
+import { lotSize, newTradeId, splitSale, validateTrade } from "./domain/trade.js";
 
 /** @typedef {import("./domain/trade.js").Trade} Trade */
 /** @typedef {Omit<Trade, "id">} TradeDraft */
@@ -118,15 +118,43 @@ export function createActions({ store, state }) {
     return done;
   }
 
+  /**
+   * Marks an open trade as sold, optionally with another tax rate (a price updated at the HDV pays less).
+   * Selling part of a lot splits it: the sold items become a sold trade of their own, and
+   * the trade keeps the rest, for sale, with its cost reduced in proportion.
+   * @param {Trade} trade
+   * @param {number} price    price received for the items sold
+   * @param {string} dateIso
+   * @param {number} [hdvTax]
+   * @param {number} [quantity] items sold; the whole lot by default
+   * @returns {Promise<Trade>} the sold trade
+   */
+  async function sell(trade, price, dateIso, hdvTax = trade.hdvTax, quantity = lotSize(trade)) {
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > lotSize(trade)) {
+      throw new ActionError(`Quantité vendue invalide : de 1 à ${lotSize(trade)}.`);
+    }
+    const { sold, rest } = splitSale({ ...trade, hdvTax }, quantity, price, dateIso, newTradeId());
+    if (!rest) return persist(sold);
+    // Check both halves before writing either, so a refused sale changes nothing.
+    const errors = [...validateTrade(sold), ...validateTrade(rest)];
+    if (errors.length) throw new ActionError(errors[0]);
+    // The sold part first: if the second write fails, it is taken back, so the lot is
+    // never counted twice. The rest keeps the original tax rate, as it is not sold yet.
+    await persist(sold);
+    try {
+      await persist({ ...rest, hdvTax: trade.hdvTax });
+    } catch (error) {
+      await store.remove(sold.id).catch(() => {});
+      throw error;
+    }
+    return sold;
+  }
+
   return {
     addTrade,
     /** Replaces a trade after editing. @param {Trade} trade */
     updateTrade: (trade) => persist(trade),
-    /**
-     * Marks an open trade as sold, optionally with another tax rate (a price updated at the HDV pays less).
-     * @param {Trade} trade @param {number} price @param {string} dateIso @param {number} [hdvTax]
-     */
-    sell: (trade, price, dateIso, hdvTax = trade.hdvTax) => persist(markSold({ ...trade, hdvTax }, price, dateIso)),
+    sell,
     removeTrade,
     importDrafts,
     rememberPrices,
