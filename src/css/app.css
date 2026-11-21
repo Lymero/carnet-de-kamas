@@ -712,6 +712,8 @@ table.grid tfoot td {
 }
 .open-row .c {
   text-align: right;
+  /* Top-aligned so the amounts stay on one line when Investi has a "dont FM" line below. */
+  align-self: start;
 }
 .sell {
   grid-column: 1 / -1;
