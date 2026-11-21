@@ -20,6 +20,11 @@
 - **FM cost in _En cours_**: craft rows show _dont FM_ under the invested amount, as in
   _Historique_.
 
+### Fixed
+
+- Coming back to the item field right after leaving it no longer closes its suggestions, so
+  Enter picks the item instead of adding the trade.
+
 ## 3.1.0 (2026-11-19)
 
 ### Nouveautés
