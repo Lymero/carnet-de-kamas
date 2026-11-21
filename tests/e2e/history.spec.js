@@ -39,11 +39,40 @@ test("the filter button shows the filters and counts the ones in use", async ({ 
   await expect(rows(page)).toHaveCount(1);
   await expect(page.locator("#h-filter-btn")).toHaveAccessibleName("Filtres (2 actifs)");
 
-  await page.locator("#h-filter-btn").click();
-  await page.getByRole("button", { name: "Effacer les filtres" }).click();
+  // Each filter in use shows as a chip that removes it.
+  await expect(page.locator("#h-chips .filter-chip")).toHaveText(["Craft/FM", "En vente"]);
+  await page.getByRole("button", { name: "Retirer le filtre Craft/FM" }).click();
+  await expect(page.locator("#h-chips .filter-chip")).toHaveText(["En vente"]);
+  await expect(page.locator("#h-filter-btn")).toHaveAccessibleName("Filtres (1 actif)");
   await expect(rows(page)).toHaveCount(2);
-  await expect(page.locator("#h-cat")).toHaveValue("");
+
+  // Tout effacer clears the search too.
+  await page.fill("#h-q", "cape");
+  await expect(rows(page)).toHaveCount(1);
+  await page.getByRole("button", { name: "Tout effacer" }).click();
+  await expect(rows(page)).toHaveCount(2);
+  await expect(page.locator("#h-q")).toHaveValue("");
+  await expect(page.locator("#h-chips")).toBeHidden();
+  await page.locator("#h-filter-btn").click();
+  await expect(page.locator("#h-status")).toHaveValue("");
   await expect(page.locator("#h-filter-btn")).toHaveAccessibleName("Filtres");
+});
+
+test("the × in the search box clears only the search", async ({ page }) => {
+  const clear = page.getByRole("button", { name: "Effacer la recherche" });
+  await expect(clear).toBeHidden();
+  await page.click("#h-filter-btn");
+  await page.selectOption("#h-status", "open");
+  await page.fill("#h-q", "zzz");
+  await expect(clear).toBeVisible();
+  await expect(rows(page)).toHaveCount(0);
+
+  await clear.click();
+  await expect(page.locator("#h-q")).toHaveValue("");
+  await expect(page.locator("#h-q")).toBeFocused();
+  await expect(clear).toBeHidden();
+  await expect(page.locator("#h-status")).toHaveValue("open");
+  await expect(rows(page)).toHaveCount(2);
 });
 
 test("filters by type and sorts by column", async ({ page }) => {

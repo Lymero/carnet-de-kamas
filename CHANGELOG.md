@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Historique filters in use show as chips**: under the toolbar, each filter in use is a chip
+  you can click to remove it, even while the filter row is hidden. _Tout effacer_ after the
+  chips clears the search and every filter at once, and a × in the search box clears the search.
+
 ## 3.3.0 (2026-11-21)
 
 ### Changed

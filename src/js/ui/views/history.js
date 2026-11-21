@@ -41,6 +41,11 @@ const STATUS = {
   loss: (t) => t.sold && profit(t) < 0,
 };
 
+/** Status filter labels, for the select and the chips. */
+const STATUS_LABEL = { open: "En vente", sold: "Vendus", loss: "Ventes à perte" };
+
+const CROSS = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>`;
+
 /**
  * @param {{openEditor: (t: Trade) => void, openImport: () => void, openCopy: (text: string) => void, redo: (t: Trade) => void}} ctx
  * @returns {import("./view.js").View & {showItem: (name: string) => void}}
@@ -69,6 +74,46 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
     btn.setAttribute("aria-label", btn.title);
     $(".count", btn).textContent = n ? String(n) : "";
     row.hidden = !filtersOpen;
+    const clear = $("#h-q-clear", root);
+    if (clear) clear.hidden = !filters.text;
+    renderChips();
+  }
+
+  /** One removable chip per filter in use, so they show even with the filter row hidden. */
+  function renderChips() {
+    const box = $("#h-chips", root);
+    if (!box) return;
+    const labels = {
+      cat: filters.cat && CATEGORY_LABEL[filters.cat],
+      month: filters.month && monthLabel(filters.month),
+      status: filters.status && STATUS_LABEL[filters.status],
+    };
+    const chips = Object.entries(labels)
+      .filter(([, label]) => label)
+      .map(
+        ([field, label]) =>
+          `<button type="button" class="filter-chip" data-clear="${field}" aria-label="Retirer le filtre ${esc(label)}">${esc(label)}${CROSS}</button>`,
+      );
+    box.hidden = !chips.length;
+    box.innerHTML = chips.length
+      ? `${chips.join("")}<button type="button" class="link" data-act="reset">Tout effacer</button>`
+      : "";
+  }
+
+  /**
+   * Empties the given filters ("text" is the search box), then refreshes the list.
+   * Focus goes to the search box, as the chip or button clicked may be gone.
+   * @param {("text"|"cat"|"month"|"status")[]} fields
+   */
+  function clearFilters(fields) {
+    const ids = { text: "h-q", cat: "h-cat", month: "h-month", status: "h-status" };
+    for (const field of fields) {
+      filters[field] = "";
+      /** @type {HTMLInputElement|HTMLSelectElement} */ ($(`#${ids[field]}`, root)).value = "";
+    }
+    syncFilterToggle();
+    renderResults();
+    /** @type {HTMLInputElement} */ ($("#h-q", root)).focus();
   }
 
   /** @returns {Trade[]} */
@@ -90,7 +135,10 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
       `<option value="${esc(value)}" ${selected === value ? "selected" : ""}>${esc(label)}</option>`;
     root.innerHTML = `
       <div class="toolbar">
-        <input type="text" id="h-q" class="grow" placeholder="Chercher un objet…" value="${esc(filters.text)}" aria-label="Chercher un objet">
+        <div class="search grow">
+          <input type="text" id="h-q" placeholder="Chercher un objet…" value="${esc(filters.text)}" aria-label="Chercher un objet">
+          <button type="button" class="clear" id="h-q-clear" data-act="clear-search" title="Effacer la recherche" aria-label="Effacer la recherche" hidden>${CROSS}</button>
+        </div>
         <button class="btn filter-btn" id="h-filter-btn" data-act="filters" aria-controls="h-filters" aria-expanded="false">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z" /></svg><span class="count"></span>
         </button>
@@ -100,9 +148,13 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
       <div class="toolbar" id="h-filters">
         <select id="h-cat" aria-label="Type">${opt("", "Tous types", filters.cat)}${opt(CATEGORY.CRAFT, CATEGORY_LABEL.craft, filters.cat)}${opt(CATEGORY.RESALE, CATEGORY_LABEL.resale, filters.cat)}</select>
         <select id="h-month" aria-label="Mois">${opt("", "Tous les mois", filters.month)}${months.map((m) => opt(m, monthLabel(m), filters.month)).join("")}</select>
-        <select id="h-status" aria-label="Statut">${opt("", "Tous statuts", filters.status)}${opt("open", "En vente", filters.status)}${opt("sold", "Vendus", filters.status)}${opt("loss", "Ventes à perte", filters.status)}</select>
-        <button class="btn" data-act="clear-filters">Effacer les filtres</button>
+        <select id="h-status" aria-label="Statut">${opt("", "Tous statuts", filters.status)}${Object.entries(
+          STATUS_LABEL,
+        )
+          .map(([value, label]) => opt(value, label, filters.status))
+          .join("")}</select>
       </div>
+      <div class="filter-chips" id="h-chips" aria-label="Filtres actifs" hidden></div>
       <div id="h-results"></div>`;
     syncFilterToggle();
   }
@@ -175,13 +227,10 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
       filtersOpen = !filtersOpen;
       return syncFilterToggle();
     }
-    if (act === "clear-filters") {
-      Object.assign(filters, { cat: "", month: "", status: "" });
-      for (const id of ["h-cat", "h-month", "h-status"])
-        /** @type {HTMLSelectElement} */ ($(`#${id}`, root)).value = "";
-      syncFilterToggle();
-      return renderResults();
-    }
+    if (act === "clear-search") return clearFilters(["text"]);
+    if (act === "reset") return clearFilters(["text", "cat", "month", "status"]);
+    const chip = closest(e, "[data-clear]");
+    if (chip) return clearFilters([/** @type {"cat"|"month"|"status"} */ (chip.dataset.clear)]);
     if (act === "import") return openImport();
     if (act === "export") return copyExport();
     const row = closest(e, "tr[data-id]");
@@ -193,6 +242,7 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
   function onInput(e) {
     if (e.target.id !== "h-q") return;
     filters.text = e.target.value;
+    syncFilterToggle();
     renderResults();
   }
   function onChange(e) {
