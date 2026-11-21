@@ -7,12 +7,18 @@
 //! (`server/paths.js`): `%APPDATA%\Carnet de Kamas` on Windows,
 //! `~/Library/Application Support/Carnet de Kamas` on macOS and
 //! `~/.local/share/carnet-de-kamas` on Linux.
+//!
+//! Updates: `check_update` asks the release feed (`plugins.updater` in tauri.conf.json)
+//! for a newer version, and `install_update` downloads it, checks its signature and
+//! installs it, then restarts the app. The page only learns the new version's number.
 
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use tauri::Manager;
+use tauri_plugin_updater::{Update, UpdaterExt};
 
 /// Where the data file is, decided once at start-up, and the app's version.
 struct DataFile(PathBuf, String);
@@ -101,6 +107,53 @@ fn version_key(version: &str) -> Vec<u64> {
         .collect()
 }
 
+/// The update found by the last `check_update`, kept for `install_update`.
+#[derive(Default)]
+struct PendingUpdate(Mutex<Option<Update>>);
+
+/// The newer version's number, or `None` when the app is up to date. Development
+/// builds never look: they are not installed, so there is nothing to replace.
+#[tauri::command]
+async fn check_update(
+    app: tauri::AppHandle,
+    pending: tauri::State<'_, PendingUpdate>,
+) -> Result<Option<String>, String> {
+    if cfg!(debug_assertions) {
+        return Ok(None);
+    }
+    let update = find_update(&app).await?;
+    let version = update.as_ref().map(|update| update.version.clone());
+    *pending.0.lock().map_err(|error| error.to_string())? = update;
+    Ok(version)
+}
+
+/// Downloads the update found by `check_update` (or looks again), verifies its
+/// signature, installs it and restarts the app. On Windows the installer closes the
+/// app itself and opens the new version when it is done.
+#[tauri::command]
+async fn install_update(
+    app: tauri::AppHandle,
+    pending: tauri::State<'_, PendingUpdate>,
+) -> Result<(), String> {
+    let found = pending.0.lock().map_err(|error| error.to_string())?.take();
+    let update = match found {
+        Some(update) => update,
+        None => find_update(&app)
+            .await?
+            .ok_or_else(|| "no update available".to_string())?,
+    };
+    update
+        .download_and_install(|_, _| {}, || {})
+        .await
+        .map_err(|error| error.to_string())?;
+    app.restart()
+}
+
+async fn find_update(app: &tauri::AppHandle) -> Result<Option<Update>, String> {
+    let updater = app.updater().map_err(|error| error.to_string())?;
+    updater.check().await.map_err(|error| error.to_string())
+}
+
 fn read_optional(path: &Path) -> io::Result<Option<String>> {
     match fs::read_to_string(path) {
         Ok(text) => Ok(Some(text)),
@@ -172,6 +225,8 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(PendingUpdate::default())
         .setup(|app| {
             let location = data_file_location(app)?;
             let version = app.package_info().version.to_string();
@@ -182,7 +237,9 @@ pub fn run() {
             data_file_path,
             read_data,
             write_data,
-            backup_data
+            backup_data,
+            check_update,
+            install_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running Carnet de Kamas");

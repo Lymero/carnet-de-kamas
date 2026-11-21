@@ -14,8 +14,9 @@ The app is a web page (`src/`). It runs in one of two hosts, which both keep the
 file with the same rules (`src/js/data/data-file.js`):
 
 - **The desktop app** (`src-tauri/`, Tauri): a native window showing `src/` through the
-  system's web engine (WebView2, WebKit). Four small Rust commands give the page its data file.
-  This is what people install.
+  system's web engine (WebView2, WebKit). Four small Rust commands give the page its data file,
+  and two more check for and install updates (Tauri's updater plugin, reading the `latest.json`
+  of the latest GitHub release; see `src/js/ui/update-notice.js`). This is what people install.
 - **The local server** (`server/`, Node): serves `src/` to a browser, with a small JSON API over
   the data file. Used for development, the browser tests, and by anyone running from a copy of
   the repository.

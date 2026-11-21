@@ -6,7 +6,8 @@
  *   2. connect storage: the data file through the desktop shell (Tauri) or through the
  *      local server's API (server/main.js), or memory when the page has neither;
  *   3. mount the form, dialogs and router; subscribe to trades;
- *   4. load the item catalog in the background (autocomplete works without it).
+ *   4. load the item catalog in the background (autocomplete works without it);
+ *   5. in the desktop app, look for a newer version and offer it.
  */
 
 import { createActions } from "./actions.js";
@@ -25,6 +26,7 @@ import { mountEntryForm } from "./ui/entry-form.js";
 import { mountPurchaseImport } from "./ui/purchase-import.js";
 import { enableKamasFields } from "./ui/kamas-field.js";
 import { renderSummary } from "./ui/summary.js";
+import { offerUpdate } from "./ui/update-notice.js";
 import { createAnalysisView } from "./ui/views/analysis.js";
 import { createHistoryView } from "./ui/views/history.js";
 import { createOpenView } from "./ui/views/open.js";
@@ -194,6 +196,9 @@ async function start() {
   ItemCatalog.load(CATALOG_URL)
     .then((catalog) => state.set({ catalog }))
     .catch((e) => console.warn("Item catalog unavailable; autocomplete limited to own history.", e));
+
+  const tauri = /** @type {any} */ (window).__TAURI__;
+  if (tauri) offerUpdate(tauri.core, $("#update"));
 }
 
 start().catch((error) => {

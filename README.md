@@ -27,6 +27,12 @@ Download the installer for your system from the
 Nothing else is needed: the app opens in its own window. The warnings come from the installers
 not being signed with a paid certificate.
 
+**Updates.** At each start the app checks for a newer release. When there is one, the header
+shows _Version X.Y.Z disponible_ with a _Mettre à jour_ button: it downloads the new version,
+checks its signature, installs it and restarts the app. Your data file is not touched. If the
+check fails (offline), the app works as usual. Versions before 3.2.0 cannot update themselves:
+install the next one by hand once.
+
 **Your data** is one file, `carnet.json`, in your per-user folder: `%APPDATA%\Carnet de Kamas\`
 on Windows, `~/Library/Application Support/Carnet de Kamas/` on macOS,
 `~/.local/share/carnet-de-kamas/` on Linux. Hover the status line (top right) to see the exact
@@ -158,7 +164,7 @@ carnet-de-kamas/
 │       ├── domain/         pure logic: trade, kamas, dates, stats, sheet-io, text
 │       ├── data/           catalog, stores, the data file and its desktop access
 │       └── ui/             DOM: form, autocomplete, summary, chart, dialogs, views/
-├── src-tauri/              the desktop shell (Tauri, Rust): window, data file commands, installers
+├── src-tauri/              the desktop shell (Tauri, Rust): window, data file, updates, installers
 ├── server/                 the local server for browsers (npm start), no dependencies
 │   ├── main.js             command line: port, data file
 │   ├── app.js              serves src/ and the data API (/api/...)
@@ -166,7 +172,8 @@ carnet-de-kamas/
 │   └── paths.js            default data location (portable or per-user)
 ├── scripts/
 │   ├── build_catalog.py    regenerates src/data/dofus-data.json from game data
-│   └── render-icon.js      regenerates the app icons from src-tauri/icons/app-icon.svg
+│   ├── render-icon.js      regenerates the app icons from src-tauri/icons/app-icon.svg
+│   └── updater-manifest.js writes a release's update feed (latest.json)
 ├── data/                   portable-mode data file (git-ignored)
 └── tests/                  node:test suites (*.test.js), the catalog script test (test_*.py)
     ├── e2e/                Playwright tests of the page (*.spec.js) and their fixtures
@@ -263,8 +270,21 @@ See the docstring in `scripts/build_catalog.py` for what is included and how rec
 3. Commit, then tag and push: `git tag -a vX.Y.Z -m "Carnet de Kamas X.Y.Z" && git push origin main vX.Y.Z`.
 4. The _Release_ workflow (`.github/workflows/release.yml`) checks that the tag, `package.json`
    and `CHANGELOG.md` agree and runs the checks and browser tests. It then builds the installers
-   on Windows, macOS and Linux into a draft release, and publishes it once all are uploaded,
-   with that version's CHANGELOG section as notes.
+   on Windows, macOS and Linux into a draft release, attaches the update feed (`latest.json`,
+   built by `scripts/updater-manifest.js`), and publishes it once all are uploaded, with that
+   version's CHANGELOG section as notes. Installed apps then offer the update.
+
+**The updater key.** Installed apps only accept updates signed with the key whose public half is
+`plugins.updater.pubkey` in `src-tauri/tauri.conf.json`. The private half is the repository
+secret `TAURI_SIGNING_PRIVATE_KEY` (Settings › Secrets and variables › Actions); it has no
+password, so `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is not needed. The release workflow refuses to
+build without it. Keep a copy of the private key somewhere safe and never commit it: if it is
+lost, a new keypair is needed, and apps installed with the old public key can no longer update
+themselves (they need one manual install). To make a new one: `npx tauri signer generate -w
+~/.tauri/carnet-de-kamas.key`, put the `.pub` file's content in `tauri.conf.json`, and the
+private key's content in the secret. Local builds (`npm run build:desktop`) do not sign and need
+no key: only the release workflow turns on the updater artifacts
+(`src-tauri/tauri.release.conf.json`).
 
 ## Limits
 

@@ -18,7 +18,13 @@ test("opens the data file, backs it up, and shows where it is", async ({ page })
   await expect(page.locator("#status")).toHaveText("1 opération · enregistré sur ce PC");
   await expect(page.locator("#status")).toHaveAttribute("title", /^Fichier de données : .*carnet\.json$/);
   await expect(page.locator(".open-row")).toContainText("Kokulte");
-  expect(await callsOf(page)).toEqual(["data_file_path", "read_data", "backup_data"]);
+  await expect.poll(() => callsOf(page)).toContain("check_update");
+  expect((await callsOf(page)).filter((call) => call !== "check_update")).toEqual([
+    "data_file_path",
+    "read_data",
+    "backup_data",
+  ]);
+  await expect(page.locator("#update")).toBeHidden(); // no newer version
 });
 
 test("writes the whole data file on each change", async ({ page }) => {
@@ -80,4 +86,32 @@ test("stored data is shown as text and malformed parts are dropped", async ({ pa
   await expect(page.getByRole("dialog").locator(".hint")).toHaveCount(0); // recipe dropped
   await expect(page.locator("#e-date")).toHaveValue("1970-01-01");
   expect(await page.evaluate(() => window.__xss)).toBeUndefined();
+});
+
+test("offers a newer version and installs it on request", async ({ page }) => {
+  await installFakeDesktop(page, { text: stored, update: "3.2.0" });
+  await openApp(page, { catalog: false });
+  const notice = page.locator("#update");
+  await expect(notice).toContainText("Version 3.2.0 disponible");
+  await notice.getByRole("button", { name: "Mettre à jour" }).click();
+  await expect(notice).toContainText("Installation de la version 3.2.0…");
+  await expect(notice.getByRole("button")).toBeDisabled();
+  expect(await callsOf(page)).toContain("install_update");
+});
+
+test("a failed installation can be tried again", async ({ page }) => {
+  await installFakeDesktop(page, { text: stored, update: "3.2.0", install: "fail" });
+  await openApp(page, { catalog: false });
+  const notice = page.locator("#update");
+  await notice.getByRole("button", { name: "Mettre à jour" }).click();
+  await expect(notice).toContainText("La mise à jour a échoué. Réessaie plus tard.");
+  await expect(notice.getByRole("button", { name: "Mettre à jour" })).toBeEnabled();
+});
+
+test("an update check that fails changes nothing", async ({ page }) => {
+  await installFakeDesktop(page, { text: stored, update: new Error("offline") });
+  await openApp(page, { catalog: false });
+  await expect.poll(() => callsOf(page)).toContain("check_update");
+  await expect(page.locator("#update")).toBeHidden();
+  await expect(page.locator("#status")).toHaveText("1 opération · enregistré sur ce PC");
 });
