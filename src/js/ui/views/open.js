@@ -41,10 +41,10 @@ const SORTS = [
 ];
 
 /**
- * @param {{actions: ReturnType<typeof import("../../actions.js").createActions>, openEditor: (t: import("../../domain/trade.js").Trade) => void}} ctx
+ * @param {{actions: ReturnType<typeof import("../../actions.js").createActions>, openEditor: (t: Trade) => void, redo: (t: Trade) => void}} ctx
  * @returns {import("./view.js").View}
  */
-export function createOpenView({ actions, openEditor }) {
+export function createOpenView({ actions, openEditor, redo }) {
   /** @type {HTMLElement} */ let root;
   /** @type {import("../../state.js").AppState} */ let current;
   /** The open sale form: which trade, and what has been typed so far. */
@@ -78,6 +78,7 @@ export function createOpenView({ actions, openEditor }) {
         <div class="row-actions">
           <button class="btn small primary" data-act="sell">Vendu</button>
           <button class="btn small" data-act="edit">Modifier</button>
+          <button class="btn small" data-act="redo" title="Remplir le formulaire avec cette opération">Refaire</button>
         </div>
         ${
           sale?.id === t.id
@@ -123,6 +124,9 @@ export function createOpenView({ actions, openEditor }) {
         break;
       case "edit":
         openEditor(trade);
+        break;
+      case "redo":
+        redo(trade);
         break;
       case "sell-ok": {
         const price = evaluateKamas(sale?.price);

@@ -92,6 +92,10 @@ another investment or adding the trade forgets the screenshots.
 **Fix or delete.** Click any row (or _Modifier_). Delete asks for a second click. Leaving the
 sale date empty means "unknown".
 
+**Do it again.** _Refaire_ on an _En cours_ row (↻ in _Historique_) fills the form from that
+trade: same item, type, planned price and tax, dated today. A craft keeps its number of crafts
+and FM cost; ingredients take the remembered prices.
+
 **Import old rows.** _Historique_ → _Importer depuis Sheets_, then paste cells copied from the
 sheet. The preview says how many rows are new, already present, sold, or unreadable:
 

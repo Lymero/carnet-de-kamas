@@ -41,10 +41,10 @@ const STATUS = {
 };
 
 /**
- * @param {{openEditor: (t: Trade) => void, openImport: () => void, openCopy: (text: string) => void}} ctx
+ * @param {{openEditor: (t: Trade) => void, openImport: () => void, openCopy: (text: string) => void, redo: (t: Trade) => void}} ctx
  * @returns {import("./view.js").View & {showItem: (name: string) => void}}
  */
-export function createHistoryView({ openEditor, openImport, openCopy }) {
+export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
   /** @type {HTMLElement} */ let root;
   /** @type {import("../../state.js").AppState} */ let current;
   /** Filters and sort survive switching tabs. */
@@ -96,7 +96,7 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
     const totalSale = rows.reduce((s, t) => s + salePrice(t), 0);
     const totalProfit = rows.reduce((s, t) => s + profit(t), 0);
     out.innerHTML = `<div class="scroll"><table class="grid">
-      <thead>${sortHeader(COLUMNS, sort)}</thead>
+      <thead>${sortHeader(COLUMNS, sort, '<th class="redo" aria-label="Refaire"></th>')}</thead>
       <tbody>${rows
         .map((t) => {
           const p = profit(t);
@@ -110,6 +110,7 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
           ${amountCell(p, { cls: signClass(p) })}
           <td class="n ${signClass(p)}">${formatPercent(ratioPercent(p, t.cost))}</td>
           <td class="st">${statusDot(t)}</td>
+          <td class="redo"><button type="button" class="btn small" data-act="redo" title="Refaire : remplir le formulaire avec cette opération" aria-label="Refaire ${esc(t.item)}">↻</button></td>
         </tr>`;
         })
         .join("")}</tbody>
@@ -118,7 +119,7 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
         ${amountCell(totalCost)}${amountCell(totalFm || null, { cls: "fm" })}
         ${amountCell(totalSale)}
         ${amountCell(totalProfit, { cls: signClass(totalProfit) })}
-        <td class="n ${signClass(totalProfit)}">${formatPercent(ratioPercent(totalProfit, totalCost))}</td><td></td>
+        <td class="n ${signClass(totalProfit)}">${formatPercent(ratioPercent(totalProfit, totalCost))}</td><td></td><td></td>
       </tr></tfoot>
     </table></div>`;
   }
@@ -147,7 +148,9 @@ export function createHistoryView({ openEditor, openImport, openCopy }) {
     if (act === "export") return copyExport();
     const row = closest(e, "tr[data-id]");
     const trade = row && current.trades.find((t) => t.id === row.dataset.id);
-    if (trade) openEditor(trade);
+    if (!trade) return;
+    if (act === "redo") redo(trade);
+    else openEditor(trade);
   }
   function onInput(e) {
     if (e.target.id !== "h-q") return;

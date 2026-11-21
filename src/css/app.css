@@ -1038,3 +1038,26 @@ table.grid td.st {
 table.grid td.fm {
   color: var(--muted);
 }
+/* Historique: "Refaire" fills the form from a row. Quiet until the row is hovered or focused. */
+table.grid td.redo {
+  padding: 2px 4px;
+  width: 1%;
+}
+table.grid td.redo .btn {
+  padding: 2px 7px;
+  border-color: transparent;
+  background: none;
+  color: var(--muted);
+  opacity: 0.45;
+}
+table.grid tr:hover td.redo .btn,
+table.grid tr:focus-within td.redo .btn,
+table.grid td.redo .btn:focus-visible {
+  opacity: 1;
+  color: var(--accent);
+}
+@media (hover: none) {
+  table.grid td.redo .btn {
+    opacity: 1;
+  }
+}
