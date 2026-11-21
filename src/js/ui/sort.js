@@ -76,13 +76,14 @@ export function sortButton(column, sort) {
  * @template T
  * @param {SortColumn<T>[]} columns
  * @param {SortState} sort
+ * @param {string} [after]  cells appended after the sortable ones (e.g. an empty one over a button column)
  */
-export function sortHeader(columns, sort) {
+export function sortHeader(columns, sort, after = "") {
   return `<tr>${columns
     .map((column) => {
       const active = sort.key === column.key;
       const aria = active ? (sort.dir > 0 ? "ascending" : "descending") : "none";
       return `<th class="${column.numeric ? "n" : ""}" aria-sort="${aria}">${sortButton(column, sort)}</th>`;
     })
-    .join("")}</tr>`;
+    .join("")}${after}</tr>`;
 }

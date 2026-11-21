@@ -3,6 +3,11 @@ name: Release
 # Pushing a version tag (v3.0.0) builds the desktop installers for Windows, macOS and
 # Linux and publishes them as a GitHub release. The tag must match package.json's
 # version, and CHANGELOG.md must have a section for it.
+#
+# The release also carries the update feed, latest.json, which installed apps read to
+# update themselves (plugins.updater in src-tauri/tauri.conf.json). The installers are
+# signed for the updater with the TAURI_SIGNING_PRIVATE_KEY secret, the private half of
+# the public key in tauri.conf.json (see "Making a release" in the README).
 
 on:
   push:
@@ -91,29 +96,73 @@ jobs:
           workspaces: src-tauri
       - run: npm ci
 
-      - name: Refuse to build without a release to upload to
+      - name: Refuse to build without a release to upload to, or without the updater key
         shell: bash
-        run: test -n "${{ needs.verify.outputs.release-id }}"
+        env:
+          HAS_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        run: |
+          test -n "${{ needs.verify.outputs.release-id }}"
+          test "$HAS_KEY" = true || {
+            echo "::error::The TAURI_SIGNING_PRIVATE_KEY secret is missing: installed apps could not trust this release's updates."
+            exit 1
+          }
 
+      # tauri.release.conf.json turns on the updater artifacts (signed installers, plus the
+      # macOS .app.tar.gz). Local builds leave them off, so they need no key.
       - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           releaseId: ${{ needs.verify.outputs.release-id }}
-          args: ${{ matrix.args }}
+          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
+          # The publish job writes latest.json once every system's build is uploaded, so
+          # parallel builds never race to edit it.
+          uploadUpdaterJson: false
 
   publish:
     # Only once every installer is uploaded, so nobody sees a half-filled release.
     needs: [verify, build]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Check every system's installers are attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RELEASE="repos/$GITHUB_REPOSITORY/releases/${{ needs.verify.outputs.release-id }}"
+          gh api "$RELEASE/assets" --paginate --jq '.[] | [.id, .name] | @tsv' > assets.tsv
+          cut -f2 assets.tsv | jq -R . | jq -s . > assets.json
+          cat assets.json
+          for pattern in '-setup.exe"' '.msi"' '.dmg"' '.AppImage"' '.deb"' '.app.tar.gz"'; do
+            grep -qF -- "$pattern" assets.json || { echo "missing an asset ending in ${pattern%\"}"; exit 1; }
+          done
+
+      - name: Attach the update feed (latest.json), with that version's CHANGELOG section as notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir sigs
+          # The draft's assets are fetched by id: the release is not yet linked to its tag.
+          grep -P '\t.*\.sig$' assets.tsv | while IFS=$'\t' read -r id name; do
+            gh api -H "Accept: application/octet-stream" "repos/$GITHUB_REPOSITORY/releases/assets/$id" > "sigs/$name"
+          done
+          awk -v v="$VERSION" '$0 ~ "^## " v " " {found=1; next} /^## / {found=0} found' CHANGELOG.md > notes.md
+          node scripts/updater-manifest.js "$VERSION" \
+            "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME" \
+            assets.json sigs notes.md > latest.json
+          cat latest.json
+          gh api "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/${{ needs.verify.outputs.release-id }}/assets?name=latest.json" \
+            -X POST -H "Content-Type: application/json" --input latest.json --jq .name
+
       - name: Publish the release, once every system's installers are attached
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ASSETS=$(gh api "repos/$GITHUB_REPOSITORY/releases/${{ needs.verify.outputs.release-id }}" --jq '[.assets[].name]')
-          echo "$ASSETS"
-          for pattern in '-setup.exe"' '.msi"' '.dmg"' '.AppImage"' '.deb"'; do
-            echo "$ASSETS" | grep -qF -- "$pattern" || { echo "missing an asset ending in ${pattern%\"}"; exit 1; }
-          done
           gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest

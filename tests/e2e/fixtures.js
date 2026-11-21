@@ -62,11 +62,14 @@ export async function pickCatalogItem(page, query, expectedName) {
   await expect(async () => {
     await page.fill("#f-item", "");
     await page.fill("#f-item", query);
+    await expect(first).toBeVisible({ timeout: 1000 });
     await expect(first).toContainText(expectedName, { timeout: 1000 });
+    // The list closes 150 ms after the field loses focus: a blur just before can close it
+    // between showing the suggestion and the keys, so the pick is retried too.
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#f-item")).toHaveValue(expectedName, { timeout: 1000 });
   }).toPass();
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
-  await expect(page.locator("#f-item")).toHaveValue(expectedName);
 }
 
 /**
@@ -105,14 +108,17 @@ export async function addTrade(page, { item, cost, expected, date, cat = "craft"
  * runs its desktop code path. `window.__desktopFile` holds the file's current text and
  * `window.__desktopCalls` every command called.
  * @param {import("@playwright/test").Page} page
- * @param {{text?: string|null, path?: string}} [file]  the data file's text (null: missing)
+ * @param {{text?: string|null, path?: string, update?: string|null|Error, install?: "restart"|"fail"}} [shell]
+ *   `text`: the data file's text (null: missing). `update`: the newer version the update
+ *   check finds (null: none; an Error: the check fails). `install`: what installing it does.
  */
 export async function installFakeDesktop(
   page,
-  { text = null, path = "/home/ana/.local/share/carnet-de-kamas/carnet.json" } = {},
+  { text = null, path = "/home/ana/.local/share/carnet-de-kamas/carnet.json", update = null, install = "restart" } = {},
 ) {
+  const checkFails = update instanceof Error;
   await page.addInitScript(
-    ({ text, path }) => {
+    ({ text, path, update, checkFails, install }) => {
       window.__desktopFile = text;
       window.__desktopCalls = [];
       const commands = {
@@ -122,6 +128,15 @@ export async function installFakeDesktop(
           window.__desktopFile = contents;
         },
         backup_data: () => undefined,
+        check_update: () => {
+          if (checkFails) throw new Error("offline");
+          return update;
+        },
+        // The real app restarts on success, so the call never returns.
+        install_update: () => {
+          if (install === "fail") throw new Error("download failed");
+          return new Promise(() => {});
+        },
       };
       window.__TAURI__ = {
         core: {
@@ -132,6 +147,6 @@ export async function installFakeDesktop(
         },
       };
     },
-    { text, path },
+    { text, path, update: checkFails ? null : update, checkFails, install },
   );
 }

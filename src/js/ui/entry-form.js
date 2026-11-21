@@ -6,9 +6,9 @@
  * for history and remembered prices, and submits through `actions.addTrade`.
  */
 
-import { CATEGORY } from "../config.js";
+import { CATEGORY, LOT_MAX } from "../config.js";
 import { recipeCost } from "../data/catalog.js";
-import { todayIso } from "../domain/dates.js";
+import { formatShortDate, todayIso } from "../domain/dates.js";
 import { evaluateKamas, formatKamas, formatPercent, isKamas, ratioPercent, signClass } from "../domain/kamas.js";
 import { itemHistory } from "../domain/stats.js";
 import { normalize } from "../domain/text.js";
@@ -17,9 +17,6 @@ import { attachAutocomplete } from "./autocomplete.js";
 import { closeOnClickOutside } from "./dismiss.js";
 import { loadTaxPreference, saveTaxPreference, taxOptions } from "./hdv-tax.js";
 import { $, $$, esc, runAction, toast } from "./dom.js";
-
-/** Largest number of crafts the recipe helper accepts in one operation. */
-const QTY_MAX = 9999;
 
 /**
  * @typedef {Object} RecipeHook  Lets the screenshot reader (ui/purchase-import.js) fill the recipe.
@@ -33,7 +30,7 @@ const QTY_MAX = 9999;
 /**
  * @param {HTMLFormElement} form
  * @param {{state: ReturnType<typeof import("../state.js").createState>, actions: ReturnType<typeof import("../actions.js").createActions>, onAdded: (trade: import("../domain/trade.js").Trade) => void}} ctx
- * @returns {{refresh: () => void, recipe: RecipeHook}}
+ * @returns {{refresh: () => void, fill: (trade: import("../domain/trade.js").Trade) => void, recipe: RecipeHook}}
  */
 export function mountEntryForm(form, { state, actions, onAdded }) {
   const el = {
@@ -46,6 +43,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     date: /** @type {HTMLInputElement} */ ($("#f-date", form)),
     sold: /** @type {HTMLInputElement} */ ($("#f-sold", form)),
     tax: /** @type {HTMLSelectElement} */ ($("#f-tax", form)),
+    lastSale: $("#f-last", form),
     preview: $("#f-preview b", form),
     submit: /** @type {HTMLButtonElement} */ ($("#f-submit", form)),
     reset: /** @type {HTMLButtonElement} */ ($("#f-reset", form)),
@@ -70,6 +68,13 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     /** Which folds are open (ingredients, FM); both start closed for each new item. */
     open: { ing: false, fm: false },
   };
+
+  /**
+   * The amounts last pre-filled from a past trade, as written in their fields. A field still
+   * showing its pre-filled amount takes the next item's; one the player typed in is kept.
+   * @type {{cost?: string, expected?: string}}
+   */
+  let prefilled = {};
 
   const priceOf = (id) => draft.unitPrices[id] ?? state.get().prices[id];
   /**
@@ -120,7 +125,55 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   });
 
   // ----- item + autocomplete -----
+  const pastOf = (name) => itemHistory(state.get().trades).get(normalize(name));
+  /** Shows the latest sale of the item typed, under the planned sale. */
+  function showLastSale() {
+    const sale = el.item.value.trim() ? pastOf(el.item.value)?.lastSale : null;
+    el.lastSale.hidden = !sale;
+    const lot = sale?.qty > 1 ? ` les ${sale.qty}` : "";
+    el.lastSale.textContent = sale
+      ? `Dernière vente : ${formatKamas(sale.price)}${lot} (${formatShortDate(sale.date)})`
+      : "";
+  }
+  /**
+   * Fills the investment and planned sale from the latest trade of the item picked, and for a
+   * craft, its number of crafts. The investment is the one paid then, so it no longer follows
+   * the recipe ("Utiliser le coût calculé" brings the computed cost back).
+   * @param {import("../domain/stats.js").ItemHistory|undefined} past
+   */
+  function prefillFrom(past) {
+    if (!past) return;
+    const { last } = past;
+    const free = (/** @type {"cost"|"expected"} */ key) => {
+      const v = el[key].value.trim();
+      return !v || v === prefilled[key];
+    };
+    const crafting = draft.craftItem && draft.cat === CATEGORY.CRAFT;
+    const qty = crafting && last.cat === CATEGORY.CRAFT ? craftsIn(last) : null;
+    if (qty && free("cost") && free("expected")) draft.qty = qty;
+    if (free("cost") && isKamas(last.cost)) {
+      el.cost.value = prefilled.cost = formatKamas(last.cost);
+      if (crafting) draft.costFollowsRecipe = false;
+    }
+    if (free("expected") && isKamas(last.expected)) el.expected.value = prefilled.expected = formatKamas(last.expected);
+    renderRecipe();
+    updatePreview();
+  }
+  /**
+   * Number of crafts a past trade recorded: its lot size, or for a trade saved before lots had
+   * one, its first ingredient's quantity over the recipe's.
+   * @param {import("../domain/trade.js").Trade} trade
+   * @returns {number|null} null when the trade does not tell
+   */
+  function craftsIn(trade) {
+    if (trade.qty != null) return trade.qty;
+    const [id, perCraft] = draft.craftItem?.recipe[0] ?? [];
+    const used = trade.recipe?.find(([i]) => i === id)?.[1];
+    const n = used && perCraft ? used / perCraft : NaN;
+    return Number.isInteger(n) && n >= 1 && n <= LOT_MAX ? n : null;
+  }
   function syncItem() {
+    showLastSale();
     const match = state.get().catalog.findByName(el.item.value);
     const craftItem = match?.recipe ? match : null;
     if (craftItem?.id !== draft.craftItem?.id) {
@@ -142,10 +195,11 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     getSuggestions: (q) => state.get().catalog.suggest(q, itemHistory(state.get().trades)),
     onInput: syncItem,
     onPick: (s) => {
-      // Default the category to what the player did last time with this item.
-      const past = itemHistory(state.get().trades).get(normalize(s.name));
+      // Default the category and amounts to what the player did last time with this item.
+      const past = pastOf(s.name);
       if (past) setCategory(past.lastCat);
       syncItem();
+      prefillFrom(past);
       el.cost.focus();
     },
   });
@@ -259,7 +313,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
    */
   function setQuantity(raw) {
     const n = Number(raw.trim());
-    if (!Number.isInteger(n) || n < 1 || n > QTY_MAX || n === draft.qty) return;
+    if (!Number.isInteger(n) || n < 1 || n > LOT_MAX || n === draft.qty) return;
     const ratio = n / draft.qty;
     draft.qty = n;
     $$("td[data-q]", el.recipe).forEach((td) => {
@@ -317,6 +371,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   // ----- submit -----
   function reset() {
     form.reset();
+    prefilled = {};
     el.date.value = todayIso();
     el.tax.value = String(loadTaxPreference());
     Object.assign(draft, {
@@ -329,7 +384,43 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       open: { ing: false, fm: false },
     });
     setCategory(draft.cat);
+    showLastSale();
     updatePreview();
+  }
+  /**
+   * Fills the form from a past trade to record it again ("Refaire"): same item, type, planned
+   * price and auction tax, dated today and not sold. A craft keeps its number of crafts and FM
+   * cost; ingredients take the remembered prices, else the ones paid then. The investment follows
+   * the recipe when it did on that trade, else it is the amount typed then.
+   * @param {import("../domain/trade.js").Trade} trade
+   */
+  function fill(trade) {
+    reset();
+    el.item.value = trade.item;
+    setCategory(trade.cat);
+    syncItem();
+    el.expected.value = formatKamas(trade.expected);
+    el.tax.value = String(trade.hdvTax);
+    const item = draft.craftItem;
+    const withRecipe = Boolean(item && trade.cat === CATEGORY.CRAFT && trade.recipe?.length);
+    if (item && withRecipe) {
+      const [firstId, firstQty] = item.recipe[0];
+      const line = trade.recipe.find(([id]) => id === firstId);
+      const qty = line ? line[1] / firstQty : 1;
+      draft.qty = Number.isInteger(qty) && qty >= 1 && qty <= LOT_MAX ? qty : 1;
+      for (const [id, , price] of trade.recipe) {
+        if (price != null && state.get().prices[id] == null) draft.unitPrices[id] = price;
+      }
+      draft.runes = trade.runes ?? 0;
+      const pastTotal = trade.recipe.reduce((s, [, q, p]) => s + q * (p ?? 0), 0) + (trade.runes ?? 0);
+      draft.costFollowsRecipe = pastTotal === trade.cost;
+    } else draft.costFollowsRecipe = false;
+    renderRecipe();
+    const followed = withRecipe && draft.costFollowsRecipe && currentRecipeTotal();
+    el.cost.value = formatKamas(followed ? currentRecipeTotal() : trade.cost);
+    updatePreview();
+    form.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    el.cost.focus();
   }
   el.reset.addEventListener("click", () => {
     reset();
@@ -355,6 +446,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
       if (draft.craftItem && draft.cat === CATEGORY.CRAFT) {
         trade.recipe = draft.craftItem.recipe.map(([id, qty]) => [id, qty * draft.qty, priceOf(id) ?? null]);
         trade.runes = runesTotal();
+        if (draft.qty > 1) trade.qty = draft.qty;
       }
       const { trade: saved, warning } = await actions.addTrade(trade, draft.unitPrices);
       reset();
@@ -370,6 +462,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   return {
     /** Re-render parts that depend on loaded data (catalog, remembered prices). */
     refresh: syncItem,
+    fill,
     recipe: {
       current() {
         const item = draft.craftItem;

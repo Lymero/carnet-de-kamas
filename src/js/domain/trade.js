@@ -5,7 +5,7 @@
  * The full field reference is in docs/DATA-MODEL.md.
  */
 
-import { CATEGORY, HDV_TAX, ITEM_NAME_MAX, SCHEMA_VERSION } from "../config.js";
+import { CATEGORY, HDV_TAX, ITEM_NAME_MAX, LOT_MAX, SCHEMA_VERSION } from "../config.js";
 import { isIsoDate } from "./dates.js";
 import { isKamas } from "./kamas.js";
 
@@ -30,6 +30,8 @@ import { isKamas } from "./kamas.js";
  *                                  (see `auctionTax` and `HDV_TAX`).
  * @property {RecipeLine[]} [recipe] Ingredient breakdown, for crafts priced with the recipe helper.
  * @property {number} [runes]       Kamas spent on runes / forgemagie for this craft.
+ * @property {number} [qty]         Number of items in the lot (×10 crafts), when more than one.
+ *                                  `cost`, `expected`, `runes` and `soldPrice` are for the whole lot.
  * @property {string} [source]      Where the row came from: "sheet" for imported rows.
  * @property {string} [updatedAt]   ISO timestamp of the last write.
  * @property {number} [schemaVersion]
@@ -70,6 +72,7 @@ export function normalizeTrade(id, raw = {}) {
   else delete trade.recipe;
   if (typeof raw.runes !== "number" || !Number.isFinite(raw.runes)) delete trade.runes;
   if (typeof raw.source !== "string") delete trade.source;
+  if (!isLotSize(raw.qty) || raw.qty === 1) delete trade.qty;
   return trade;
 }
 
@@ -110,6 +113,7 @@ export function validateTrade(t) {
   if (!isKamas(t.cost)) errors.push("Investissement illisible : écris par ex. 1.8m ou 1 800 000.");
   if (!isKamas(t.expected)) errors.push("Vente prévue illisible : écris par ex. 2.6m.");
   if (t.sold && !isKamas(t.soldPrice)) errors.push("Prix de vente illisible.");
+  if (t.qty != null && !isLotSize(t.qty)) errors.push(`Quantité invalide : de 1 à ${LOT_MAX}.`);
   if (t.hdvTax != null && !TAX_RATES.includes(t.hdvTax)) errors.push("Taxe HDV invalide.");
   if (t.soldDate != null && !isIsoDate(t.soldDate)) errors.push("Date de vente invalide.");
   else if (t.soldDate && isIsoDate(t.date) && t.soldDate < t.date) {
@@ -165,6 +169,52 @@ export const isOpen = (t) => !t.sold;
  */
 export function markSold(t, price, dateIso) {
   return { ...t, sold: true, soldPrice: price, soldDate: dateIso };
+}
+
+/** @param {unknown} n @returns {n is number} */
+const isLotSize = (n) => Number.isInteger(n) && /** @type {number} */ (n) >= 1 && /** @type {number} */ (n) <= LOT_MAX;
+
+/**
+ * Number of items in the trade's lot (1 unless it says otherwise).
+ * @param {Pick<Trade, "qty">} t
+ * @returns {number}
+ */
+export const lotSize = (t) => t.qty ?? 1;
+
+/**
+ * Splits a lot in two: `quantity` of its items, sold at `price`, and the rest, still for sale.
+ * Cost, planned price and FM spend are shared in proportion to the number of items; the
+ * rest gets what the sold part leaves, so the two always add up to the original amounts.
+ * Recipe quantities are shared the same way. Selling the whole lot is a plain `markSold`.
+ * @param {Trade} t        an open trade
+ * @param {number} quantity items sold, from 1 to the lot size
+ * @param {number} price   price received for those items
+ * @param {string} dateIso
+ * @param {string} soldId  id for the sold part (the rest keeps the trade's id)
+ * @returns {{sold: Trade, rest: Trade|null}} `rest` is null when the whole lot is sold
+ */
+export function splitSale(t, quantity, price, dateIso, soldId) {
+  const size = lotSize(t);
+  if (quantity >= size) return { sold: markSold(t, price, dateIso), rest: null };
+  const share = (/** @type {number} */ amount) => Math.round((amount * quantity) / size);
+  /** @param {number} n @param {number} part */
+  const withQty = (n, part) => {
+    /** @type {Trade} */
+    const piece = { ...t, qty: n };
+    if (n === 1) delete piece.qty;
+    piece.cost = part === 0 ? share(t.cost) : t.cost - share(t.cost);
+    piece.expected = part === 0 ? share(t.expected) : t.expected - share(t.expected);
+    if (t.runes != null) piece.runes = part === 0 ? share(t.runes) : t.runes - share(t.runes);
+    if (t.recipe) {
+      piece.recipe = t.recipe.map(([id, q, unitPrice]) => {
+        const soldQ = (q * quantity) / size;
+        return /** @type {RecipeLine} */ ([id, part === 0 ? soldQ : q - soldQ, unitPrice]);
+      });
+    }
+    return piece;
+  };
+  const sold = markSold({ ...withQty(quantity, 0), id: soldId }, price, dateIso);
+  return { sold, rest: withQty(size - quantity, 1) };
 }
 
 /**

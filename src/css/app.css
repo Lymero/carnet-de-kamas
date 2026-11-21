@@ -164,12 +164,24 @@ header.top {
   gap: 12px;
   flex-wrap: wrap;
 }
+header.top h1 {
+  margin-right: auto;
+}
 .status {
   font-size: 13px;
   color: var(--muted);
 }
 .status.warn {
   color: var(--bad);
+}
+.update {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.update[hidden] {
+  display: none;
 }
 
 .kpis {
@@ -763,6 +775,8 @@ table.grid tfoot td {
 }
 .open-row .c {
   text-align: right;
+  /* Top-aligned so the amounts stay on one line when Investi has a "dont FM" line below. */
+  align-self: start;
 }
 .sell {
   grid-column: 1 / -1;
@@ -775,6 +789,23 @@ table.grid tfoot td {
 }
 .sell .field {
   min-width: 140px;
+}
+.sell .field.qty {
+  min-width: 0;
+}
+.sell .of {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sell .of input {
+  width: 6ch;
+  text-align: right;
+}
+.open-row .it .lot,
+.grid .obj .lot {
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .split {
@@ -1086,4 +1117,27 @@ table.grid td.st {
 /* "dont FM": the runes / forgemagie part of the investment, kept discreet next to it. */
 table.grid td.fm {
   color: var(--muted);
+}
+/* Historique: "Refaire" fills the form from a row. Quiet until the row is hovered or focused. */
+table.grid td.redo {
+  padding: 2px 4px;
+  width: 1%;
+}
+table.grid td.redo .btn {
+  padding: 2px 7px;
+  border-color: transparent;
+  background: none;
+  color: var(--muted);
+  opacity: 0.45;
+}
+table.grid tr:hover td.redo .btn,
+table.grid tr:focus-within td.redo .btn,
+table.grid td.redo .btn:focus-visible {
+  opacity: 1;
+  color: var(--accent);
+}
+@media (hover: none) {
+  table.grid td.redo .btn {
+    opacity: 1;
+  }
 }

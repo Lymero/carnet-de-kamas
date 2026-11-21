@@ -16,6 +16,7 @@
       <header class="top">
         <h1>Carnet de Kamas</h1>
         <div class="status" id="status" role="status">Chargement…</div>
+        <div class="update" id="update" role="status" hidden></div>
       </header>
 
       <section class="kpis" id="kpis" aria-label="Résumé"></section>
@@ -66,6 +67,7 @@
             <div class="field">
               <label for="f-exp">Vente prévue</label>
               <input type="text" id="f-exp" class="kamas" placeholder="2.6m" />
+              <span class="hint" id="f-last" hidden></span>
             </div>
           </div>
           <!-- Reads chat screenshots offline (ui/purchase-import.js). -->

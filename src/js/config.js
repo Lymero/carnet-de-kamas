@@ -34,6 +34,9 @@ export const HDV_TAX_LABEL = Object.freeze({
   [HDV_TAX.NONE]: "Aucune",
 });
 
+/** Most items one trade (a lot, such as ×10 crafts) may hold. */
+export const LOT_MAX = 9999;
+
 /** Longest item name accepted (in-game names are well under this). */
 export const ITEM_NAME_MAX = 200;
 

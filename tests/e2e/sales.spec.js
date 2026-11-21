@@ -86,3 +86,28 @@ test("the date, the type and the days for sale stay on one line", async ({ page 
     await expect(row).toContainText("j en vente");
   }
 });
+
+test("part of a lot is sold, and the rest stays for sale at its share of the cost", async ({ page }) => {
+  // Make the trade a lot of 10 through the editor.
+  await page.locator(".open-row .it b").click();
+  await page.fill("#e-qty", "10");
+  await page.click("#e-save");
+  const row = page.locator(".open-row", { hasText: "Kokulte" });
+  await expect(row.locator(".lot")).toHaveText("×10");
+
+  await row.getByRole("button", { name: "Vendu" }).click();
+  await expect(page.locator("#s-price")).toHaveValue(/^1\s500\s000$/);
+  await page.fill("#s-qty", "4");
+  await expect(page.locator("#s-price")).toHaveValue(/^600\s000$/);
+  await page.fill("#s-price", "800k");
+  await page.fill("#s-date", "2026-01-20");
+  await page.getByRole("button", { name: "Confirmer" }).click();
+  await expect(page.locator(".toast")).toContainText("Kokulte vendu (4 sur 10) : +100 %");
+
+  await expect(page.locator(".open-row")).toHaveCount(1);
+  await expect(row.locator(".lot")).toHaveText("×6");
+  await expect(page.locator(".sell")).toHaveCount(0);
+  await expect(row.locator(".c").first()).toContainText(/600\sk/);
+  await page.goto(page.url().replace(/#.*$/, "") + "#historique");
+  await expect(page.locator("td.obj", { hasText: "Kokulte" }).locator(".lot")).toHaveCount(2);
+});

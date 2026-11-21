@@ -139,6 +139,23 @@ test("the kamas and rune value before and after forging give the FM cost", async
   await expect(page.locator("#f-cost")).toHaveValue(/^1\s000$/);
 });
 
+test("the FM cost shows under the investment of an open craft", async ({ page }) => {
+  await openApp(page);
+  await page.selectOption("#f-tax", "0");
+  await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
+  await openRecipeFolds(page);
+  const recipe = page.locator("#recipeBox");
+  await recipe.locator("[data-ing]").first().fill("500k");
+  await recipe.locator('[data-bal="kb"]').fill("10m");
+  await recipe.locator('[data-bal="ka"]').fill("7m");
+  await page.fill("#f-exp", "5m");
+  await page.click("#f-submit");
+
+  const fm = page.locator(".open-row .c small.fm");
+  await expect(fm).toHaveText(/^dont FM 3\sM$/);
+  await expect(fm).toHaveAttribute("title", /^3\s000\s000$/);
+});
+
 test("the FM cost shows in the history and in the analysis", async ({ page }) => {
   await openApp(page);
   await page.selectOption("#f-tax", "0");
@@ -220,4 +237,75 @@ test("the FM total sits in its header, typed in there without folding or unfoldi
   await expect(page.locator("#f-runes")).toHaveValue(/^1\s000\s000$/);
   await page.locator("#f-runes").click();
   await expect(fm).toHaveJSProperty("open", true);
+});
+
+test("picking an item traded before fills the amounts from last time and shows its last sale", async ({ page }) => {
+  await openApp(page, { catalog: false });
+  await addTrade(page, {
+    item: "Kokulte",
+    cat: "resale",
+    cost: "500k",
+    expected: "700k",
+    date: "2026-01-10",
+    sold: true,
+  });
+  await addTrade(page, { item: "Kokulte", cat: "resale", cost: "600k", expected: "800k", date: "2026-02-01" });
+
+  const pick = () => pickCatalogItem(page, "koku", "Kokulte");
+  await pick();
+  // The latest trade's amounts; the latest sale, which is an older trade.
+  await expect(page.locator("#f-cost")).toHaveValue(/^600\s000$/);
+  await expect(page.locator("#f-exp")).toHaveValue(/^800\s000$/);
+  await expect(page.locator("#f-last")).toBeVisible();
+  await expect(page.locator("#f-last")).toHaveText(/^Dernière vente : 700\s000 \(\d\d\/\d\d\/\d\d\)$/);
+  await expect(page.locator('#f-cat button[data-v="resale"]')).toHaveAttribute("aria-pressed", "true");
+
+  // An amount typed by hand is kept when the item is picked again.
+  await page.fill("#f-cost", "550k");
+  await pick();
+  await expect(page.locator("#f-cost")).toHaveValue(/^550\s000$/);
+
+  // Another item hides the last sale; « Vider » too.
+  await page.fill("#f-item", "Gelano");
+  await expect(page.locator("#f-last")).toBeHidden();
+  await pick();
+  await page.click("#f-reset");
+  await expect(page.locator("#f-last")).toBeHidden();
+  await expect(page.locator("#f-cost")).toHaveValue("");
+});
+
+test("picking a craft made before brings back its number of crafts and investment", async ({ page }) => {
+  await openApp(page);
+  await page.selectOption("#f-tax", "0");
+  await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
+  await openRecipeFolds(page);
+  const recipe = page.locator("#recipeBox");
+  await recipe.locator("input[data-ing]").first().fill("1000");
+  await recipe.locator("#f-qty").fill("10");
+  await page.fill("#f-exp", "5m");
+  const cost = await page.inputValue("#f-cost");
+  await page.click("#f-submit");
+  await expect(page.locator(".toast")).toContainText("Cape d'Ogivol ajouté");
+
+  await pickCatalogItem(page, "cape d og", "Cape d'Ogivol");
+  await expect(recipe.locator("#r-qty")).toHaveText(" · ×10");
+  await expect(page.locator("#f-cost")).toHaveValue(cost);
+  await expect(page.locator("#f-exp")).toHaveValue(/^5\s000\s000$/);
+  // The investment is last time's: the computed cost is one click away.
+  await expect(recipe.getByRole("button", { name: "Utiliser le coût calculé" })).toBeVisible();
+  await expect(page.locator("#f-last")).toBeHidden();
+});
+
+test("coming back to the item field at once keeps its suggestions open", async ({ page }) => {
+  await openApp(page, { catalog: false });
+  await addTrade(page, { item: "Kokulte", cat: "resale", cost: "500k", expected: "700k" });
+  await page.fill("#f-item", "koku");
+  await expect(page.locator("#f-item-list")).toBeVisible();
+  // Leaving the field closes the list 150 ms later; typing in it again before then keeps it.
+  await page.locator("#f-item").evaluate((input) => {
+    input.blur();
+    input.focus();
+  });
+  await page.waitForTimeout(300);
+  await expect(page.locator("#f-item-list")).toBeVisible();
 });
