@@ -10,7 +10,7 @@
 import { CATEGORY } from "../config.js";
 import { monthKey } from "./dates.js";
 import { normalize } from "./text.js";
-import { isCraft, profit, salePrice } from "./trade.js";
+import { isCraft, lotSize, profit, salePrice } from "./trade.js";
 
 /** @typedef {import("./trade.js").Trade} Trade */
 
@@ -180,7 +180,7 @@ export function itemHistory(trades) {
     }
     if (t.sold) {
       const date = t.soldDate ?? t.date;
-      if (!h.lastSale || date >= h.lastSale.date) h.lastSale = { price: salePrice(t), date };
+      if (!h.lastSale || date >= h.lastSale.date) h.lastSale = { price: salePrice(t), date, qty: lotSize(t) };
     }
     map.set(key, h);
   }
@@ -194,7 +194,8 @@ export function itemHistory(trades) {
  * @property {string} lastCat  category of the latest trade
  * @property {string} lastDate  date of the latest trade
  * @property {Trade} last  the latest trade
- * @property {{price: number, date: string}|null} lastSale  the latest sale, null if never sold
+ * @property {{price: number, date: string, qty: number}|null} lastSale  the latest sale (`qty`: the
+ *   number of items it was for), null if never sold
  */
 
 function emptyBucket() {
