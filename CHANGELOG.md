@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.4.0 (2026-11-21)
 
 ### Changed
 
@@ -16,6 +16,11 @@
 
 - **Keyboard shortcuts**: `/` jumps to the Historique search, Escape clears it, and `N` jumps to
   the new trade form. They do nothing while you type in a field or a dialog is open.
+
+### Fixed
+
+- The _Investissement_ and _Vente prévue_ fields stay level: the last sale price now shows on
+  its own line under both fields instead of stretching the investment field.
 
 ## 3.3.0 (2026-11-21)
 
