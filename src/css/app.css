@@ -581,6 +581,44 @@ input.kamas {
   flex: 1;
   min-width: 180px;
 }
+.toolbar[hidden] {
+  display: none;
+}
+/* Funnel button that shows or hides the Historique filter row; gold once a filter is in use. */
+.filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+.filter-btn:hover,
+.filter-btn[aria-expanded="true"] {
+  color: var(--ink);
+}
+.filter-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.filter-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+/* An empty text line, so the icon-only button is as tall as its text neighbours. */
+.filter-btn::before {
+  content: "\200b";
+  width: 0;
+}
+.filter-btn .count {
+  font-size: 12px;
+  font-weight: 600;
+}
+.filter-btn .count:empty {
+  display: none;
+}
 .scroll {
   overflow-x: auto;
 }
@@ -706,6 +744,19 @@ table.grid tfoot td {
   border: 1px solid var(--line);
   border-radius: 6px;
   border-left: 4px solid var(--accent);
+}
+.open-row {
+  cursor: pointer;
+}
+.open-row:hover {
+  background: var(--bg);
+}
+.open-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.open-row .sell {
+  cursor: auto;
 }
 .open-row .it b {
   display: block;

@@ -1,6 +1,7 @@
 /**
  * @file "En cours" view: items listed for sale, oldest first unless sorted otherwise,
- * with an inline "mark as sold" form.
+ * with an inline "mark as sold" form. Clicking a row (outside its buttons and the
+ * sale form) opens the editor.
  *
  * View contract (shared by all views, see docs/ARCHITECTURE.md):
  *   mount(el)      called when the view becomes visible; binds events once
@@ -68,7 +69,7 @@ export function createOpenView({ actions, openEditor, redo }) {
         const days = daysBetween(t.date, today);
         const age =
           days >= SLOW_SALE_DAYS ? `<span class="pill slow">${days} j en vente</span>` : `<span>${days} j</span>`;
-        return `<div class="open-row" data-id="${esc(t.id)}">
+        return `<div class="open-row" data-id="${esc(t.id)}" tabindex="0">
         <div class="it"><b>${esc(t.item)}</b><small><span>${esc(formatShortDate(t.date))} ·</span>${categoryPill(t)}${
           lotSize(t) > 1 ? `<span class="lot" title="Lot de ${lotSize(t)}">×${lotSize(t)}</span>` : ""
         }${age}</small></div>
@@ -79,7 +80,6 @@ export function createOpenView({ actions, openEditor, redo }) {
         <div class="c"><small>Marge</small><span class="num ${signClass(p)}">${formatPercent(ratioPercent(p, t.cost))}</span></div>
         <div class="row-actions">
           <button class="btn small primary" data-act="sell">Vendu</button>
-          <button class="btn small" data-act="edit">Modifier</button>
           <button class="btn small" data-act="redo" title="Remplir le formulaire avec cette opération">Refaire</button>
         </div>
         ${
@@ -115,9 +115,14 @@ export function createOpenView({ actions, openEditor, redo }) {
     }
     const button = /** @type {HTMLButtonElement|null} */ (closest(e, "[data-act]"));
     const row = closest(e, "[data-id]");
-    if (!button || !row) return;
+    if (!row) return;
     const trade = current.trades.find((t) => t.id === row.dataset.id);
     if (!trade) return;
+    if (!button) {
+      // A click on the row itself edits it; clicks inside the sale form stay there.
+      if (!closest(e, ".sell")) openEditor(trade);
+      return;
+    }
     switch (button.dataset.act) {
       case "sell":
         sale = {
@@ -134,9 +139,6 @@ export function createOpenView({ actions, openEditor, redo }) {
         sale = null;
         render();
         /** @type {HTMLElement|null} */ ($(`[data-id="${CSS.escape(trade.id)}"] [data-act="sell"]`, root))?.focus();
-        break;
-      case "edit":
-        openEditor(trade);
         break;
       case "redo":
         redo(trade);
@@ -194,8 +196,12 @@ export function createOpenView({ actions, openEditor, redo }) {
 
   /** @param {KeyboardEvent} e */
   function onKeydown(e) {
-    if (e.key === "Enter" && ["s-price", "s-qty"].includes(/** @type {HTMLElement} */ (e.target).id)) {
+    const target = /** @type {HTMLElement} */ (e.target);
+    if (e.key === "Enter" && ["s-price", "s-qty"].includes(target.id)) {
       /** @type {HTMLElement|null} */ ($('[data-act="sell-ok"]', root))?.click();
+    } else if (e.key === "Enter" && target.matches(".open-row")) {
+      e.preventDefault(); // otherwise the same Enter submits the editor that just opened
+      target.click();
     }
   }
 

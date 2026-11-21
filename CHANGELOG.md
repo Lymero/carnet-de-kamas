@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.3.0 (2026-11-21)
+
+### Changed
+
+- **Historique filters behind a button**: the type, month and status filters are now hidden
+  behind a funnel button next to the search box, so the toolbar fits on one line. The button
+  turns gold and shows how many filters are in use, even while they are hidden, and the filter
+  row has an _Effacer les filtres_ button.
+- **Click an _En cours_ row to edit it**: the _Modifier_ button is gone. Click anywhere on the
+  row, or press Enter on it, to open the editor. _Vendu_, _Refaire_ and the sale form keep
+  their own clicks.
+
+### Fixed
+
+- Pressing Enter on a focused row no longer also saves the editor it just opened.
+
 ## 3.2.0 (2026-11-21)
 
 ### Added

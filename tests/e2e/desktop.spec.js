@@ -81,7 +81,7 @@ test("stored data is shown as text and malformed parts are dropped", async ({ pa
   });
   await openApp(page, { catalog: false });
   await expect(page.locator(".open-row b")).toHaveText("<img src=x onerror=window.__xss=2>");
-  await page.getByRole("button", { name: "Modifier" }).click();
+  await page.locator(".open-row").click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByRole("dialog").locator(".hint")).toHaveCount(0); // recipe dropped
   await expect(page.locator("#e-date")).toHaveValue("1970-01-01");

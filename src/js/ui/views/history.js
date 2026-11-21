@@ -3,7 +3,8 @@
  * plus import from and export to a spreadsheet.
  *
  * The toolbar is rendered once per mount so the search box keeps focus while
- * typing; only the results region re-renders.
+ * typing; only the results region re-renders. The type/month/status selects sit
+ * in a row the filter button shows or hides, so the toolbar fits on one line.
  */
 
 import { CATEGORY, CATEGORY_LABEL } from "../../config.js";
@@ -50,6 +51,25 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
   /** Filters and sort survive switching tabs. */
   const filters = { text: "", cat: "", month: "", status: "" };
   let sort = { key: "date", dir: -1 };
+  /** Whether the filter row is shown; survives switching tabs like the filters. */
+  let filtersOpen = false;
+
+  /** Number of select filters in use (the search box is always visible, so it doesn't count). */
+  const activeFilterCount = () => [filters.cat, filters.month, filters.status].filter(Boolean).length;
+
+  /** Syncs the filter button (pressed state, count badge) and the filter row's visibility. */
+  function syncFilterToggle() {
+    const btn = $("#h-filter-btn", root);
+    const row = $("#h-filters", root);
+    if (!btn || !row) return;
+    const n = activeFilterCount();
+    btn.setAttribute("aria-expanded", String(filtersOpen));
+    btn.classList.toggle("active", n > 0);
+    btn.title = n ? `Filtres (${n} actif${n > 1 ? "s" : ""})` : "Filtres";
+    btn.setAttribute("aria-label", btn.title);
+    $(".count", btn).textContent = n ? String(n) : "";
+    row.hidden = !filtersOpen;
+  }
 
   /** @returns {Trade[]} */
   function visibleTrades() {
@@ -71,13 +91,20 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
     root.innerHTML = `
       <div class="toolbar">
         <input type="text" id="h-q" class="grow" placeholder="Chercher un objet…" value="${esc(filters.text)}" aria-label="Chercher un objet">
-        <select id="h-cat" aria-label="Type">${opt("", "Tous types", filters.cat)}${opt(CATEGORY.CRAFT, CATEGORY_LABEL.craft, filters.cat)}${opt(CATEGORY.RESALE, CATEGORY_LABEL.resale, filters.cat)}</select>
-        <select id="h-month" aria-label="Mois">${opt("", "Tous les mois", filters.month)}${months.map((m) => opt(m, monthLabel(m), filters.month)).join("")}</select>
-        <select id="h-status" aria-label="Statut">${opt("", "Tous statuts", filters.status)}${opt("open", "En vente", filters.status)}${opt("sold", "Vendus", filters.status)}${opt("loss", "Ventes à perte", filters.status)}</select>
+        <button class="btn filter-btn" id="h-filter-btn" data-act="filters" aria-controls="h-filters" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z" /></svg><span class="count"></span>
+        </button>
         <button class="btn" data-act="import">Importer depuis Sheets</button>
         <button class="btn" data-act="export">Copier en tableau</button>
       </div>
+      <div class="toolbar" id="h-filters">
+        <select id="h-cat" aria-label="Type">${opt("", "Tous types", filters.cat)}${opt(CATEGORY.CRAFT, CATEGORY_LABEL.craft, filters.cat)}${opt(CATEGORY.RESALE, CATEGORY_LABEL.resale, filters.cat)}</select>
+        <select id="h-month" aria-label="Mois">${opt("", "Tous les mois", filters.month)}${months.map((m) => opt(m, monthLabel(m), filters.month)).join("")}</select>
+        <select id="h-status" aria-label="Statut">${opt("", "Tous statuts", filters.status)}${opt("open", "En vente", filters.status)}${opt("sold", "Vendus", filters.status)}${opt("loss", "Ventes à perte", filters.status)}</select>
+        <button class="btn" data-act="clear-filters">Effacer les filtres</button>
+      </div>
       <div id="h-results"></div>`;
+    syncFilterToggle();
   }
 
   function renderResults() {
@@ -144,6 +171,17 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
       return renderResults();
     }
     const act = closest(e, "[data-act]")?.dataset.act;
+    if (act === "filters") {
+      filtersOpen = !filtersOpen;
+      return syncFilterToggle();
+    }
+    if (act === "clear-filters") {
+      Object.assign(filters, { cat: "", month: "", status: "" });
+      for (const id of ["h-cat", "h-month", "h-status"])
+        /** @type {HTMLSelectElement} */ ($(`#${id}`, root)).value = "";
+      syncFilterToggle();
+      return renderResults();
+    }
     if (act === "import") return openImport();
     if (act === "export") return copyExport();
     const row = closest(e, "tr[data-id]");
@@ -161,10 +199,13 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
     const field = { "h-cat": "cat", "h-month": "month", "h-status": "status" }[e.target.id];
     if (!field) return;
     filters[field] = e.target.value;
+    syncFilterToggle();
     renderResults();
   }
   function onKeydown(e) {
-    if (e.key === "Enter" && e.target.matches("tr[data-id]")) e.target.click();
+    if (e.key !== "Enter" || !e.target.matches("tr[data-id]")) return;
+    e.preventDefault(); // otherwise the same Enter submits the editor that just opened
+    e.target.click();
   }
 
   return {
@@ -188,7 +229,7 @@ export function createHistoryView({ openEditor, openImport, openCopy, redo }) {
       current = state;
       // Rebuild the toolbar only when the month list may have changed, and never while one of its
       // controls has focus (typing in the search box, an open select).
-      const toolbarFocused = $(".toolbar", root)?.contains(document.activeElement) ?? false;
+      const toolbarFocused = [...root.querySelectorAll(".toolbar")].some((bar) => bar.contains(document.activeElement));
       if (firstRender || (monthsChanged && !toolbarFocused)) renderToolbar();
       renderResults();
     },
