@@ -11,7 +11,7 @@
  * Further screenshots add to the same purchase, lines repeated where two overlap left out.
  *
  * "Vérifier (N)" opens the list of lines read, each as its picture cut from the
- * screenshot, to double-check and fix (counted or not, price; lines added or removed)
+ * screenshot, to double-check and fix (counted or not, lot size, price; lines added or removed)
  * with a running total; "Utiliser" writes it to the field.
  *
  * The screenshots belong to the investment shown: changing the field by hand or adding
@@ -34,6 +34,15 @@ import { createScreenshotReader } from "./screenshot-ocr.js";
  * @property {ImageBitmap} image  to cut each line's picture from
  * @property {PurchaseLine[]} lines  as read, to spot repeats with the next screenshot
  */
+
+/**
+ * A lot size typed in the review list; NaN unless a whole number of at least 1.
+ * @param {string} raw
+ */
+const readCount = (raw) => {
+  const n = Number(raw.trim());
+  return Number.isInteger(n) && n >= 1 ? n : NaN;
+};
 
 /** Room left around a line's picture, in screenshot pixels. */
 const PICTURE_MARGIN = 2;
@@ -259,7 +268,7 @@ export function mountPurchaseImport({ dialog, form, recipe }) {
     body.innerHTML = `
       <h2 id="dlg-title">Achats lus</h2>
       <div class="scroll"><table class="grid lots">
-        <thead class="sr"><tr><th>Compter</th><th>Ligne de la capture</th><th>Prix du lot</th><th>Retirer</th></tr></thead>
+        <thead class="sr"><tr><th>Compter</th><th>Ligne de la capture</th><th>Quantité</th><th>Prix du lot</th><th>Retirer</th></tr></thead>
         <tbody id="r-rows"></tbody>
       </table></div>
       <div class="lots-foot">
@@ -286,6 +295,7 @@ export function mountPurchaseImport({ dialog, form, recipe }) {
       if (input.dataset.f === "counted") row.counted = input.checked;
       else if (input.dataset.f === "item") row.item = input.value;
       else if (input.dataset.f === "price") row.price = evaluateKamas(input.value);
+      else if (input.dataset.f === "quantity") row.quantity = readCount(input.value);
       input.closest("tr")?.classList.toggle("off", !row.counted);
       renderTotal();
     });
@@ -297,7 +307,7 @@ export function mountPurchaseImport({ dialog, form, recipe }) {
     });
     $("#r-add", body)?.addEventListener("click", () => {
       if (!draft) return;
-      draft.push({ shot: -1, text: "", quantity: NaN, item: "", price: NaN, counted: true, flag: "", box: null });
+      draft.push({ shot: -1, text: "", quantity: 1, item: "", price: NaN, counted: true, flag: "", box: null });
       renderRows();
       /** @type {HTMLInputElement|null} */ ($(`tr[data-i="${draft.length - 1}"] [data-f="item"]`, body))?.focus();
     });
@@ -321,14 +331,14 @@ export function mountPurchaseImport({ dialog, form, recipe }) {
     shots.forEach((shot, s) => {
       // Headers only tell several screenshots apart.
       if (shots.length > 1)
-        html += `<tr class="shot"><td colspan="4" title="${esc(shot.name)}">Capture ${s + 1}</td></tr>`;
+        html += `<tr class="shot"><td colspan="5" title="${esc(shot.name)}">Capture ${s + 1}</td></tr>`;
       list.forEach((row, i) => {
         if (row.shot === s) html += rowHtml(row, i);
       });
     });
     const added = list.map((row, i) => (row.shot === -1 ? rowHtml(row, i) : "")).join("");
-    if (added) html += `<tr class="shot"><td colspan="4">À la main</td></tr>${added}`;
-    tbody.innerHTML = html || `<tr><td colspan="4" class="hint">Aucun achat lu.</td></tr>`;
+    if (added) html += `<tr class="shot"><td colspan="5">À la main</td></tr>${added}`;
+    tbody.innerHTML = html || `<tr><td colspan="5" class="hint">Aucun achat lu.</td></tr>`;
     $$("canvas[data-pic]", tbody).forEach((canvas) => drawPicture(/** @type {HTMLCanvasElement} */ (canvas)));
     renderTotal();
   }
@@ -347,6 +357,7 @@ export function mountPurchaseImport({ dialog, form, recipe }) {
     return `<tr data-i="${i}" class="${row.counted ? "" : "off"}">
       <td><input type="checkbox" data-f="counted" ${row.counted ? "checked" : ""} aria-label="Compter ${label}"></td>
       <td class="pic">${read}</td>
+      <td class="n"><span class="qty"><input type="text" inputmode="numeric" class="num" data-f="quantity" value="${Number.isNaN(row.quantity) ? "" : row.quantity}" placeholder="qté" aria-label="Quantité ${label}">×</span></td>
       <td class="n"><input type="text" class="kamas" data-f="price" value="${Number.isNaN(row.price) ? "" : formatKamas(row.price)}" placeholder="prix" aria-label="Prix du lot ${label}"></td>
       <td><button type="button" class="btn small" data-remove="${i}" aria-label="Retirer ${label}">✕</button></td>
     </tr>`;

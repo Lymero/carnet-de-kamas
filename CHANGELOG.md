@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.4.2 (2026-11-22)
+
+### Fixed
+
+- **Recipe prices from pasted purchases**: lot sizes are read correctly when the screenshot
+  shows the chat timestamps, whole or cut on the left (`[13:54]`, `3:54]`, a lone `]`). The
+  timestamp's bracket could be read as a 1 stuck to the lot size (`110 x` instead of `10 x`),
+  so ingredients bought in lots got a unit price several times too low. Prices whose "kamas" is
+  cut off by the screenshot's right edge are read too.
+- **Check the lot sizes**: _Vérifier_ now shows each lot's quantity, which you can correct.
+  An unusual lot size is flagged _à vérifier_.
+- **Emptied price fields**: emptying an ingredient's unit price in the recipe now leaves it
+  without a price, instead of still counting the price remembered from earlier trades.
+
 ## 3.4.1 (2026-11-21)
 
 ### Changed

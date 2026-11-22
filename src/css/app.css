@@ -1042,6 +1042,18 @@ table.grid.lots input[data-f="item"] {
 table.grid.lots input.kamas {
   width: 8.5em;
 }
+/* The lot size: what the recipe's unit prices are divided by. */
+table.grid.lots .qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+}
+table.grid.lots input[data-f="quantity"] {
+  width: 3.5em;
+  text-align: right;
+  color: var(--ink);
+}
 /* The line as it is in the screenshot, so the price read can be compared at a glance. */
 table.grid.lots td.pic {
   white-space: normal;

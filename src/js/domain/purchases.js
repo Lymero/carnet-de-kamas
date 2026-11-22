@@ -50,15 +50,28 @@ const AMOUNT = `\\d{1,3}(?:${SPACE}\\d{3})+|\\d+`;
 /**
  * The price at the end of a line, as the reader may garble it: brackets read as other
  * brackets, "kamas" as "komas" or "kamos", digits as look-alike letters or symbols
- * ("1 89%"). Group: the price, with at least one digit; `readAmount` decides.
+ * ("1 89%"), and "kamas" cut short where the screenshot ends ("(5 785 ka"). Group: the
+ * price, with at least one digit; `readAmount` decides.
  */
-const LOOSE_PRICE = /[([{]\s*([^()[\]{}]*?\d[^()[\]{}]*?)\s*k[a-z]{2,6}\s*[)\]}|]?\s*[.!]?\s*$/iu;
+const LOOSE_PRICE = /[([{]\s*([^()[\]{}]*?\d[^()[\]{}]*?)\s*k[a-z]{0,6}\s*[)\]}|]?\s*[.!]?\s*$/iu;
+
+/**
+ * The chat timestamp at the start of a line, whole ("[13:54]") or cut by the screenshot's
+ * left edge ("3:54]", ":54]"), with its closing bracket when read as one.
+ */
+const TIMESTAMP = /^\W*\d{0,2}\s*[:;]\s*\d{2}\s*[\])}|]?/u;
 
 /**
  * What comes before the price: `N x [Item]`, with "1" possibly read as a letter and the
  * brackets as other brackets. Groups: quantity, item.
  */
 const LOOSE_LOT = /(\d{1,5}|[lItLi|!])\s*[x×X]\s*[[({|]?\s*(.+?)\s*[\])}|]?\s*$/u;
+
+/**
+ * The lot sizes the auction house sells. A quantity read as one of these behind other
+ * digits ("11 x", "110 x", "41 x") is the end of the chat timestamp, its "]" read as a 1.
+ */
+const LOT_SIZES = [1, 10, 100, 1000];
 
 /** Letters the reader takes for digits. */
 const DIGIT_LOOKALIKES = { O: "0", o: "0", I: "1", l: "1", "|": "1", S: "5", B: "8" };
@@ -89,17 +102,18 @@ export function readOcrLine(line) {
     .trim();
   const box = line?.box ?? null;
   const priceMatch = LOOSE_PRICE.exec(text);
-  const before = priceMatch ? text.slice(0, priceMatch.index) : text;
+  const before = (priceMatch ? text.slice(0, priceMatch.index) : text).replace(TIMESTAMP, "");
   const lot = LOOSE_LOT.exec(before);
   // Without a price that ends in "k…" nor an "N x [" start, it is another chat line.
   if (!priceMatch && !(lot && /[x×X]\s*[[({]/u.test(before))) return null;
   if (!lot && !priceMatch) return null;
 
   const price = priceMatch ? readAmount(priceMatch[1]) : { value: NaN, clean: false };
-  const quantity = lot ? (/\d/.test(lot[1]) ? Number(lot[1]) : 1) : NaN;
+  const lotSize = lot ? readQuantity(lot[1]) : { value: NaN, clean: false };
+  const quantity = lotSize.value;
   const item = lot ? lot[2].replace(/^[[({|]+|[\])}|]+$/g, "").trim() : "";
   const confident = priceWords(line).every((word) => word.confidence >= CONFIDENCE_MIN);
-  const complete = Boolean(lot) && isCount(quantity) && item.length > 0;
+  const complete = Boolean(lot) && isCount(quantity) && lotSize.clean && item.length > 0;
   return {
     text,
     quantity: isCount(quantity) ? quantity : NaN,
@@ -109,6 +123,26 @@ export function readOcrLine(line) {
     skipped: false,
     box,
   };
+}
+
+/**
+ * The lot size before "x": digits, or a letter standing for "1". A size the auction house
+ * does not sell is kept but not `clean`; one that ends in a lot size behind other digits
+ * (the timestamp's end, its "]" read as a 1) keeps that end, and is not `clean` either, so
+ * the player checks it.
+ * @param {string} raw
+ * @returns {{value: number, clean: boolean}}
+ */
+function readQuantity(raw) {
+  if (!/\d/.test(raw)) return { value: 1, clean: true };
+  const value = Number(raw);
+  if (LOT_SIZES.includes(value)) return { value, clean: true };
+  // The digits in front are what is left of the timestamp: the lot size is the end.
+  for (let start = 1; start < raw.length; start += 1) {
+    const rest = Number(raw.slice(start));
+    if (raw[start] === "1" && LOT_SIZES.includes(rest)) return { value: rest, clean: false };
+  }
+  return { value, clean: false };
 }
 
 /**
@@ -176,11 +210,21 @@ export function combineReadings(readings) {
     if (votes * 2 <= versions.length) return { ...line, sure: false };
     const agreeing = versions.filter((version) => version?.price === price);
     const source = line.skipped ? /** @type {PurchaseLine} */ (agreeing[0]) : line;
+    // The lot size is voted on the same way: a misread one would skew the unit price.
+    const sizes = new Map();
+    for (const version of agreeing) {
+      if (version && isCount(version.quantity)) sizes.set(version.quantity, (sizes.get(version.quantity) ?? 0) + 1);
+    }
+    const [quantity, sizeVotes] = [...sizes].reduce(
+      (best, entry) => (entry[1] > best[1] ? entry : best),
+      [source.quantity, sizes.get(source.quantity) ?? 0],
+    );
     return {
       ...source,
       box: line.box,
+      quantity,
       price,
-      sure: votes === versions.length && agreeing.some((version) => version?.sure),
+      sure: votes === versions.length && sizeVotes === versions.length && agreeing.some((version) => version?.sure),
     };
   });
 }
