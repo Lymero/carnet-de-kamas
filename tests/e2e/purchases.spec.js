@@ -189,3 +189,79 @@ test("with a craft's recipe shown, the lots bought fill its unit prices", async 
   const truthTotal = TRUTH.reduce((a, b) => a + b, 0);
   await expect.poll(async () => Math.abs((await cost(page)) - truthTotal)).toBeLessThan(1000);
 });
+
+/**
+ * Chat screenshots cut in the ways players take them, and every lot in them read by eye:
+ * [quantity, item, price of the lot]. "Kamatrix" lines cut on the right lose the end of
+ * "kamas" but keep the whole price.
+ */
+const S = "Sourcil de Barbétoal";
+const K = "Kamatrix";
+const J = "Joyau de la couronne du roi Nidas";
+const CROPS = {
+  // No timestamp at all.
+  "chat-no-time.png": [
+    ...[2094, 2095, 2099, 2099, 2099, 2178, 2178].map((p) => [1, S, p]),
+    [10, K, 9999],
+    ...[966, 966, 967, 967, 967].map((p) => [1, K, p]),
+    ...[5785, 5785, 5787, 5787].map((p) => [1, J, p]),
+  ],
+  // Whole "[13:54]" timestamps.
+  "chat-time.png": [
+    ...[1999, 2000, 2000, 2000, 2000, 2094, 2095, 2099, 2099, 2099, 2178, 2178].map((p) => [1, S, p]),
+    [10, K, 9999],
+    ...[966, 966, 967, 967, 967].map((p) => [1, K, p]),
+    ...[5785, 5785, 5787, 5787].map((p) => [1, J, p]),
+    [1, "Broderie de la Reine des Voleurs", 395000],
+  ],
+  // Cut on the right, in the middle of "kamas".
+  "chat-cut-right.png": [
+    [1, K, 967],
+    [1, K, 967],
+  ],
+  // Timestamps cut on the left ("3:54]"), "kamas" cut on the right.
+  "chat-cut-both.png": [...[967, 967, 967].map((p) => [1, K, p]), ...[5785, 5785, 5787, 5787].map((p) => [1, J, p])],
+};
+
+for (const [name, lots] of Object.entries(CROPS)) {
+  test(`reads every lot of ${name}: quantity and price`, async ({ page }) => {
+    await openApp(page, { catalog: false });
+    await paste(page, name);
+    await waitForReading(page, lots.length);
+    await page.click("#f-shots-check");
+    await expect(rows(page)).toHaveCount(lots.length);
+    const read = [];
+    for (const row of await rows(page).all()) {
+      read.push([
+        Number(await row.locator('[data-f="quantity"]').inputValue()),
+        await row.locator("canvas").getAttribute("aria-label"),
+        await price(row),
+      ]);
+    }
+    expect(read.map(([quantity, , p]) => [quantity, p])).toEqual(lots.map(([quantity, , p]) => [quantity, p]));
+    for (const [i, [, item]] of lots.entries()) expect(read[i][1]).toContain(`[${item}]`.slice(0, 9));
+    expect(await total(page)).toBe(lots.reduce((sum, [, , p]) => sum + p, 0));
+  });
+}
+
+test("lines starting with the timestamp's lone bracket keep their lot sizes", async ({ page }) => {
+  // Cut just after the timestamps: each line starts with "] ", which once read as "11 x".
+  await openApp(page, { catalog: false });
+  await paste(page, "chat-cut-time.png");
+  await expect(page.locator("#f-shots-check")).toBeVisible({ timeout: 60_000 });
+  await page.click("#f-shots-check");
+  /** @type {Record<string, number>} */
+  const units = {};
+  for (const row of await rows(page).all()) {
+    const label = (await row.locator("canvas").getAttribute("aria-label")) ?? "";
+    const item = /\[([^\]]+)\]/.exec(label)?.[1] ?? label;
+    units[item] = (units[item] ?? 0) + Number(await row.locator('[data-f="quantity"]').inputValue());
+  }
+  expect(units).toMatchObject({
+    Kamatrix: 15,
+    "Joyau de la couronne du roi Nidas": 4,
+    "Broderie de la Reine des Voleurs": 4,
+    "Trame Dimensionnelle": 20,
+  });
+  expect(Object.entries(units).find(([item]) => item.startsWith("Fragment"))?.[1]).toBe(15);
+});

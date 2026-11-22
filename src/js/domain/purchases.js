@@ -50,9 +50,16 @@ const AMOUNT = `\\d{1,3}(?:${SPACE}\\d{3})+|\\d+`;
 /**
  * The price at the end of a line, as the reader may garble it: brackets read as other
  * brackets, "kamas" as "komas" or "kamos", digits as look-alike letters or symbols
- * ("1 89%"). Group: the price, with at least one digit; `readAmount` decides.
+ * ("1 89%"), and "kamas" cut short where the screenshot ends ("(5 785 ka"). Group: the
+ * price, with at least one digit; `readAmount` decides.
  */
-const LOOSE_PRICE = /[([{]\s*([^()[\]{}]*?\d[^()[\]{}]*?)\s*k[a-z]{2,6}\s*[)\]}|]?\s*[.!]?\s*$/iu;
+const LOOSE_PRICE = /[([{]\s*([^()[\]{}]*?\d[^()[\]{}]*?)\s*k[a-z]{0,6}\s*[)\]}|]?\s*[.!]?\s*$/iu;
+
+/**
+ * The chat timestamp at the start of a line, whole ("[13:54]") or cut by the screenshot's
+ * left edge ("3:54]", ":54]"), with its closing bracket when read as one.
+ */
+const TIMESTAMP = /^\W*\d{0,2}\s*[:;]\s*\d{2}\s*[\])}|]?/u;
 
 /**
  * What comes before the price: `N x [Item]`, with "1" possibly read as a letter and the
@@ -61,8 +68,8 @@ const LOOSE_PRICE = /[([{]\s*([^()[\]{}]*?\d[^()[\]{}]*?)\s*k[a-z]{2,6}\s*[)\]}|
 const LOOSE_LOT = /(\d{1,5}|[lItLi|!])\s*[x×X]\s*[[({|]?\s*(.+?)\s*[\])}|]?\s*$/u;
 
 /**
- * The lot sizes the auction house sells. A quantity read as one of these plus a leading
- * "1" ("11 x", "110 x") is the "]" closing the chat timestamp, read as a 1.
+ * The lot sizes the auction house sells. A quantity read as one of these behind other
+ * digits ("11 x", "110 x", "41 x") is the end of the chat timestamp, its "]" read as a 1.
  */
 const LOT_SIZES = [1, 10, 100, 1000];
 
@@ -95,7 +102,7 @@ export function readOcrLine(line) {
     .trim();
   const box = line?.box ?? null;
   const priceMatch = LOOSE_PRICE.exec(text);
-  const before = priceMatch ? text.slice(0, priceMatch.index) : text;
+  const before = (priceMatch ? text.slice(0, priceMatch.index) : text).replace(TIMESTAMP, "");
   const lot = LOOSE_LOT.exec(before);
   // Without a price that ends in "k…" nor an "N x [" start, it is another chat line.
   if (!priceMatch && !(lot && /[x×X]\s*[[({]/u.test(before))) return null;
@@ -120,8 +127,9 @@ export function readOcrLine(line) {
 
 /**
  * The lot size before "x": digits, or a letter standing for "1". A size the auction house
- * does not sell is kept but not `clean`; one that is a lot size behind a stray leading "1"
- * (the timestamp's "]") loses that 1, and is not `clean` either, so the player checks it.
+ * does not sell is kept but not `clean`; one that ends in a lot size behind other digits
+ * (the timestamp's end, its "]" read as a 1) keeps that end, and is not `clean` either, so
+ * the player checks it.
  * @param {string} raw
  * @returns {{value: number, clean: boolean}}
  */
@@ -129,8 +137,11 @@ function readQuantity(raw) {
   if (!/\d/.test(raw)) return { value: 1, clean: true };
   const value = Number(raw);
   if (LOT_SIZES.includes(value)) return { value, clean: true };
-  const rest = Number(raw.slice(1));
-  if (raw.length > 1 && raw[0] === "1" && LOT_SIZES.includes(rest)) return { value: rest, clean: false };
+  // The digits in front are what is left of the timestamp: the lot size is the end.
+  for (let start = 1; start < raw.length; start += 1) {
+    const rest = Number(raw.slice(start));
+    if (raw[start] === "1" && LOT_SIZES.includes(rest)) return { value: rest, clean: false };
+  }
   return { value, clean: false };
 }
 
