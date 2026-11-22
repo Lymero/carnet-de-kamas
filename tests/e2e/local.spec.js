@@ -80,4 +80,11 @@ test("remembered unit prices are saved and offered again", async ({ page }) => {
   await openApp(page); // a fresh load: prices come back from the data file
   await pickCatalogItem(page, "Cape d'Ogivol", "Cape d'Ogivol");
   await expect(page.locator(`#recipeBox input[data-ing="${ingredient}"]`)).toHaveValue(/4\s321/);
+
+  // Emptying the field leaves that ingredient without a price: the remembered one stops counting.
+  await openRecipeFolds(page);
+  await expect(page.locator("#r-tot")).not.toHaveText("0");
+  await page.locator(`#recipeBox input[data-ing="${ingredient}"]`).fill("");
+  await expect(page.locator("#r-tot")).toHaveText("0");
+  await expect(page.locator("#r-ing")).toHaveText("—");
 });

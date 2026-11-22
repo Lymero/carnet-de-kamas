@@ -60,6 +60,12 @@ const LOOSE_PRICE = /[([{]\s*([^()[\]{}]*?\d[^()[\]{}]*?)\s*k[a-z]{2,6}\s*[)\]}|
  */
 const LOOSE_LOT = /(\d{1,5}|[lItLi|!])\s*[x×X]\s*[[({|]?\s*(.+?)\s*[\])}|]?\s*$/u;
 
+/**
+ * The lot sizes the auction house sells. A quantity read as one of these plus a leading
+ * "1" ("11 x", "110 x") is the "]" closing the chat timestamp, read as a 1.
+ */
+const LOT_SIZES = [1, 10, 100, 1000];
+
 /** Letters the reader takes for digits. */
 const DIGIT_LOOKALIKES = { O: "0", o: "0", I: "1", l: "1", "|": "1", S: "5", B: "8" };
 
@@ -96,10 +102,11 @@ export function readOcrLine(line) {
   if (!lot && !priceMatch) return null;
 
   const price = priceMatch ? readAmount(priceMatch[1]) : { value: NaN, clean: false };
-  const quantity = lot ? (/\d/.test(lot[1]) ? Number(lot[1]) : 1) : NaN;
+  const lotSize = lot ? readQuantity(lot[1]) : { value: NaN, clean: false };
+  const quantity = lotSize.value;
   const item = lot ? lot[2].replace(/^[[({|]+|[\])}|]+$/g, "").trim() : "";
   const confident = priceWords(line).every((word) => word.confidence >= CONFIDENCE_MIN);
-  const complete = Boolean(lot) && isCount(quantity) && item.length > 0;
+  const complete = Boolean(lot) && isCount(quantity) && lotSize.clean && item.length > 0;
   return {
     text,
     quantity: isCount(quantity) ? quantity : NaN,
@@ -109,6 +116,22 @@ export function readOcrLine(line) {
     skipped: false,
     box,
   };
+}
+
+/**
+ * The lot size before "x": digits, or a letter standing for "1". A size the auction house
+ * does not sell is kept but not `clean`; one that is a lot size behind a stray leading "1"
+ * (the timestamp's "]") loses that 1, and is not `clean` either, so the player checks it.
+ * @param {string} raw
+ * @returns {{value: number, clean: boolean}}
+ */
+function readQuantity(raw) {
+  if (!/\d/.test(raw)) return { value: 1, clean: true };
+  const value = Number(raw);
+  if (LOT_SIZES.includes(value)) return { value, clean: true };
+  const rest = Number(raw.slice(1));
+  if (raw.length > 1 && raw[0] === "1" && LOT_SIZES.includes(rest)) return { value: rest, clean: false };
+  return { value, clean: false };
 }
 
 /**
@@ -176,11 +199,21 @@ export function combineReadings(readings) {
     if (votes * 2 <= versions.length) return { ...line, sure: false };
     const agreeing = versions.filter((version) => version?.price === price);
     const source = line.skipped ? /** @type {PurchaseLine} */ (agreeing[0]) : line;
+    // The lot size is voted on the same way: a misread one would skew the unit price.
+    const sizes = new Map();
+    for (const version of agreeing) {
+      if (version && isCount(version.quantity)) sizes.set(version.quantity, (sizes.get(version.quantity) ?? 0) + 1);
+    }
+    const [quantity, sizeVotes] = [...sizes].reduce(
+      (best, entry) => (entry[1] > best[1] ? entry : best),
+      [source.quantity, sizes.get(source.quantity) ?? 0],
+    );
     return {
       ...source,
       box: line.box,
+      quantity,
       price,
-      sure: votes === versions.length && agreeing.some((version) => version?.sure),
+      sure: votes === versions.length && sizeVotes === versions.length && agreeing.some((version) => version?.sure),
     };
   });
 }

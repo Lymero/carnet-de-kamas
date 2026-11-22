@@ -53,7 +53,7 @@ export function createActions({ store, state }) {
   /**
    * Merges new unit prices into the remembered list, writing only the prices that
    * changed. Shown at once; the store merges them, so prices not loaded yet are kept.
-   * @param {Record<string, number>} changes  ingredient id → unit price
+   * @param {Record<string, number|null>} changes  ingredient id → unit price; others are skipped
    */
   async function rememberPrices(changes) {
     const current = state.get().prices;
@@ -73,7 +73,7 @@ export function createActions({ store, state }) {
    * Records a new trade. Unit prices typed in the recipe helper are remembered;
    * that part is a convenience, so its failure never undoes the trade.
    * @param {TradeDraft} draft
-   * @param {Record<string, number>} [unitPrices]
+   * @param {Record<string, number|null>} [unitPrices]  null: no price (an emptied field)
    * @returns {Promise<{trade: Trade, warning: string|null}>}
    */
   async function addTrade(draft, unitPrices = {}) {

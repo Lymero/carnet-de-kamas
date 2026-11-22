@@ -53,7 +53,12 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
   const draft = {
     cat: CATEGORY.CRAFT,
     /** @type {import("../data/catalog.js").CatalogItem|null} */ craftItem: null,
-    /** @type {Record<string, number>} */ unitPrices: {},
+    /**
+     * Unit prices typed or filled for this item. Null: the field was emptied, so the price
+     * remembered from earlier trades no longer counts either.
+     * @type {Record<string, number|null>}
+     */
+    unitPrices: {},
     runes: 0,
     /**
      * Kamas and rune value held before and after forging (kb, rb, ka, ra). When a "before" and an
@@ -76,7 +81,7 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
    */
   let prefilled = {};
 
-  const priceOf = (id) => draft.unitPrices[id] ?? state.get().prices[id];
+  const priceOf = (id) => (id in draft.unitPrices ? (draft.unitPrices[id] ?? undefined) : state.get().prices[id]);
   /**
    * Kamas spent on forgemagie, read from the balance before and after: (kamas + runes before) −
    * (kamas + runes after). Null while a side is empty; negative when "after" is higher.
@@ -255,8 +260,8 @@ export function mountEntryForm(form, { state, actions, onAdded }) {
     const value = evaluateKamas(t.value);
     // Unreadable or negative amounts count as "no price yet".
     if (t.dataset.ing) {
-      if (isKamas(value)) draft.unitPrices[t.dataset.ing] = value;
-      else delete draft.unitPrices[t.dataset.ing];
+      // An emptied field means no price: the remembered one stops counting too.
+      draft.unitPrices[t.dataset.ing] = isKamas(value) ? value : null;
     } else if (t.id === "f-runes") {
       draft.runes = isKamas(value) ? value : 0;
     } else if (t.dataset.bal) {

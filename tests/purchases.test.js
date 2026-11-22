@@ -89,6 +89,25 @@ test("readOcrLine doubts garbled or unconfident prices", () => {
   assert.equal(read("(800 kamas)").sure, false, "a price without its lot");
 });
 
+test("readOcrLine drops the timestamp's bracket read as a 1 glued to the lot size", () => {
+  // "] 1 x" and "] 10 x" with the "]" read as a "1": 11 and 110 are no lot sizes.
+  for (const [text, quantity] of [
+    ["11 x [Broderie de la Reine des Voleurs] (397 883 kamas)", 1],
+    ["110 x [Trame Dimensionnelle] (41 998 kamas)", 10],
+    ["1100 x [Sourcil de Barbétoal] (199 900 kamas)", 100],
+  ]) {
+    const line = read(text);
+    assert.equal(line.quantity, quantity, text);
+    assert.equal(line.sure, false, `${text}: to check`);
+  }
+  // Real lot sizes stay as read.
+  assert.equal(read("100 x [Serre] (95 200 kamas)").quantity, 100);
+  assert.equal(read("100 x [Serre] (95 200 kamas)").sure, true);
+  assert.equal(read("1000 x [Serre] (952 000 kamas)").quantity, 1000);
+  // Another size is kept, but worth a look.
+  assert.deepEqual([read("7 x [Serre] (700 kamas)").quantity, read("7 x [Serre] (700 kamas)").sure], [7, false]);
+});
+
 test("readOcrLine leaves out other chat lines", () => {
   for (const text of [
     "Vous êtes arrivé à destination !",
@@ -200,6 +219,43 @@ test("ingredientPrices gives each ingredient's unit price from the lots bought",
   // Too different to be the same name.
   assert.deepEqual(ingredientPrices([lot(1, "Serre", 5)], [{ id: 1, name: "Terre" }]).prices, {});
   assert.deepEqual(ingredientPrices([lot(1, "", 5)], [{ id: 1, name: "A" }]).prices, {});
+});
+
+test("ingredientPrices divides by the units bought, as in the chat lines pasted", () => {
+  const lines = readOcrLines(
+    [
+      "] 10 x [Kamatrix] (9 999 kamas)",
+      "] 1 x [Kamatrix] (966 kamas)",
+      "] 1 x [Kamatrix] (966 kamas)",
+      "] 1 x [Kamatrix] (967 kamas)",
+      "] 1 x [Kamatrix] (967 kamas)",
+      "] 1 x [Kamatrix] (967 kamas)",
+      "] 1 x [Broderie de la Reine des Voleurs] (395 000 kamas)",
+      "11 x [Broderie de la Reine des Voleurs] (397 883 kamas)", // "]" read as a 1
+      "] 1 x [Broderie de la Reine des Voleurs] (397 883 kamas)",
+      "] 1 x [Broderie de la Reine des Voleurs] (397 883 kamas)",
+      "110 x [Trame Dimensionnelle] (41 000 kamas)", // "]" read as a 1
+      "] 10 x [Trame Dimensionnelle] (41 998 kamas)",
+    ].map((text, row) => ocr(text, { row })),
+  );
+  const { prices } = ingredientPrices(lines, [
+    { id: 1, name: "Kamatrix" },
+    { id: 2, name: "Broderie de la Reine des Voleurs" },
+    { id: 3, name: "Trame Dimensionnelle" },
+  ]);
+  assert.deepEqual(prices, {
+    1: Math.round(14832 / 15),
+    2: Math.round((395000 + 3 * 397883) / 4),
+    3: Math.round(82998 / 20),
+  });
+});
+
+test("combineReadings takes the lot size most readings agree on", () => {
+  const reading = (quantity) => readOcrLines([ocr(`${quantity} x [Trame] (41 000 kamas)`)]);
+  const [line] = combineReadings([reading(7), reading(10), reading(10)]);
+  assert.deepEqual([line.quantity, line.sure], [10, false]);
+  const [agreed] = combineReadings([reading(10), reading(10), reading(10)]);
+  assert.deepEqual([agreed.quantity, agreed.sure], [10, true]);
 });
 
 test("overlappingLines finds the lines repeated where screenshots overlap, in either order", () => {
